@@ -4,6 +4,8 @@ Status: draft untuk implementasi backend
 Versi: `v1`  
 Tanggal: 31 Oktober 2026
 
+Pembaruan kebijakan identitas: 1 November 2026
+
 Dokumen ini menjadi kesepakatan nama endpoint, field request, bentuk respons,
 role, dan galat sebelum backend serta frontend fitur dikerjakan. Endpoint di
 bawah adalah kontrak yang direncanakan. Kontrak ini bukan bukti bahwa seluruh
@@ -122,6 +124,13 @@ Server tidak boleh menerima query yang menggabungkan SQL secara langsung.
 
 Role: `pasien` untuk resource miliknya sendiri.
 
+Identitas akun mengikuti FR-07. NIK dan nomor Kartu Keluarga (KK) tidak
+menjadi field request/response profil, syarat pembuatan profil, atau syarat
+menggunakan fitur kesehatan. Payload mutasi profil harus menolak field di luar
+kontrak, termasuk `nik` dan `kk`, melalui validasi Zod strict di server.
+Kebijakan edit nama akun dibahas terpisah; penghapusan profil bukan penghapusan
+akun atau kredensial login.
+
 | Method | Path | Tujuan |
 |---|---|---|
 | `GET` | `/api/profil` | Membaca profil pasien yang sedang masuk |
@@ -131,6 +140,11 @@ Role: `pasien` untuk resource miliknya sendiri.
 #### `GET /api/profil`
 
 Request body: tidak ada.
+
+Sukses `200` juga menangkap daftar obat yang dilaporkan pasien pada field
+`obat`. Pasien hanya dapat membaca daftar tersebut melalui profil; mutasi obat
+pasien tidak disediakan sebagai endpoint pasien. Dosis dan frekuensi adalah
+catatan pasien, bukan rekomendasi medis.
 
 Sukses `200`:
 
@@ -149,7 +163,21 @@ Sukses `200`:
     "riwayatAlergi": "penisilin",
     "kontakDaruratNama": "Siti Santoso",
     "kontakDaruratTelepon": "081200000002",
-    "updatedAt": "2026-10-31T04:00:00.000Z"
+    "updatedAt": "2026-10-31T04:00:00.000Z",
+    "obat": [
+      {
+        "id": "uuid",
+        "katalogObatFornasId": "uuid",
+        "namaObat": "abakavir",
+        "namaInternasional": "abacavir",
+        "dosisCatatan": "Sesuai resep dokter",
+        "frekuensiCatatan": "1 kali sehari",
+        "mulaiPada": "2026-11-01",
+        "selesaiPada": null,
+        "catatan": null,
+        "sumber": "dilaporkan_pasien"
+      }
+    ]
   }
 }
 ```
@@ -549,6 +577,15 @@ Sumber yang diizinkan dan proses peninjauan harus diputuskan sebelum endpoint
 ini diaktifkan.
 
 ### FR-07 Auth, sesi, dan dua role
+
+Keputusan pemilik, 1 November 2026: login memakai email dan kata sandi saja.
+NIK dan nomor Kartu Keluarga (KK) tidak dikumpulkan untuk autentikasi maupun
+profil kesehatan. UUID tetap digunakan secara internal untuk kepemilikan data,
+bukan nomor identitas kependudukan. Endpoint login hanya menerima `email` dan
+`password`; field tambahan ditolak melalui validasi Zod strict.
+
+Keputusan ini tidak menambahkan endpoint registrasi. Pemilik tugas registrasi,
+field selain kredensial, dan perilaku setelah registrasi masih perlu ditetapkan.
 
 | Method | Path | Role | Tujuan |
 |---|---|---|---|

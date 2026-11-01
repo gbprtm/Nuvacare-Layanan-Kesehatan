@@ -12,6 +12,7 @@ export default defineConfig({
     include: [
       "src/**/*.db.test.ts",
       "tests/integration/auth/**/*.db.test.ts",
+      "tests/integration/profil/**/*.db.test.ts",
     ],
     setupFiles: ["./tests/setup-db.ts"],
     testTimeout: 30_000,

@@ -385,11 +385,18 @@ Constraint dan indeks:
 Profil kesehatan dan kontak pasien. Satu pengguna memiliki paling banyak satu
 profil.
 
+Keputusan pemilik, 1 November 2026: NIK dan nomor Kartu Keluarga (KK) tidak
+dikumpulkan melalui fitur profil atau autentikasi; kontrak identitas ada di
+`api-contract.md`, FR-07. Tabel berikut tetap mendeskripsikan skema yang ada:
+kolom `nik` masih tersimpan sebagai kolom lama yang nullable, bukan field API.
+Penghapusan kolom membutuhkan migrasi dan penyesuaian seed/test yang disetujui;
+perubahan dokumentasi ini belum mengubah database.
+
 | Kolom | Tipe | Null | Default | Keterangan |
 |---|---|---:|---|---|
 | `id` | uuid | tidak | random | Primary key |
 | `user_id` | uuid | tidak | - | FK ke `users.id`, unik |
-| `nik` | varchar(16) | ya | - | Data demo wajib fiktif |
+| `nik` | varchar(16) | ya | - | Kolom lama; tidak dikumpulkan atau diekspos API; belum dihapus dari skema |
 | `nomor_telepon` | varchar(20) | ya | - | Nomor telepon |
 | `tanggal_lahir` | date | ya | - | Tanggal lahir |
 | `jenis_kelamin` | `jenis_kelamin` | ya | - | Jenis kelamin |

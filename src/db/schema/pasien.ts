@@ -72,6 +72,63 @@ export const profil = pgTable(
   ]
 );
 
+// Snapshot daftar obat Fornas, bukan tabel resep atau rekomendasi medis.
+export const katalogObatFornas = pgTable(
+  "katalog_obat_fornas",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    namaIndonesia: varchar("nama_indonesia", { length: 255 }).notNull(),
+    namaInternasional: varchar("nama_internasional", { length: 255 }),
+    kodeResmi: varchar("kode_resmi", { length: 100 }),
+    sumber: varchar("sumber", { length: 100 }).notNull().default("fornas"),
+    sumberUrl: text("sumber_url").notNull(),
+    versiSnapshot: varchar("versi_snapshot", { length: 100 }),
+    tanggalSnapshot: date("tanggal_snapshot").notNull(),
+    cakupanSnapshot: varchar("cakupan_snapshot", { length: 50 }).notNull(),
+    aktif: boolean("aktif").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("katalog_obat_fornas_snapshot_nama_idx").on(
+      table.sumber,
+      table.tanggalSnapshot,
+      table.namaIndonesia
+    ),
+    index("katalog_obat_fornas_nama_idx").on(table.namaIndonesia),
+    index("katalog_obat_fornas_kode_resmi_idx").on(table.kodeResmi),
+  ]
+);
+
+// Catatan obat yang dilaporkan pasien, bukan resep atau rekomendasi medis.
+export const obatPasien = pgTable(
+  "obat_pasien",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    pasienId: uuid("pasien_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    katalogObatFornasId: uuid("katalog_obat_fornas_id").references(
+      () => katalogObatFornas.id,
+      { onDelete: "set null" }
+    ),
+    namaObat: varchar("nama_obat", { length: 255 }).notNull(),
+    namaInternasional: varchar("nama_internasional", { length: 255 }),
+    dosisCatatan: varchar("dosis_catatan", { length: 100 }),
+    frekuensiCatatan: varchar("frekuensi_catatan", { length: 100 }),
+    mulaiPada: date("mulai_pada"),
+    selesaiPada: date("selesai_pada"),
+    catatan: text("catatan"),
+    sumber: varchar("sumber", { length: 50 }).notNull().default("dilaporkan_pasien"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("obat_pasien_pasien_id_idx").on(table.pasienId),
+    index("obat_pasien_katalog_id_idx").on(table.katalogObatFornasId),
+  ]
+);
+
 // Tabel Jadwal Kontrol Berulang (FR-02)
 export const jadwalKontrol = pgTable(
   "jadwal_kontrol",

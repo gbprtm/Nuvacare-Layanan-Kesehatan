@@ -36,6 +36,20 @@
       "when": 1793510760349,
       "tag": "0004_auth_login_attempts",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793526865391,
+      "tag": "0005_fornas_catalog",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793527698117,
+      "tag": "0006_patient_medications",
+      "breakpoints": true
     }
   ]
 }
