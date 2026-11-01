@@ -9,7 +9,10 @@ export default defineConfig({
   test: {
     environment: "node",
     globals: true,
-    include: ["src/**/*.db.test.ts"],
+    include: [
+      "src/**/*.db.test.ts",
+      "tests/integration/auth/**/*.db.test.ts",
+    ],
     setupFiles: ["./tests/setup-db.ts"],
     testTimeout: 30_000,
     hookTimeout: 30_000,

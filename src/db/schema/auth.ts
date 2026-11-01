@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, text, timestamp, pgEnum, index } from "drizzle-orm/pg-core";
+import { pgTable, uuid, varchar, text, timestamp, pgEnum, index, integer } from "drizzle-orm/pg-core";
 
 // Enum peran pengguna: hanya boleh 'pasien' atau 'admin'
 export const userRoleEnum = pgEnum("user_role", ["pasien", "admin"]);
@@ -40,7 +40,20 @@ export const sessions = pgTable(
   ]
 );
 
+export const loginAttempts = pgTable(
+  "login_attempts",
+  {
+    accountKey: varchar("account_key", { length: 64 }).primaryKey(),
+    failedAttempts: integer("failed_attempts").notNull().default(0),
+    windowStartedAt: timestamp("window_started_at", { withTimezone: true }).notNull(),
+    lockedUntil: timestamp("locked_until", { withTimezone: true }),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [index("login_attempts_updated_at_idx").on(table.updatedAt)]
+);
+
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type Session = typeof sessions.$inferSelect;
 export type NewSession = typeof sessions.$inferInsert;
+export type LoginAttempt = typeof loginAttempts.$inferSelect;
