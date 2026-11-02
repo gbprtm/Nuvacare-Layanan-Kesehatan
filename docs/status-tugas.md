@@ -44,7 +44,7 @@ Jangan mengubah status tugas milik agen lain.
 | ID | Status | Commit | Catatan |
 |---|---|---|---|
 | B01 | done | 53f9a92 | Auth, sesi idle 15 menit, lockout, guard role, dan verifikasi selesai |
-| B02 | doing | — | Endpoint profil, katalog Fornas, import snapshot A, dan tabel obat pasien selesai; capture GET profil teruji; menunggu commit B02 |
+| B02 | done | 9b3b9ad | Profil, katalog Fornas parsial A, import snapshot, tabel obat pasien, dan capture GET profil teruji; mutasi obat diteruskan ke B09 |
 | B03 | todo | — | — |
 | B04 | todo | — | — |
 | B05 | todo | — | — |
@@ -86,4 +86,4 @@ Jangan mengubah status tugas milik agen lain.
 
 ## Ringkasan
 
-Diperbarui: 1 November 2026 · total 44 · `todo` 25 · `doing` 1 · `blocked` 1 · `done` 16
+Diperbarui: 1 November 2026 · total 44 · `todo` 26 · `doing` 0 · `blocked` 1 · `done` 17
