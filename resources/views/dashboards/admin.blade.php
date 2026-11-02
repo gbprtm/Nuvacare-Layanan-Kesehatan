@@ -1,26 +1,33 @@
-@extends('layouts.app')
+@extends('layouts.admin')
 
 @section('title', 'Dasbor Operasional Admin')
 
 @section('content')
-<div class="container" style="margin-top: 2rem;">
-    <div class="card" style="margin-bottom: 1.5rem;">
-        <span class="badge badge-success" style="width: fit-content; margin-bottom: 0.75rem; background-color: var(--color-primary-soft); color: var(--color-primary-ink);">Administrasi Klinik</span>
-        <h1>Dasbor Operasional</h1>
-        <p class="text-muted" style="margin-top: 0.25rem;">Pengelolaan antrean, jadwal dokter, dan verifikasi kunjungan.</p>
+<div style="display: flex; flex-direction: column; gap: 1.5rem;">
+    <!-- Kartu Informasi Admin -->
+    <div class="card" style="border-left: 4px solid var(--color-ink);">
+        <p class="text-small text-muted" style="margin-bottom: 0.25rem;">Panel Staf Loket & Administrasi</p>
+        <h1 style="font-size: 1.75rem;">Dasbor Operasional Klinik</h1>
+        <p class="text-muted" style="margin-top: 0.5rem; max-width: 600px;">
+            Pusat pengelolaan nomor antrean loket pendaftaran, kehadiran pasien, dan ketersediaan kuota jadwal praktik dokter.
+        </p>
     </div>
 
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem;">
-        <div class="card">
-            <h3>Antrean Hari Ini</h3>
-            <p class="text-muted text-small" style="margin-top: 0.5rem;">Lihat dan kelola alur check-in pasien di loket.</p>
-        </div>
+    <!-- Ringkasan Operasional -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem;">
+        <x-card title="Antrean Loket Pendaftaran">
+            <x-empty-state 
+                title="Belum Ada Pasien Check-in" 
+                description="Daftar nomor antrean pasien yang telah melakukan check-in mandiri di klinik akan ditampilkan di sini."
+            />
+        </x-card>
 
-        <div class="card">
-            <h3>Jadwal Dokter</h3>
-            <p class="text-muted text-small" style="margin-top: 0.5rem;">Kelola ketersediaan kuota slot janji temu klinik.</p>
-        </div>
+        <x-card title="Ketersediaan Praktik Dokter">
+            <x-empty-state 
+                title="Kelola Jadwal & Kuota" 
+                description="Atur kuota slot kunjungan harian per dokter untuk memastikan kelancaran alur pelayanan pasien."
+            />
+        </x-card>
     </div>
 </div>
 @endsection
-

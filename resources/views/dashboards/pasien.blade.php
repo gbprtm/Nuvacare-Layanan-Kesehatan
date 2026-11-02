@@ -1,26 +1,35 @@
-@extends('layouts.app')
+@extends('layouts.patient')
 
 @section('title', 'Beranda Pasien')
 
 @section('content')
-<div class="container" style="margin-top: 2rem;">
-    <div class="card" style="margin-bottom: 1.5rem;">
-        <span class="badge badge-success" style="width: fit-content; margin-bottom: 0.75rem;">Area Pasien</span>
-        <h1>Halo, {{ $user->name }}</h1>
-        <p class="text-muted" style="margin-top: 0.25rem;">Selamat datang di layanan kesehatan personal Anda.</p>
+<div style="display: flex; flex-direction: column; gap: 1.5rem;">
+    <!-- Kartu Pengenal Pasien -->
+    <div class="card" style="border-left: 4px solid var(--color-primary);">
+        <p class="text-small text-muted" style="margin-bottom: 0.25rem;">Selamat Datang Kembali</p>
+        <h1 style="font-size: 1.75rem;">Halo, {{ $user->name }}</h1>
+        <p class="text-muted" style="margin-top: 0.5rem; max-width: 600px;">
+            Halaman beranda untuk memantau jadwal kontrol kesehatan, antrean klinik, dan catatan minum obat harian Anda.
+        </p>
     </div>
 
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem;">
-        <div class="card">
-            <h3>Jadwal & Kunjungan</h3>
-            <p class="text-muted text-small" style="margin-top: 0.5rem;">Belum ada jadwal kunjungan aktif untuk hari ini.</p>
-        </div>
+    <!-- Ringkasan Grid Dua Kolom -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem;">
+        <!-- Kolom 1: Jadwal & Antrean -->
+        <x-card title="Jadwal Kontrol & Antrean Hari Ini">
+            <x-empty-state 
+                title="Tidak Ada Jadwal Hari Ini" 
+                description="Anda tidak memiliki janji temu dokter atau jadwal kontrol yang terdaftar untuk hari ini."
+            />
+        </x-card>
 
-        <div class="card">
-            <h3>Pengingat Obat</h3>
-            <p class="text-muted text-small" style="margin-top: 0.5rem;">Semua catatan minum obat telah diperbarui.</p>
-        </div>
+        <!-- Kolom 2: Catatan Kebiasaan & Obat -->
+        <x-card title="Ringkasan Kebiasaan Sehat">
+            <x-empty-state 
+                title="Belum Ada Catatan Tercatat" 
+                description="Catatan hidrasi, aktivitas, dan waktu tidur harian akan tampil di sini untuk membantu pemantauan kesehatan Anda."
+            />
+        </x-card>
     </div>
 </div>
 @endsection
-

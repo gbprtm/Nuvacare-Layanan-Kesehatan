@@ -1,6 +1,6 @@
 /**
  * resources/css/app.css
- * Stylesheet vanilla CSS berdasarkan pedoman DESIGN.md
+ * Stylesheet vanilla CSS berdasarkan pedoman DESIGN.md dan prinsip Antislop
  */
 
 :root {
@@ -48,16 +48,48 @@
   padding: 0;
 }
 
+html {
+  font-size: 16px;
+  overflow-x: hidden;
+}
+
 body {
   font-family: var(--font-sans);
   background-color: var(--color-bg);
   color: var(--color-ink);
   line-height: 1.6;
-  font-size: 16px;
+  font-size: 1rem; /* 16px standar aksesibilitas */
   -webkit-font-smoothing: antialiased;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  overflow-x: hidden;
+}
+
+/* Aksesibilitas: Skip Link ke Konten Utama */
+.skip-link {
+  position: absolute;
+  top: -999px;
+  left: 1rem;
+  background-color: var(--color-ink);
+  color: #FFFFFF;
+  padding: 0.75rem 1.25rem;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  z-index: 9999;
+  border: 2px solid var(--color-primary);
+  outline: none;
+}
+
+.skip-link:focus {
+  top: 1rem;
+}
+
+/* Fokus Keyboard Aksesibel (Focus Ring) */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
 /* Tipografi Heading */
@@ -104,19 +136,24 @@ a:hover {
   color: var(--color-primary-ink);
 }
 
+img, svg, video {
+  max-width: 100%;
+  height: auto;
+}
+
 /* Layout Komponen */
 .container {
   width: 100%;
   max-width: 1080px;
   margin: 0 auto;
-  padding: 1.5rem;
+  padding: 1.25rem;
 }
 
 .card {
   background: var(--color-surface);
   border: 1px solid var(--color-line);
   border-radius: var(--radius-lg);
-  padding: 1.75rem;
+  padding: 1.5rem;
   box-shadow: var(--shadow-sm);
 }
 
@@ -124,7 +161,7 @@ a:hover {
 .site-header {
   border-bottom: 1px solid var(--color-line);
   background: var(--color-surface);
-  padding: 1rem 1.5rem;
+  padding: 1rem 1.25rem;
 }
 
 .header-container {
@@ -155,6 +192,12 @@ a:hover {
   vertical-align: middle;
 }
 
+.site-footer {
+  border-top: 1px solid var(--color-line);
+  background: var(--color-surface);
+  margin-top: auto;
+}
+
 /* Tombol (DESIGN.md §1.3 & §3.2) */
 .btn {
   display: inline-flex;
@@ -169,6 +212,7 @@ a:hover {
   cursor: pointer;
   border: 1px solid transparent;
   min-height: 44px; /* Tap target minimal aksesibel */
+  min-width: 44px;
   transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
@@ -201,6 +245,7 @@ a:hover {
   border: none;
   cursor: pointer;
   padding: 0.5rem;
+  min-height: 44px;
 }
 
 .btn-danger-text:hover {
@@ -272,13 +317,48 @@ a:hover {
   border: 1px solid var(--color-success);
 }
 
-/* Halaman Autentikasi Khusus */
+.alert-info {
+  background-color: var(--color-primary-soft);
+  color: var(--color-primary-ink);
+  border: 1px solid var(--color-primary);
+}
+
+.alert-warning {
+  background-color: var(--color-warning-soft);
+  color: var(--color-warning-ink);
+  border: 1px solid var(--color-warning);
+}
+
+/* Badges */
+.badge {
+  display: inline-block;
+  padding: 0.25rem 0.625rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+}
+
+.badge-success {
+  background-color: var(--color-success-soft);
+  color: var(--color-success-ink);
+}
+
+/* Empty State Box (DESIGN.md §2) */
+.empty-state-box {
+  border: 1px dashed var(--color-line-strong);
+  border-radius: var(--radius-lg);
+  padding: 2rem 1.25rem;
+  text-align: center;
+  background-color: var(--color-bg);
+}
+
+/* Halaman Autentikasi */
 .auth-wrapper {
   display: flex;
   align-items: center;
   justify-content: center;
   min-height: calc(100vh - 140px);
-  padding: 2rem 1rem;
+  padding: 1.5rem 1rem;
 }
 
 .auth-card {
@@ -287,7 +367,7 @@ a:hover {
   background: var(--color-surface);
   border: 1px solid var(--color-line);
   border-radius: var(--radius-lg);
-  padding: 2rem;
+  padding: 1.75rem;
   box-shadow: var(--shadow-sm);
 }
 
@@ -303,7 +383,18 @@ a:hover {
   color: var(--color-ink-2);
 }
 
-/* Reduced Motion */
+/* Utilitas Responsif */
+@media (max-width: 480px) {
+  .hide-on-mobile {
+    display: none !important;
+  }
+
+  .auth-card {
+    padding: 1.25rem;
+  }
+}
+
+/* Reduced Motion (Aksesibilitas) */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
