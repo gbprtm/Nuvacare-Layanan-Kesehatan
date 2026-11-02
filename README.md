@@ -1,9 +1,14 @@
 # Sistem Informasi Janji Temu Klinik (Klinik Sehat)
 
+<<<<<<< HEAD
 Aplikasi web manajemen janji temu rawat jalan dan jadwal kontrol rutin untuk **Tamu (Guest)**, **Pasien**, dan **Admin Klinik**. Proyek ini dibangun mengikuti spesifikasi tunggal pada **[RANCANGAN FINAL](docs/RANCANGANFINAL.md)** dan panduan tampilan **[DESIGN.md](DESIGN.md)**.
+=======
+Sebuah rancangan aplikasi web untuk membuat janji temu dan pemeriksaan.
+>>>>>>> 40188899470b2864d43fac097b2d8acfb1668a0f
 
 ---
 
+<<<<<<< HEAD
 ## 1. Peran & Fitur Utama
 
 1. **Tamu (Guest)**
@@ -20,6 +25,12 @@ Aplikasi web manajemen janji temu rawat jalan dan jadwal kontrol rutin untuk **T
    - Menyelesaikan pemeriksaan dengan mengisi catatan dokter (`doctor_notes`) atau membatalkan janji bila jadwal bentrok disertai rekomendasi dokter pengganti.
    - Menetapkan jadwal kontrol rutin berikutnya untuk pasien.
    - Mengelola master data poliklinik, menambah dokter baru, serta mengaktifkan/menonaktifkan status praktik dokter (`is_active`) (`/admin/master-data.html`).
+=======
+## Stack
+- Laravel sebagai JSON API (`routes/api.php`) + Eloquent + PostgreSQL Neon.
+- Frontend HTML, CSS, JavaScript murni di `public/` memakai `fetch()`.
+- Uji: PHPUnit dan Pint.
+>>>>>>> 40188899470b2864d43fac097b2d8acfb1668a0f
 
 ---
 
