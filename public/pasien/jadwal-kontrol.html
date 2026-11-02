@@ -3,33 +3,39 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Jadwal Kontrol - Sistem Janji Temu Klinik</title>
+  <meta name="theme-color" content="#EEF1F6">
+  <title>Jadwal Kontrol - Klinik Sehat</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-  <nav class="navbar">
-    <div class="brand">
-      <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:var(--color-accent);"></span>
-      Klinik Sehat
+  <a href="#main-content" class="skip-link">Langsung ke isi utama</a>
+
+  <header class="site-header">
+    <nav class="navbar" aria-label="Navigasi utama">
+      <a href="/pasien/janji-temu.html" class="brand" translate="no">Klinik Sehat</a>
+      <ul class="nav-links">
+        <li><a href="/pasien/janji-temu.html">Janji Temu</a></li>
+        <li><a href="/pasien/riwayat.html">Riwayat</a></li>
+        <li><a href="/pasien/jadwal-kontrol.html" class="active" aria-current="page">Jadwal Kontrol</a></li>
+        <li><a href="/pasien/profil.html">Profil</a></li>
+        <li class="nav-user">
+          <span id="navUserName" class="nav-user-name"></span>
+          <button type="button" id="logoutBtn" class="btn btn-secondary btn-sm">Keluar</button>
+        </li>
+      </ul>
+    </nav>
+  </header>
+
+  <main id="main-content" class="container">
+    <div class="mb-4">
+      <h1 class="page-title">Jadwal Kontrol</h1>
+      <p class="text-sm text-muted">Jadwal kunjungan ulang yang ditetapkan oleh klinik setelah pemeriksaan sebelumnya.</p>
     </div>
-    <ul class="nav-links">
-      <li><a href="/pasien/janji-temu.html">Janji Temu</a></li>
-      <li><a href="/pasien/riwayat.html">Riwayat</a></li>
-      <li><a href="/pasien/jadwal-kontrol.html" class="active">Jadwal Kontrol</a></li>
-      <li><a href="/pasien/profil.html">Profil</a></li>
-      <li><a href="#" id="logoutBtn" style="color:var(--color-danger);">Keluar</a></li>
-    </ul>
-  </nav>
 
-  <main class="container">
-    <div class="card">
-      <div class="flex-between mb-4">
-        <div>
-          <h1 class="card-title" style="margin-bottom: 0.25rem;">Jadwal Kontrol Rutin</h1>
-          <p class="text-sm text-muted">Jadwal konsultasi ulang yang ditetapkan oleh dokter untuk memantau perkembangan kesehatan Anda.</p>
-        </div>
-      </div>
-
+    <section class="card" aria-label="Tabel jadwal kontrol">
       <div class="table-responsive">
         <table>
           <thead>
@@ -37,24 +43,23 @@
               <th>Tanggal Kontrol</th>
               <th>Poliklinik</th>
               <th>Dokter</th>
-              <th>Arahan / Catatan Kontrol</th>
+              <th>Arahan Dokter</th>
               <th>Status</th>
             </tr>
           </thead>
-          <tbody id="controlTableBody">
+          <tbody id="controlTableBody" aria-live="polite">
             <tr>
-              <td colspan="5" class="text-muted" style="text-align: center; padding: 2rem;">
-                Memuat jadwal kontrol...
+              <td colspan="5" class="text-muted text-center" style="padding: var(--space-6);">
+                Memuat jadwal kontrol…
               </td>
             </tr>
           </tbody>
         </table>
       </div>
-    </div>
+    </section>
   </main>
 
   <script src="/js/api.js"></script>
   <script src="/js/pasien.js"></script>
 </body>
 </html>
-

@@ -3,104 +3,79 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Beranda - Sistem Janji Temu Klinik Sehat</title>
+  <meta name="theme-color" content="#EEF1F6">
+  <title>Beranda - Klinik Sehat</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="/css/style.css">
-  <style>
-    .hero {
-      background: linear-gradient(135deg, var(--color-primary) 0%, #173859 100%);
-      color: #FFFFFF;
-      padding: 3rem 1.5rem;
-      border-radius: var(--radius-lg);
-      margin-bottom: 2rem;
-      box-shadow: var(--shadow-md);
-    }
-    .hero h1 {
-      font-size: 2rem;
-      font-weight: 700;
-      margin-bottom: 0.75rem;
-    }
-    .hero p {
-      font-size: 1.05rem;
-      color: #E2E8F0;
-      max-width: 600px;
-      margin-bottom: 1.5rem;
-      line-height: 1.6;
-    }
-    .hero-actions {
-      display: flex;
-      gap: 0.75rem;
-      flex-wrap: wrap;
-    }
-    .feature-card {
-      background: var(--color-surface);
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-md);
-      padding: 1.25rem;
-      box-shadow: var(--shadow-sm);
-    }
-  </style>
 </head>
 <body>
-  <nav class="navbar">
-    <div class="brand">
-      <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:var(--color-accent);"></span>
-      <span id="navClinicName">Klinik Sehat</span>
-    </div>
-    <div id="navAuthAction">
-      <a href="/login.html" class="btn btn-secondary btn-sm" style="margin-right: 0.5rem;">Masuk</a>
-      <a href="/daftar.html" class="btn btn-primary btn-sm">Daftar Akun</a>
-    </div>
-  </nav>
+  <a href="#main-content" class="skip-link">Langsung ke isi utama</a>
 
-  <main class="container">
-    <section class="hero">
-      <h1 id="clinicName">Klinik Sehat</h1>
-      <p id="clinicDesc">Pelayanan kesehatan profesional dan terpercaya untuk Anda dan keluarga. Buat janji temu dengan mudah secara online tanpa antre panjang.</p>
-      <div class="hero-actions">
-        <a href="/daftar.html" class="btn btn-accent" style="font-weight:700;">Daftar Pasien Baru</a>
-        <a href="/login.html" class="btn btn-secondary" style="background:rgba(255,255,255,0.15); color:#fff; border-color:rgba(255,255,255,0.3);">Masuk ke Akun Anda</a>
+  <header class="site-header">
+    <nav class="navbar" aria-label="Navigasi utama">
+      <a href="/index.html" class="brand" id="navClinicName" translate="no">Klinik Sehat</a>
+      <div id="navAuthAction" style="display: flex; align-items: center; gap: var(--space-2);">
+        <a href="/login.html" class="btn btn-secondary btn-sm">Masuk</a>
+        <a href="/daftar.html" class="btn btn-secondary btn-sm">Daftar Akun</a>
+      </div>
+    </nav>
+  </header>
+
+  <main id="main-content" class="container">
+    <section class="card" aria-labelledby="clinicName">
+      <h1 id="clinicName" translate="no">Klinik Sehat</h1>
+      <p id="clinicDesc" class="text-muted mb-4" style="max-width: 640px;">
+        Layanan pendaftaran janji temu rawat jalan dan pemantauan jadwal kontrol rutin untuk pasien dan keluarga.
+      </p>
+      <div style="display: flex; gap: var(--space-3); flex-wrap: wrap;">
+        <a href="/daftar.html" class="btn btn-primary">Daftar Pasien Baru</a>
+        <a href="/login.html" class="btn btn-secondary">Masuk ke Akunmu</a>
       </div>
     </section>
 
     <div class="grid-2">
-      <!-- Daftar Poliklinik & Dokter Aktif -->
-      <div>
-        <h2 class="card-title" style="margin-bottom: 1rem;">Layanan Poliklinik & Dokter</h2>
-        <div id="publicPoliList">
-          <p class="text-muted">Memuat informasi layanan...</p>
-        </div>
-      </div>
-
-      <!-- Info Klinik & Alur Berobat -->
-      <div>
-        <div class="card mb-4">
-          <h3 class="card-title" style="margin-bottom: 0.75rem;">Informasi & Kontak Klinik</h3>
-          <div style="font-size: 0.9rem; line-height: 1.6;">
-            <p><strong>Alamat:</strong> <span id="clinicAddress">Jl. Kesehatan Raya No. 45, Jakarta Pusat</span></p>
-            <p class="mt-2"><strong>Telepon / WhatsApp:</strong> <span id="clinicContact">+62 21 555-0199</span></p>
-            <p class="mt-2"><strong>Jam Operasional:</strong><br>Senin s/d Sabtu: 08:00 - 20:00 WIB<br>Minggu & Hari Libur Nasional: Tutup</p>
+      <section aria-labelledby="poliSectionTitle">
+        <h2 id="poliSectionTitle">Poliklinik &amp; Dokter</h2>
+        <div id="publicPoliList" aria-live="polite">
+          <div class="card">
+            <p class="text-muted">Memuat daftar poliklinik dan dokter…</p>
           </div>
+        </div>
+      </section>
+
+      <section aria-labelledby="infoSectionTitle">
+        <h2 id="infoSectionTitle">Informasi Klinik</h2>
+        <div class="card">
+          <h3>Alamat &amp; Jam Layanan</h3>
+          <p class="text-sm"><strong>Alamat:</strong> <span id="clinicAddress">Jl. Kesehatan Raya No. 45, Jakarta Pusat</span></p>
+          <p class="text-sm mt-2"><strong>Telepon / WhatsApp:</strong> <span id="clinicContact">+62 21 555-0199</span></p>
+          <p class="text-sm mt-2">
+            <strong>Jam Operasional:</strong><br>
+            Senin s/d Sabtu: 08.00 – 20.00 WIB<br>
+            Minggu &amp; Hari Libur Nasional: Tutup
+          </p>
         </div>
 
         <div class="card">
-          <h3 class="card-title" style="margin-bottom: 0.75rem;">Cara Membuat Janji Temu</h3>
-          <ol style="padding-left: 1.25rem; font-size: 0.875rem; line-height: 1.7; color: var(--color-text);">
-            <li><strong>Daftar Akun:</strong> Buat akun pasien dengan mengisi nama, email, dan data diri Anda.</li>
-            <li><strong>Masuk ke Akun:</strong> Masuk menggunakan email dan kata sandi yang telah Anda daftarkan.</li>
-            <li><strong>Pilih Poli & Dokter:</strong> Pilih poliklinik tujuan, dokter spesialis, serta tanggal kunjungan yang diinginkan.</li>
-            <li><strong>Pantau & Hadir:</strong> Lihat status janji temu, riwayat hasil pemeriksaan dokter, dan jadwal kontrol rutin langsung dari dashboard Anda.</li>
+          <h3>Alur Pendaftaran Janji Temu</h3>
+          <ol style="padding-left: var(--space-6); font-size: 14px; line-height: 22px; color: var(--color-ink);">
+            <li class="mb-2">Buat akun pasien menggunakan nama lengkap, alamat email, dan nomor telepon aktif.</li>
+            <li class="mb-2">Masuk ke akunmu lalu pilih poliklinik, dokter yang aktif, dan tanggal kunjungan.</li>
+            <li class="mb-2">Datang ke klinik sesuai jadwal yang tercatat pada halaman Janji Temu.</li>
+            <li>Lihat catatan hasil pemeriksaan dokter di menu Riwayat dan pantau jadwal kunjungan ulang di menu Jadwal Kontrol.</li>
           </ol>
         </div>
-      </div>
+      </section>
     </div>
   </main>
 
-  <footer style="margin-top: 3rem; padding: 1.5rem; text-align: center; border-top: 1px solid var(--color-border); font-size: 0.85rem; color: var(--color-text-muted);">
-    &copy; 2026 Klinik Sehat. Pelayanan janji temu kesehatan modern dan terpercaya.
+  <footer style="margin-top: var(--space-12); padding: var(--space-6) var(--space-4); text-align: center; border-top: 1px solid var(--color-line); font-size: 14px; color: var(--color-ink-2);">
+    &copy; 2026 <span translate="no">Klinik Sehat</span>. Sistem pencatatan janji temu dan jadwal kontrol pasien.
   </footer>
 
   <script src="/js/api.js"></script>
   <script src="/js/auth.js"></script>
 </body>
 </html>
-

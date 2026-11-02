@@ -3,95 +3,97 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Janji Temu - Sistem Janji Temu Klinik Sehat</title>
+  <meta name="theme-color" content="#EEF1F6">
+  <title>Janji Temu - Klinik Sehat</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-  <nav class="navbar">
-    <div class="brand">
-      <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:var(--color-accent);"></span>
-      Klinik Sehat
-    </div>
-    <ul class="nav-links">
-      <li><a href="/pasien/janji-temu.html" class="active">Janji Temu</a></li>
-      <li><a href="/pasien/riwayat.html">Riwayat</a></li>
-      <li><a href="/pasien/jadwal-kontrol.html">Jadwal Kontrol</a></li>
-      <li><a href="/pasien/profil.html">Profil</a></li>
-      <li><a href="#" id="logoutBtn" style="color:var(--color-danger);">Keluar</a></li>
-    </ul>
-  </nav>
+  <a href="#main-content" class="skip-link">Langsung ke isi utama</a>
 
-  <main class="container">
+  <header class="site-header">
+    <nav class="navbar" aria-label="Navigasi utama">
+      <a href="/pasien/janji-temu.html" class="brand" translate="no">Klinik Sehat</a>
+      <ul class="nav-links">
+        <li><a href="/pasien/janji-temu.html" class="active" aria-current="page">Janji Temu</a></li>
+        <li><a href="/pasien/riwayat.html">Riwayat</a></li>
+        <li><a href="/pasien/jadwal-kontrol.html">Jadwal Kontrol</a></li>
+        <li><a href="/pasien/profil.html">Profil</a></li>
+        <li class="nav-user">
+          <span id="navUserName" class="nav-user-name"></span>
+          <button type="button" id="logoutBtn" class="btn btn-secondary btn-sm">Keluar</button>
+        </li>
+      </ul>
+    </nav>
+  </header>
+
+  <main id="main-content" class="container">
     <div class="mb-4">
-      <h1 class="page-title" style="margin-bottom: 0.25rem;">Janji Temu Pasien</h1>
-      <p class="text-sm text-muted">Ajukan jadwal konsultasi dengan dokter dan pantau janji temu aktif Anda.</p>
+      <h1 class="page-title">Janji Temu</h1>
+      <p class="text-sm text-muted">Pilih poliklinik, dokter, dan tanggal kunjunganmu, lalu pantau status janji di bawah ini.</p>
     </div>
 
-    <div class="grid-2">
-      <!-- Form Buat Janji -->
-      <div>
-        <div class="card">
-          <h2 class="card-title">Buat Janji Temu Baru</h2>
-          <div id="bookingAlert" class="alert"></div>
+    <section class="card" aria-labelledby="formBookingTitle">
+      <h2 id="formBookingTitle" class="card-title">Buat Janji Baru</h2>
+      <div id="bookingAlert" class="alert" role="status" aria-live="polite"></div>
 
-          <form id="bookingForm">
-            <div class="form-group">
-              <label class="form-label" for="polyclinic_id">Pilih Poliklinik</label>
-              <select id="polyclinic_id" class="form-select" required>
-                <option value="">Memuat data poliklinik...</option>
-              </select>
-            </div>
+      <form id="bookingForm" novalidate>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label" for="polyclinic_id">Poliklinik</label>
+            <select id="polyclinic_id" name="polyclinic_id" class="form-select" required autocomplete="off">
+              <option value="">Memuat daftar poliklinik…</option>
+            </select>
+          </div>
 
-            <div class="form-group">
-              <label class="form-label" for="doctor_id">Pilih Dokter</label>
-              <select id="doctor_id" class="form-select" required disabled>
-                <option value="">-- Pilih Poli Terlebih Dahulu --</option>
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label" for="appointment_date">Tanggal Kunjungan</label>
-              <input type="date" id="appointment_date" class="form-input" required>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label" for="complaint">Keluhan / Alasan Kunjungan (Maks. 500 karakter)</label>
-              <textarea id="complaint" class="form-textarea" required maxlength="500" placeholder="Jelaskan secara singkat gejala atau keluhan yang Anda rasakan"></textarea>
-            </div>
-
-            <button type="submit" class="btn btn-primary btn-block">Ajukan Janji Temu</button>
-          </form>
-        </div>
-      </div>
-
-      <!-- Riwayat Janji Temu Diajukan -->
-      <div>
-        <div class="card">
-          <h2 class="card-title">Janji Temu Saya</h2>
-          <div class="table-responsive">
-            <table>
-              <thead>
-                <tr>
-                  <th>Tanggal</th>
-                  <th>Poliklinik</th>
-                  <th>Dokter</th>
-                  <th>Keluhan</th>
-                  <th>Status</th>
-                  <th>Catatan Klinik</th>
-                </tr>
-              </thead>
-              <tbody id="appointmentTableBody">
-                <tr>
-                  <td colspan="6" class="text-muted" style="text-align: center; padding: 1.5rem;">
-                    Memuat daftar janji temu...
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+          <div class="form-group">
+            <label class="form-label" for="doctor_id">Dokter</label>
+            <select id="doctor_id" name="doctor_id" class="form-select" required disabled autocomplete="off">
+              <option value="">Pilih poliklinik terlebih dahulu…</option>
+            </select>
           </div>
         </div>
+
+        <div class="form-group">
+          <label class="form-label" for="appointment_date">Tanggal Kunjungan</label>
+          <input type="date" id="appointment_date" name="appointment_date" class="form-input" required autocomplete="off">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="complaint">Keluhan Singkat (Opsional, maks. 500 karakter)</label>
+          <textarea id="complaint" name="complaint" class="form-textarea" maxlength="500" autocomplete="off" placeholder="Tuliskan keluhan atau alasan kunjunganmu…"></textarea>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Buat janji</button>
+      </form>
+    </section>
+
+    <section class="card" aria-labelledby="listBookingTitle">
+      <h2 id="listBookingTitle" class="card-title">Daftar Janji Temu</h2>
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>Tanggal</th>
+              <th>Poliklinik</th>
+              <th>Dokter</th>
+              <th>Keluhan</th>
+              <th>Status</th>
+              <th>Catatan Klinik</th>
+            </tr>
+          </thead>
+          <tbody id="appointmentTableBody" aria-live="polite">
+            <tr>
+              <td colspan="6" class="text-muted text-center" style="padding: var(--space-6);">
+                Memuat daftar janji temu…
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
-    </div>
+    </section>
   </main>
 
   <script src="/js/api.js"></script>

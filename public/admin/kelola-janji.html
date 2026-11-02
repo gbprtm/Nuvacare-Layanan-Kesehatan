@@ -3,99 +3,47 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kelola Janji Temu - Admin Klinik Sehat</title>
+  <meta name="theme-color" content="#EEF1F6">
+  <title>Kelola Janji - Admin Klinik Sehat</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="/css/style.css">
-  <style>
-    .modal-backdrop {
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(10, 37, 64, 0.45);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-      backdrop-filter: blur(2px);
-    }
-    .modal-content {
-      background: var(--color-surface);
-      border-radius: var(--radius-md);
-      padding: 1.75rem;
-      width: 100%;
-      max-width: 500px;
-      box-shadow: var(--shadow-hover);
-      border: 1px solid var(--color-border);
-    }
-  </style>
 </head>
 <body>
-  <nav class="navbar">
-    <div class="brand">
-      <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:var(--color-accent);"></span>
-      Admin Panel Klinik
-    </div>
-    <ul class="nav-links">
-      <li><a href="/admin/kelola-janji.html" class="active">Kelola Janji</a></li>
-      <li><a href="/admin/master-data.html">Master Data</a></li>
-      <li><span id="navAdminName" style="font-weight:600; font-size:0.875rem; color:var(--color-primary);"></span></li>
-      <li><a href="#" id="logoutBtn" style="color:var(--color-danger);">Keluar</a></li>
-    </ul>
-  </nav>
+  <a href="#main-content" class="skip-link">Langsung ke isi utama</a>
 
-  <main class="container">
+  <header class="site-header">
+    <nav class="navbar" aria-label="Navigasi utama">
+      <a href="/admin/kelola-janji.html" class="brand" translate="no">Klinik Sehat</a>
+      <ul class="nav-links">
+        <li><a href="/admin/kelola-janji.html" class="active" aria-current="page">Kelola Janji</a></li>
+        <li><a href="/admin/master-data.html">Master Data</a></li>
+        <li class="nav-user">
+          <span id="navAdminName" class="nav-user-name"></span>
+          <button type="button" id="logoutBtn" class="btn btn-secondary btn-sm">Keluar</button>
+        </li>
+      </ul>
+    </nav>
+  </header>
+
+  <main id="main-content" class="container">
     <div class="mb-4">
-      <h1 class="page-title" style="margin-bottom: 0.25rem;">Kelola Janji Temu & Jadwal Kontrol</h1>
-      <p class="text-sm text-muted">Pantau status kunjungan pasien, tetapkan jadwal kontrol rutin, dan berikan catatan medis dokter.</p>
+      <h1 class="page-title">Kelola Janji Temu</h1>
+      <p class="text-sm text-muted">Periksa daftar kunjungan per tanggal, selesaikan pemeriksaan dengan catatan dokter, batalkan bila jadwal bentrok, atau jadwalkan kontrol rutin.</p>
     </div>
 
-    <!-- Section Buat Jadwal Kontrol Pasien -->
-    <div class="card mb-4">
-      <h2 class="card-title">Buat Jadwal Kontrol Pasien</h2>
-      <div id="controlAlert" class="alert"></div>
-      <form id="scheduleControlForm" class="grid-2">
-        <div class="form-group">
-          <label class="form-label" for="controlPatientId">Pilih Pasien</label>
-          <select id="controlPatientId" class="form-select" required>
-            <option value="">Memuat data pasien...</option>
+    <section class="card" aria-labelledby="appointmentListTitle">
+      <div class="flex-between mb-4" style="flex-wrap: wrap;">
+        <h2 id="appointmentListTitle" class="card-title" style="margin-bottom: 0;">Daftar Janji &amp; Kontrol</h2>
+        <div style="display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap;">
+          <input type="date" id="filterDate" name="date" class="form-input" style="width: auto; min-height: 44px; padding: var(--space-2) var(--space-3);" aria-label="Filter tanggal kunjungan">
+          <select id="filterType" name="type" class="form-select" style="width: auto; min-height: 44px; padding: var(--space-2) var(--space-3);" aria-label="Filter jenis kunjungan">
+            <option value="">Semua Tipe</option>
+            <option value="janji_baru">Janji baru</option>
+            <option value="kontrol_rutin">Kontrol rutin</option>
           </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="controlPoliId">Pilih Poliklinik</label>
-          <select id="controlPoliId" class="form-select" required>
-            <option value="">Memuat data poli...</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="controlDoctorId">Pilih Dokter</label>
-          <select id="controlDoctorId" class="form-select" required disabled>
-            <option value="">-- Pilih Dokter --</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="controlDate">Tanggal Kontrol</label>
-          <input type="date" id="controlDate" class="form-input" required>
-        </div>
-        <div class="form-group" style="grid-column: 1 / -1;">
-          <label class="form-label" for="controlNotes">Catatan / Arahan Kontrol</label>
-          <input type="text" id="controlNotes" class="form-input" placeholder="Contoh: Kontrol evaluasi tensi darah dan hasil laboratorium">
-        </div>
-        <div style="grid-column: 1 / -1;">
-          <button type="submit" class="btn btn-primary">Tetapkan Jadwal Kontrol</button>
-        </div>
-      </form>
-    </div>
-
-    <!-- Section Daftar Semua Janji Temu -->
-    <div class="card">
-      <div class="flex-between mb-4" style="flex-wrap: wrap; gap: 1rem;">
-        <h2 class="card-title" style="margin-bottom:0;">Daftar Janji Temu & Jadwal Kontrol Pasien</h2>
-        <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
-          <input type="date" id="filterDate" class="form-input" style="width: auto; padding: 0.4rem 0.6rem; min-height: 40px;" aria-label="Filter Tanggal Kunjungan">
-          <select id="filterType" class="form-select" style="width: auto; padding: 0.4rem 0.6rem; min-height: 40px;" aria-label="Filter Jenis Kunjungan">
-            <option value="">Semua Jenis</option>
-            <option value="janji_baru">Janji Baru</option>
-            <option value="kontrol_rutin">Kontrol Rutin</option>
-          </select>
-          <select id="filterStatus" class="form-select" style="width: auto; padding: 0.4rem 0.6rem; min-height: 40px;" aria-label="Filter Status Kunjungan">
+          <select id="filterStatus" name="status" class="form-select" style="width: auto; min-height: 44px; padding: var(--space-2) var(--space-3);" aria-label="Filter status kunjungan">
             <option value="">Semua Status</option>
             <option value="terjadwal">Terjadwal</option>
             <option value="selesai">Selesai</option>
@@ -108,43 +56,78 @@
         <table>
           <thead>
             <tr>
-              <th>ID</th>
-              <th>Tanggal</th>
               <th>Pasien</th>
-              <th>Poli & Dokter</th>
-              <th>Keterangan</th>
+              <th>Poli &amp; Dokter</th>
+              <th>Tanggal</th>
+              <th>Tipe</th>
               <th>Status</th>
+              <th>Keluhan &amp; Catatan</th>
               <th>Aksi</th>
             </tr>
           </thead>
-          <tbody id="adminAppointmentTableBody">
+          <tbody id="adminAppointmentTableBody" aria-live="polite">
             <tr>
-              <td colspan="7" class="text-muted" style="text-align: center; padding: 1.5rem;">
-                Memuat data...
+              <td colspan="7" class="text-muted text-center" style="padding: var(--space-6);">
+                Memuat daftar janji temu…
               </td>
             </tr>
           </tbody>
         </table>
       </div>
-    </div>
+    </section>
+
+    <section class="card" id="controlFormSection" aria-labelledby="scheduleControlTitle">
+      <h2 id="scheduleControlTitle" class="card-title">Buat Jadwal Kontrol</h2>
+      <div id="controlAlert" class="alert" role="status" aria-live="polite"></div>
+      <form id="scheduleControlForm" class="grid-2" novalidate>
+        <div class="form-group">
+          <label class="form-label" for="controlPatientId">Pasien</label>
+          <select id="controlPatientId" name="user_id" class="form-select" required autocomplete="off">
+            <option value="">Memuat daftar pasien…</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="controlPoliId">Poliklinik</label>
+          <select id="controlPoliId" name="polyclinic_id" class="form-select" required autocomplete="off">
+            <option value="">Memuat daftar poli…</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="controlDoctorId">Dokter</label>
+          <select id="controlDoctorId" name="doctor_id" class="form-select" required disabled autocomplete="off">
+            <option value="">Pilih poliklinik terlebih dahulu…</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="controlDate">Tanggal Kontrol</label>
+          <input type="date" id="controlDate" name="appointment_date" class="form-input" required autocomplete="off">
+        </div>
+        <div class="form-group" style="grid-column: 1 / -1;">
+          <label class="form-label" for="controlNotes">Arahan / Catatan Kontrol</label>
+          <input type="text" id="controlNotes" name="doctor_notes" class="form-input" autocomplete="off" placeholder="Contoh: Evaluasi tekanan darah dan hasil laboratorium…">
+        </div>
+        <div style="grid-column: 1 / -1;">
+          <button type="submit" class="btn btn-primary">Buat jadwal kontrol</button>
+        </div>
+      </form>
+    </section>
   </main>
 
-  <!-- Modal Ubah Status & Catatan Dokter (R-32 & R-39 Dialog) -->
   <div id="updateModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
     <div class="modal-content">
-      <div class="flex-between mb-2">
-        <h3 id="modalTitle" style="color:var(--color-primary); font-size: 1.25rem;">Kelola Janji Temu</h3>
-        <button type="button" class="btn btn-secondary btn-sm" onclick="closeUpdateModal()" aria-label="Tutup Dialog">✕</button>
+      <div class="flex-between mb-4">
+        <h2 id="modalTitle" class="card-title" style="margin-bottom: 0;">Perbarui Janji Temu</h2>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="closeUpdateModal()" aria-label="Tutup dialog">Tutup</button>
       </div>
 
-      <div id="modalAlert" class="alert"></div>
+      <div id="modalAlert" class="alert" role="alert" aria-live="polite"></div>
 
-      <form id="updateForm">
-        <input type="hidden" id="modalAppointmentId">
+      <form id="updateForm" novalidate>
+        <input type="hidden" id="modalAppointmentId" name="id">
 
         <div class="form-group">
-          <label class="form-label" for="modalStatus">Ubah Status Kunjungan</label>
-          <select id="modalStatus" class="form-select">
+          <label class="form-label" for="modalStatus">Status Kunjungan</label>
+          <select id="modalStatus" name="status" class="form-select">
             <option value="terjadwal">Terjadwal</option>
             <option value="selesai">Selesai</option>
             <option value="dibatalkan">Dibatalkan</option>
@@ -152,13 +135,13 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="modalNotes">Catatan Hasil Pemeriksaan / Dokter</label>
-          <textarea id="modalNotes" class="form-textarea" placeholder="Tambahkan instruksi kontrol, diagnosa ringkas, atau resep obat"></textarea>
+          <label class="form-label" for="modalNotes">Catatan Dokter / Alasan Pembatalan</label>
+          <textarea id="modalNotes" name="doctor_notes" class="form-textarea" placeholder="Isi ringkasan hasil pemeriksaan, atau saran dokter pengganti bila jadwal bentrok…"></textarea>
         </div>
 
-        <div style="display:flex; justify-content:flex-end; gap:0.5rem; margin-top: 1.5rem;">
+        <div style="display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-6);">
           <button type="button" class="btn btn-secondary" onclick="closeUpdateModal()">Batal</button>
-          <button type="submit" id="modalSubmitBtn" class="btn btn-primary">Simpan Perubahan</button>
+          <button type="submit" id="modalSubmitBtn" class="btn btn-secondary">Simpan</button>
         </div>
       </form>
     </div>

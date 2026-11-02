@@ -3,65 +3,78 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Daftar Pasien Baru - Sistem Janji Temu Klinik Sehat</title>
+  <meta name="theme-color" content="#EEF1F6">
+  <title>Daftar Pasien Baru - Klinik Sehat</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-  <main class="auth-wrapper" style="padding: 2.5rem 1rem;">
-    <div class="auth-card" style="max-width: 520px;">
+  <a href="#main-content" class="skip-link">Langsung ke isi utama</a>
+
+  <header class="site-header">
+    <nav class="navbar" aria-label="Navigasi utama">
+      <a href="/index.html" class="brand" translate="no">Klinik Sehat</a>
+      <a href="/login.html" class="btn btn-secondary btn-sm">Masuk</a>
+    </nav>
+  </header>
+
+  <main id="main-content" class="auth-wrapper">
+    <div class="auth-card" style="max-width: 540px;">
       <div class="auth-header">
         <h1>Daftar Pasien Baru</h1>
-        <p>Lengkapi formulir untuk membuat akun layanan klinik</p>
+        <p>Isi data dirimu untuk membuat janji temu di Klinik Sehat.</p>
       </div>
 
-      <div id="registerAlert" class="alert"></div>
+      <div id="registerAlert" class="alert" role="alert" aria-live="polite"></div>
 
-      <form id="registerForm">
+      <form id="registerForm" novalidate>
         <div class="form-group">
-          <label class="form-label" for="regName">Nama Lengkap Pasien *</label>
-          <input type="text" id="regName" class="form-input" required placeholder="Contoh: Budi Santoso">
+          <label class="form-label" for="regName">Nama Lengkap</label>
+          <input type="text" id="regName" name="name" class="form-input" required autocomplete="name" placeholder="Contoh: Budi Santoso…">
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="regEmail">Alamat Email Aktif *</label>
-          <input type="email" id="regEmail" class="form-input" required autocomplete="email" placeholder="nama@email.com">
+          <label class="form-label" for="regEmail">Alamat Email</label>
+          <input type="email" id="regEmail" name="email" class="form-input" required autocomplete="email" spellcheck="false" placeholder="nama@email.com…">
         </div>
 
         <div class="grid-2">
           <div class="form-group">
-            <label class="form-label" for="regPhone">Nomor WhatsApp / HP</label>
-            <input type="text" id="regPhone" class="form-input" placeholder="08xxxxxxxxxx">
+            <label class="form-label" for="regPhone">Nomor Telepon / WhatsApp</label>
+            <input type="tel" id="regPhone" name="phone_number" class="form-input" inputmode="tel" autocomplete="tel" placeholder="0812xxxxxxxx…">
           </div>
 
           <div class="form-group">
             <label class="form-label" for="regBirthDate">Tanggal Lahir</label>
-            <input type="date" id="regBirthDate" class="form-input">
+            <input type="date" id="regBirthDate" name="birth_date" class="form-input" autocomplete="bday">
           </div>
         </div>
 
         <div class="form-group">
           <label class="form-label" for="regAddress">Alamat Domisili</label>
-          <input type="text" id="regAddress" class="form-input" placeholder="Jl. Nama Jalan No. XX, Kota">
+          <input type="text" id="regAddress" name="address" class="form-input" autocomplete="street-address" placeholder="Nama jalan, nomor rumah, kota…">
         </div>
 
         <div class="grid-2">
           <div class="form-group">
-            <label class="form-label" for="regPassword">Kata Sandi (Min. 8 karakter) *</label>
-            <input type="password" id="regPassword" class="form-input" required minlength="8" autocomplete="new-password" placeholder="••••••••">
+            <label class="form-label" for="regPassword">Kata Sandi (Min. 8 karakter)</label>
+            <input type="password" id="regPassword" name="password" class="form-input" required minlength="8" autocomplete="new-password" placeholder="Minimal 8 karakter…">
           </div>
 
           <div class="form-group">
-            <label class="form-label" for="regPasswordConfirm">Konfirmasi Kata Sandi *</label>
-            <input type="password" id="regPasswordConfirm" class="form-input" required minlength="8" autocomplete="new-password" placeholder="••••••••">
+            <label class="form-label" for="regPasswordConfirm">Ulangi Kata Sandi</label>
+            <input type="password" id="regPasswordConfirm" name="password_confirmation" class="form-input" required minlength="8" autocomplete="new-password" placeholder="Ketik ulang kata sandi…">
           </div>
         </div>
 
-        <button type="submit" id="regSubmitBtn" class="btn btn-primary btn-block mt-2">Daftar Sekarang</button>
+        <button type="submit" id="regSubmitBtn" class="btn btn-primary btn-block mt-2">Buat Akun Pasien</button>
       </form>
 
-      <div class="mt-4 pt-4 text-sm" style="border-top: 1px solid var(--color-border); text-align: center;">
-        <p>Sudah memiliki akun? <a href="/login.html" style="font-weight: 600;">Masuk di sini</a></p>
-        <p class="mt-2"><a href="/index.html" class="text-muted">← Kembali ke Beranda</a></p>
+      <div class="mt-4 pt-4 text-sm text-center" style="border-top: 1px solid var(--color-line);">
+        <p>Sudah punya akun? <a href="/login.html" style="font-weight: 600;">Masuk di sini</a></p>
+        <p class="mt-2"><a href="/index.html" class="text-muted">Kembali ke Beranda</a></p>
       </div>
     </div>
   </main>

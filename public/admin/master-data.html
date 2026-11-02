@@ -3,88 +3,92 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#EEF1F6">
   <title>Master Data - Admin Klinik Sehat</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-  <nav class="navbar">
-    <div class="brand">
-      <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:var(--color-accent);"></span>
-      Admin Panel Klinik
-    </div>
-    <ul class="nav-links">
-      <li><a href="/admin/kelola-janji.html">Kelola Janji</a></li>
-      <li><a href="/admin/master-data.html" class="active">Master Data</a></li>
-      <li><span id="navAdminName" style="font-weight:600; font-size:0.875rem; color:var(--color-primary);"></span></li>
-      <li><a href="#" id="logoutBtn" style="color:var(--color-danger);">Keluar</a></li>
-    </ul>
-  </nav>
+  <a href="#main-content" class="skip-link">Langsung ke isi utama</a>
 
-  <main class="container">
+  <header class="site-header">
+    <nav class="navbar" aria-label="Navigasi utama">
+      <a href="/admin/kelola-janji.html" class="brand" translate="no">Klinik Sehat</a>
+      <ul class="nav-links">
+        <li><a href="/admin/kelola-janji.html">Kelola Janji</a></li>
+        <li><a href="/admin/master-data.html" class="active" aria-current="page">Master Data</a></li>
+        <li class="nav-user">
+          <span id="navAdminName" class="nav-user-name"></span>
+          <button type="button" id="logoutBtn" class="btn btn-secondary btn-sm">Keluar</button>
+        </li>
+      </ul>
+    </nav>
+  </header>
+
+  <main id="main-content" class="container">
     <div class="mb-4">
-      <h1 class="page-title" style="margin-bottom: 0.25rem;">Master Data Klinik</h1>
-      <p class="text-sm text-muted">Kelola data poliklinik dan tenaga medis dokter yang bertugas melayani pasien.</p>
+      <h1 class="page-title">Master Data</h1>
+      <p class="text-sm text-muted">Tambah poliklinik baru, daftarkan dokter, dan atur status ketersediaan praktik dokter.</p>
     </div>
 
     <div class="grid-2">
-      <!-- Form Tambah Poli -->
-      <div class="card">
-        <h2 class="card-title">Tambah Poliklinik</h2>
-        <div id="poliAlert" class="alert"></div>
-        <form id="poliForm">
+      <section class="card" aria-labelledby="addPoliTitle">
+        <h2 id="addPoliTitle" class="card-title">Tambah Poliklinik</h2>
+        <div id="poliAlert" class="alert" role="status" aria-live="polite"></div>
+        <form id="poliForm" novalidate>
           <div class="form-group">
             <label class="form-label" for="poliName">Nama Poliklinik</label>
-            <input type="text" id="poliName" class="form-input" required placeholder="Contoh: Poli Mata">
+            <input type="text" id="poliName" name="name" class="form-input" required autocomplete="off" placeholder="Contoh: Poli Mata…">
           </div>
           <div class="form-group">
             <label class="form-label" for="poliDesc">Deskripsi Layanan</label>
-            <textarea id="poliDesc" class="form-textarea" placeholder="Deskripsi layanan konsultasi dan tindakan"></textarea>
+            <textarea id="poliDesc" name="description" class="form-textarea" autocomplete="off" placeholder="Ringkasan layanan pemeriksaan poliklinik…"></textarea>
           </div>
-          <button type="submit" class="btn btn-primary">Tambah Poli</button>
+          <button type="submit" class="btn btn-primary">Tambah poli</button>
         </form>
-      </div>
+      </section>
 
-      <!-- Form Tambah Dokter -->
-      <div class="card">
-        <h2 class="card-title">Tambah Dokter</h2>
-        <div id="doctorAlert" class="alert"></div>
-        <form id="doctorForm">
+      <section class="card" aria-labelledby="addDoctorTitle">
+        <h2 id="addDoctorTitle" class="card-title">Tambah Dokter</h2>
+        <div id="doctorAlert" class="alert" role="status" aria-live="polite"></div>
+        <form id="doctorForm" novalidate>
           <div class="form-group">
-            <label class="form-label" for="docPoliId">Pilih Poliklinik</label>
-            <select id="docPoliId" class="form-select" required>
-              <option value="">Memuat data poliklinik...</option>
+            <label class="form-label" for="docPoliId">Poliklinik</label>
+            <select id="docPoliId" name="polyclinic_id" class="form-select" required autocomplete="off">
+              <option value="">Memuat daftar poliklinik…</option>
             </select>
           </div>
           <div class="form-group">
-            <label class="form-label" for="docName">Nama Lengkap & Gelar Dokter</label>
-            <input type="text" id="docName" class="form-input" required placeholder="Contoh: dr. Ahmad Fauzi, Sp.M">
+            <label class="form-label" for="docName">Nama Lengkap &amp; Gelar Dokter</label>
+            <input type="text" id="docName" name="name" class="form-input" required autocomplete="off" placeholder="Contoh: dr. Ahmad Fauzi, Sp.M…">
           </div>
-          <button type="submit" class="btn btn-primary">Tambah Dokter</button>
+          <button type="submit" class="btn btn-secondary">Tambah dokter</button>
         </form>
-      </div>
+      </section>
     </div>
 
-    <!-- Tabel Daftar Poliklinik & Dokter -->
-    <div class="card">
-      <h2 class="card-title">Daftar Poliklinik & Ketersediaan Dokter</h2>
-      <div id="masterListAlert" class="alert"></div>
+    <section class="card" aria-labelledby="listMasterTitle">
+      <h2 id="listMasterTitle" class="card-title">Daftar Poliklinik &amp; Dokter</h2>
+      <div id="masterListAlert" class="alert" role="status" aria-live="polite"></div>
       <div class="table-responsive">
         <table>
           <thead>
             <tr>
               <th>Poliklinik</th>
-              <th>Deskripsi Layanan</th>
-              <th>Dokter Terdaftar</th>
+              <th>Deskripsi</th>
+              <th>Dokter &amp; Status Praktik</th>
             </tr>
           </thead>
-          <tbody id="poliTableBody">
+          <tbody id="poliTableBody" aria-live="polite">
             <tr>
-              <td colspan="3" class="text-muted" style="text-align: center; padding: 1.5rem;">Memuat daftar poliklinik...</td>
+              <td colspan="3" class="text-muted text-center" style="padding: var(--space-6);">Memuat daftar poliklinik dan dokter…</td>
             </tr>
           </tbody>
         </table>
       </div>
-    </div>
+    </section>
   </main>
 
   <script src="/js/api.js"></script>

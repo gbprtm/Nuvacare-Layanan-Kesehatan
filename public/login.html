@@ -3,39 +3,52 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Masuk - Sistem Janji Temu Klinik Sehat</title>
+  <meta name="theme-color" content="#EEF1F6">
+  <title>Masuk - Klinik Sehat</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-  <main class="auth-wrapper">
+  <a href="#main-content" class="skip-link">Langsung ke isi utama</a>
+
+  <header class="site-header">
+    <nav class="navbar" aria-label="Navigasi utama">
+      <a href="/index.html" class="brand" translate="no">Klinik Sehat</a>
+      <a href="/daftar.html" class="btn btn-secondary btn-sm">Daftar Akun</a>
+    </nav>
+  </header>
+
+  <main id="main-content" class="auth-wrapper">
     <div class="auth-card">
       <div class="auth-header">
-        <h1>Klinik Sehat</h1>
-        <p>Silakan masuk ke akun Anda</p>
+        <h1>Masuk ke Akunmu</h1>
+        <p>Gunakan email dan kata sandi yang terdaftar di Klinik Sehat.</p>
       </div>
 
-      <div id="loginAlert" class="alert alert-danger" role="alert"></div>
+      <div id="loginAlert" class="alert alert-danger" role="alert" aria-live="polite"></div>
 
-      <form id="loginForm">
+      <form id="loginForm" novalidate>
         <div class="form-group">
           <label class="form-label" for="email">Alamat Email</label>
-          <input type="email" id="email" class="form-input" required autocomplete="email" placeholder="nama@email.com">
+          <input type="email" id="email" name="email" class="form-input" required autocomplete="email" spellcheck="false" placeholder="nama@email.com…">
         </div>
 
         <div class="form-group">
-          <div class="flex-between">
-            <label class="form-label" for="password">Kata Sandi</label>
-            <a href="/lupa-password.html" class="text-sm" style="margin-bottom: 0.35rem;">Lupa kata sandi?</a>
+          <div class="flex-between mb-2">
+            <label class="form-label" for="password" style="margin-bottom: 0;">Kata Sandi</label>
+            <a href="/lupa-password.html" class="text-sm">Lupa kata sandi?</a>
           </div>
-          <input type="password" id="password" class="form-input" required autocomplete="current-password" placeholder="••••••••">
+          <input type="password" id="password" name="password" class="form-input" required autocomplete="current-password" placeholder="Masukkan kata sandi…">
         </div>
 
         <button type="submit" id="submitBtn" class="btn btn-primary btn-block">Masuk</button>
       </form>
 
-      <div class="mt-4 pt-4 text-sm text-center" style="border-top: 1px solid var(--color-border); text-align: center;">
-        <p>Belum memiliki akun? <a href="/daftar.html" style="font-weight: 600;">Daftar Pasien Baru</a></p>
-        <p class="mt-2"><a href="/index.html" class="text-muted">← Kembali ke Beranda</a></p>
+      <div class="mt-4 pt-4 text-sm text-center" style="border-top: 1px solid var(--color-line);">
+        <p>Belum punya akun pasien? <a href="/daftar.html" style="font-weight: 600;">Daftar di sini</a></p>
+        <p class="mt-2"><a href="/index.html" class="text-muted">Kembali ke Beranda</a></p>
       </div>
     </div>
   </main>

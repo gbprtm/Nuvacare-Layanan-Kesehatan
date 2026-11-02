@@ -3,73 +3,87 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Profil Saya - Sistem Janji Temu Klinik</title>
+  <meta name="theme-color" content="#EEF1F6">
+  <title>Profil Pasien - Klinik Sehat</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-  <nav class="navbar">
-    <div class="brand">
-      <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:var(--color-accent);"></span>
-      Klinik Sehat
-    </div>
-    <ul class="nav-links">
-      <li><a href="/pasien/janji-temu.html">Janji Temu</a></li>
-      <li><a href="/pasien/riwayat.html">Riwayat</a></li>
-      <li><a href="/pasien/jadwal-kontrol.html">Jadwal Kontrol</a></li>
-      <li><a href="/pasien/profil.html" class="active">Profil</a></li>
-      <li><a href="#" id="logoutBtn" style="color:var(--color-danger);">Keluar</a></li>
-    </ul>
-  </nav>
+  <a href="#main-content" class="skip-link">Langsung ke isi utama</a>
 
-  <main class="container">
+  <header class="site-header">
+    <nav class="navbar" aria-label="Navigasi utama">
+      <a href="/pasien/janji-temu.html" class="brand" translate="no">Klinik Sehat</a>
+      <ul class="nav-links">
+        <li><a href="/pasien/janji-temu.html">Janji Temu</a></li>
+        <li><a href="/pasien/riwayat.html">Riwayat</a></li>
+        <li><a href="/pasien/jadwal-kontrol.html">Jadwal Kontrol</a></li>
+        <li><a href="/pasien/profil.html" class="active" aria-current="page">Profil</a></li>
+        <li class="nav-user">
+          <span id="navUserName" class="nav-user-name"></span>
+          <button type="button" id="logoutBtn" class="btn btn-secondary btn-sm">Keluar</button>
+        </li>
+      </ul>
+    </nav>
+  </header>
+
+  <main id="main-content" class="container">
     <div style="max-width: 600px; margin: 0 auto;">
-      <div class="card">
-        <h1 class="card-title">Profil Pasien</h1>
-        <p class="text-sm text-muted mb-4">Perbarui informasi kontak dan alamat Anda untuk kelancaran pelayanan klinik.</p>
+      <div class="mb-4">
+        <h1 class="page-title">Profil Pasien</h1>
+        <p class="text-sm text-muted">Perbarui data kontak, tanggal lahir, alamat, atau kata sandi akunmu.</p>
+      </div>
 
-        <div id="profileAlert" class="alert"></div>
+      <section class="card" aria-label="Formulir profil pasien">
+        <div id="profileAlert" class="alert" role="status" aria-live="polite"></div>
 
-        <form id="profileForm">
+        <form id="profileForm" novalidate>
           <div class="form-group">
             <label class="form-label" for="email">Alamat Email (Tidak dapat diubah)</label>
-            <input type="email" id="email" class="form-input" disabled style="background-color: var(--color-bg); cursor: not-allowed;">
+            <input type="email" id="email" name="email" class="form-input" disabled spellcheck="false">
           </div>
 
           <div class="form-group">
             <label class="form-label" for="name">Nama Lengkap</label>
-            <input type="text" id="name" class="form-input" required placeholder="Nama lengkap Anda">
+            <input type="text" id="name" name="name" class="form-input" required autocomplete="name" placeholder="Nama lengkapmu…">
           </div>
 
-          <div class="form-group">
-            <label class="form-label" for="phone_number">Nomor Telepon / WhatsApp</label>
-            <input type="text" id="phone_number" class="form-input" placeholder="08xxxxxxxxxx">
-          </div>
+          <div class="grid-2">
+            <div class="form-group">
+              <label class="form-label" for="phone_number">Nomor Telepon / WhatsApp</label>
+              <input type="tel" id="phone_number" name="phone_number" class="form-input" inputmode="tel" autocomplete="tel" placeholder="0812xxxxxxxx…">
+            </div>
 
-          <div class="form-group">
-            <label class="form-label" for="birth_date">Tanggal Lahir</label>
-            <input type="date" id="birth_date" class="form-input">
+            <div class="form-group">
+              <label class="form-label" for="birth_date">Tanggal Lahir</label>
+              <input type="date" id="birth_date" name="birth_date" class="form-input" autocomplete="bday">
+            </div>
           </div>
 
           <div class="form-group">
             <label class="form-label" for="address">Alamat Tempat Tinggal</label>
-            <textarea id="address" class="form-textarea" placeholder="Alamat lengkap tempat tinggal"></textarea>
+            <textarea id="address" name="address" class="form-textarea" autocomplete="street-address" placeholder="Alamat lengkap tempat tinggalmu…"></textarea>
           </div>
 
-          <div class="form-group">
-            <label class="form-label" for="password">Kata Sandi Baru (Kosongkan jika tidak diubah)</label>
-            <input type="password" id="password" class="form-input" placeholder="Minimal 8 karakter">
-          </div>
+          <div class="grid-2">
+            <div class="form-group">
+              <label class="form-label" for="password">Kata Sandi Baru (Opsional)</label>
+              <input type="password" id="password" name="password" class="form-input" autocomplete="new-password" placeholder="Kosongkan bila tidak diubah…">
+            </div>
 
-          <div class="form-group">
-            <label class="form-label" for="password_confirmation">Konfirmasi Kata Sandi Baru</label>
-            <input type="password" id="password_confirmation" class="form-input" placeholder="Ketik ulang kata sandi baru">
+            <div class="form-group">
+              <label class="form-label" for="password_confirmation">Ulangi Kata Sandi Baru</label>
+              <input type="password" id="password_confirmation" name="password_confirmation" class="form-input" autocomplete="new-password" placeholder="Ketik ulang kata sandi baru…">
+            </div>
           </div>
 
           <div class="mt-4">
-            <button type="submit" class="btn btn-primary">Simpan Perubahan</button>
+            <button type="submit" class="btn btn-primary">Simpan profil</button>
           </div>
         </form>
-      </div>
+      </section>
     </div>
   </main>
 
@@ -77,4 +91,3 @@
   <script src="/js/pasien.js"></script>
 </body>
 </html>
-

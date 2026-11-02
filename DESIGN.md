@@ -157,8 +157,8 @@ Semua halaman memakai kepala yang sama:
   --color-danger-soft: #FDECEC;
   --color-disabled-bg: #E3E7EE;
 
-  --font-display: "Newsreader", Georgia, serif;
-  --font-sans: "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-display: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
 
   --space-1: 4px;  --space-2: 8px;  --space-3: 12px; --space-4: 16px;
   --space-6: 24px; --space-8: 32px; --space-12: 48px;
