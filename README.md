@@ -1,85 +1,61 @@
-# web-health-ipl-project
+# Web pengelola kunjungan klinik
 
-Aplikasi web pengelola kesehatan personal untuk pasien dan klinik.
-Proyek dibangun dengan arsitektur modular, TypeScript strict, dan Next.js App Router.
+Website untuk pasien dan admin klinik: profil kesehatan, jadwal kontrol,
+pemesanan janji, antrean, kebiasaan, catatan resep, dan riwayat kunjungan.
+Dokter adalah data yang dikelola admin, bukan pengguna aplikasi. Aplikasi
+bukan pemberi diagnosis, rekomendasi obat, atau rekam medis terintegrasi.
 
-## Stack Teknologi
+## Keputusan stack baru
 
-- **Framework**: Next.js (App Router)
-- **Bahasa**: TypeScript (strict mode)
-- **Styling**: Tailwind CSS
-- **Database & ORM**: PostgreSQL (Neon) & Drizzle ORM
-- **Validasi**: Zod
-- **Autentikasi**: Sesi mandiri (JWT `jose` di cookie `httpOnly` + `bcryptjs`)
-- **Testing**: Vitest (Unit/Integration) & Playwright (E2E)
-- **Zona Waktu**: Asia/Jakarta (WIB) via modul tersentralisasi
+**Laravel + Blade (HTML) + CSS biasa + JavaScript vanilla**, dengan
+**PostgreSQL di Neon**. Eloquent untuk akses database, validasi Laravel
+untuk server, PHPUnit untuk pengujian backend, dan Playwright Google Chrome
+untuk alur browser. Vite membangun aset CSS/JS, bukan framework antarmuka.
 
-## Prasyarat
+Keputusan dan penggantian alat lama ada di
+[ADR migrasi](docs/keputusan/0002-migrasi-laravel.md).
 
-- Node.js >= 20.x (disarankan v22.x)
-- npm (package manager standar)
+## Keadaan saat ini
 
-## Cara Menjalankan
+Repo sudah ditata untuk **memulai migrasi**, belum berisi aplikasi Laravel.
+Kode, pengujian, manifest npm, CI dan konfigurasi Next.js sebelumnya sudah
+masuk [arsip](docs/migrasi/arsip.md), termasuk pekerjaan lokal yang belum
+sempat di-commit. Jangan memakai hasil uji lama sebagai hasil Laravel.
 
-1. **Klon atau buka repositori**
-   ```bash
-   git clone https://github.com/gbprtm/web-health-ipl-project.git
-   cd web-health-ipl-project
-   ```
+Pada pemeriksaan awal, `php` dan `composer` tidak ditemukan di PATH terminal;
+Node.js 22 dan npm 10 tersedia. Belum ada `artisan`/`composer.json`.
+**`npm run dev` lama tidak berlaku di root ini.** Tidak ada klaim build,
+login, koneksi Neon, atau hosting Laravel telah berhasil.
 
-2. **Siapkan berkas environment**
-   Salin berkas `.env.example` menjadi `.env` lalu sesuaikan kredensial database dan rahasia sesi:
-   ```bash
-   cp .env.example .env
-   ```
+## Mulai dari sini
 
-3. **Pasang dependensi**
-   ```bash
-   npm install --legacy-peer-deps
-   ```
+1. Baca [panduan bootstrap](docs/migrasi/bootstrap.md), lalu kerjakan **L01**.
+2. Ikuti [rencana relatif 10 hari](docs/to-do.md) dan
+   [spesifikasi tugas L01–L17](docs/rencana-agen.md).
+3. Perbarui hanya [papan status aktif](docs/status-tugas.md).
+4. Sebelum menyentuh database lama, kerjakan inventaris/backup **L02**.
+   Migrasi dan uji memakai target PostgreSQL terisolasi, bukan produksi.
 
-4. **Jalankan server pengembangan**
-   ```bash
-   npm run dev
-   ```
-   Buka [http://localhost:3000](http://localhost:3000) di peramban.
+Perintah Laravel/build/uji ditetapkan dan dibuktikan saat L01. Jangan
+menjalankan perintah scaffold di root yang tidak kosong atau menimpa `.env`.
+Hosting PHP harus dipilih dan dicoba sejak awal; Vercel lama bukan solusi
+yang otomatis berlaku. Tenggat kalender baru belum dikonfirmasi: rencana
+memakai hari relatif 1–10 sesuai sisa waktu yang disebut pemilik.
 
-## Perintah Pengujian & Kualitas Kode
+## Dokumentasi
 
-Perintah berikut tersedia mulai fase fondasi (A02 & A08):
+| Butuh | Buka |
+|---|---|
+| Indeks dan urutan bacaan | [docs/README.md](docs/README.md) |
+| Aturan coding agent | [AGENTS.md](AGENTS.md) |
+| Arsitektur target | [Panduan arsitektur](docs/panduan-arsitektur.md) |
+| Kontrak form/halaman web | [Kontrak route](docs/api-contract.md) |
+| Strategi database | [Rencana database](docs/database-schema.md) |
+| FR, layar, tugas dan modul | [Peta bagian](docs/peta-bagian.md) |
+| Arah visual yang dipertahankan | [DESIGN.md](DESIGN.md) |
+| Bukti penataan sesi ini | [Bukti dokumentasi](docs/migrasi/00-penataan.md) |
 
-```bash
-npm run dev        # Menjalankan dev server pada port 3000
-npm run lint       # Memeriksa linting kode (ESLint)
-npm run typecheck  # Memeriksa tipe data TypeScript (tsc --noEmit)
-npm test           # Menjalankan unit test (Vitest)
-npm run test:e2e   # Menjalankan end-to-end test (Playwright)
-npm run build      # Menghasilkan build produksi Next.js
-```
-
-## Continuous Integration (CI) & Deployment
-
-### 1. GitHub Actions CI
-Setiap `push` dan `pull_request` ke cabang `main` atau `master` diverifikasi secara otomatis oleh GitHub Actions (`.github/workflows/ci.yml`), mencakup:
-- Pemeriksaan linting ESLint
-- Pengecekan tipe TypeScript strict
-- Eksekusi unit test Vitest
-- Kompilasi build Next.js
-
-### 2. Deployment Vercel (Rp0)
-Deployment ke lingkungan cloud dilakukan tanpa Vercel CLI (zero configuration), dengan menghubungkan repositori GitHub langsung ke Vercel Dashboard:
-1. Hubungkan repositori GitHub `web-health-ipl-project` di dashboard Vercel.
-2. Atur Environment Variables di project settings Vercel:
-   - `DATABASE_URL`: Connection string PostgreSQL Neon (Pooled)
-   - `DATABASE_URL_UNPOOLED`: Connection string PostgreSQL Neon (Direct)
-   - `SESSION_SECRET`: Kunci rahasia minimal 32 karakter untuk enkripsi token JWT
-   - `APP_URL`: Domain publik Vercel Anda (misal `https://web-health-ipl-project.vercel.app`)
-3. Setiap commit baru yang masuk ke branch utama akan memicu deployment produksi secara otomatis.
-
-## Struktur & Dokumentasi Kerja
-
-- `docs/status-tugas.md`: Papan status resmi 44 tugas proyek
-- `docs/peta-bagian.md`: Peta FR, modul kode, dan rujukan rancangan
-- `docs/rancangan/`: Salinan baca rancangan PRD v0.3, wireframe, dan arsitektur
-- `docs/01-laporan-unit/` s.d. `05-bukti-performa/`: Arsip bukti verifikasi tugas
-- `_arsip/`: Berkas statis lama yang diarsipkan
+`docs/rancangan/` tetap salinan read-only dari vault eksternal. Kebutuhan
+produk di sana tetap berlaku; ketentuan stack dan rencana Next.js lama
+mendapat pengecualian teknis lewat ADR baru. Pemilik perlu menyelaraskan
+vault sebelum sinkron berikutnya; agen tidak menyuntingnya dari repo ini.

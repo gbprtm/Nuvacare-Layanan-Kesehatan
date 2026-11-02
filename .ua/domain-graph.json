@@ -1,0 +1,320 @@
+{
+  "project": "Aplikasi Pengelola Kesehatan Personal Klinik",
+  "domain": "klinik-kesehatan",
+  "description": "Website pasien dan admin klinik untuk mengelola alur kunjungan, janji temu, antrian, profil kesehatan, kebiasaan harian, dan catatan resep obat. Tidak memberikan diagnosis, rekomendasi obat, atau integrasi rekam medis.",
+  "stack": "Laravel + Blade + CSS biasa + JavaScript vanilla, PostgreSQL (Neon), Eloquent, PHPUnit, Playwright Chrome",
+  "layers": [
+    {
+      "name": "Auth & Identity",
+      "description": "Autentikasi, sesi, rate limiter, idle timeout 15 menit, redirect berdasarkan role. Registrasi publik selalu role pasien (server-side).",
+      "entities": ["User", "LoginController", "RegisterController"],
+      "keyRules": ["Role registrasi selalu pasien", "Rate limiter 5 percobaan gagal", "Idle timeout 15 menit server-side", "Akun admin lewat seed, bukan registrasi"]
+    },
+    {
+      "name": "Clinical Data (Patient Profile)",
+      "description": "Profil kesehatan pasien yang hanya dapat diakses pemiliknya. Kondisi, alergi, obat, kontak darurat.",
+      "entities": ["PatientProfile", "PatientReportedMedication", "HabitLog"],
+      "keyRules": ["Hanya pemilik yang bisa akses profil", "NIK null untuk data demo", "Admin hanya lihat ringkasan alergi saat check-in"]
+    },
+    {
+      "name": "Doctor & Slot Management (Admin)",
+      "description": "Admin mengelola data dokter dan slot praktik. Dokter adalah data, tidak ada login.",
+      "entities": ["Doctor", "Slot"],
+      "keyRules": ["Satu slot hanya satu janji aktif (partial unique index)", "Slot bisa dikunci sementara (dikunci_sampai) untuk usulan perubahan", "Dokter tidak memiliki akun login"]
+    },
+    {
+      "name": "Appointment & Queue (Inti Bisnis)",
+      "description": "Janji temu, usulan perubahan, tiket antrian, aturan kontrol, jadwal kontrol. Status janji dan antrian divalidasi server-side.",
+      "entities": ["Appointment", "RescheduleProposal", "QueueTicket", "ControlRule", "ControlSchedule"],
+      "keyRules": ["Status janji: aktif, perubahan_diusulkan, dibatalkan, selesai, tidak_hadir", "Janji lama tetap aktif sampai pasien menjawab usulan", "Nomor estimasi saat janji dibuat, nomor final saat check-in (unik per hari WIB)", "Transisi status antrian hanya oleh admin, koreksi wajib beralasan"]
+    },
+    {
+      "name": "Notification & Communication",
+      "description": "Pemberitahuan in-app saja (tanpa push/email/WhatsApp). Hanya milik pengguna yang bersangkutan.",
+      "entities": ["Notification"],
+      "keyRules": ["Pemberitahuan hanya di dalam aplikasi", "Pasien dapat setuju/tolak/pilih slot lain", "Tidak ada notifikasi ganda"]
+    },
+    {
+      "name": "Audit & Accountability",
+      "description": "Audit log append-only untuk setiap tindakan admin. Activity log append-only untuk aktivitas pasien.",
+      "entities": ["AuditLog", "ActivityLog"],
+      "keyRules": ["Audit log append-only, tidak ada updated_at, tidak ada endpoint ubah/hapus", "Setiap mutasi admin wajib menghasilkan tepat satu catatan audit", "Activity log hanya milik sendiri, tidak ada ubah/hapus dari antarmuka"]
+    },
+    {
+      "name": "Medication & Prescription (FR-12)",
+      "description": "Resep klinis dan catatan minum obat. Obat adalah catatan dari resep dokter, bukan saran medis.",
+      "entities": ["Prescription", "Medication", "MedicationIntakeLog", "FornasCatalog"],
+      "keyRules": ["Satu catatan minum obat per pasien, per obat, per tanggal (unique composite)", "Label 'catatan resep, bukan saran medis' wajib tampil", "Tidak ada pemetaan kondisi ke obat di kode maupun data", "Rujukan Fornas (e-fornas.kemkes.go.id)"]
+    },
+    {
+      "name": "Static Content (FR-06, opsional)",
+      "description": "Materi konten statis bersumber Kemenkes/WHO, tampil hanya bila kondisi terkait di profil.",
+      "entities": ["StaticContent"],
+      "keyRules": ["Tampil hanya bila kondisi terkait tercatat di profil", "Setiap materi punya URL sumber dan tanggal pengambilan"]
+    },
+    {
+      "name": "Infrastructure & Safety",
+      "description": "WibClock (Asia/Jakarta, clock controllable untuk tes), DatabaseSafetyGuard (isolasi produksi, TLS, pooled/direct), PostgreSQL transaksi.",
+      "entities": ["WibClock", "DatabaseSafetyGuard"],
+      "keyRules": ["Semua tanggal melalui WibClock Asia/Jakarta", "Satu transaksi untuk perubahan admin dan audit wajib", "Pooled untuk runtime, direct (unpooled) untuk DDL/migrasi", "Tidak ada SQLite/mock untuk bukti konkurensi"]
+    }
+  ],
+  "entities": [
+    {
+      "id": "User",
+      "type": "domain",
+      "table": "users",
+      "summary": "Pengguna aplikasi dengan peran pasien atau admin. UUID primary key, password_hash bcrypt, email unique.",
+      "tags": ["auth", "identity", "role-based"]
+    },
+    {
+      "id": "PatientProfile",
+      "type": "domain",
+      "table": "profil",
+      "summary": "Data kesehatan pasien: kondisi, alergi, obat, kontak darurat, biodata. Hanya pemilik yang bisa akses.",
+      "tags": ["privacy", "patient-data", "profile"]
+    },
+    {
+      "id": "Doctor",
+      "type": "domain",
+      "table": "dokter",
+      "summary": "Data dokter (nama, spesialisasi, nomor izin, aktif). Tidak ada akun login, dikelola admin.",
+      "tags": ["clinical-data", "admin-managed"]
+    },
+    {
+      "id": "Slot",
+      "type": "domain",
+      "table": "slot",
+      "summary": "Slot praktik dokter per tanggal dengan kuota, ketersediaan, dan kunci sementara.",
+      "tags": ["scheduling", "concurrency-protection"]
+    },
+    {
+      "id": "Appointment",
+      "type": "domain",
+      "table": "janji",
+      "summary": "Janji temu dengan siklus status: aktif, perubahan_diusulkan, dibatalkan, selesai, tidak_hadir.",
+      "tags": ["core-business", "appointment", "status-machine"]
+    },
+    {
+      "id": "RescheduleProposal",
+      "type": "domain",
+      "table": "usulan_perubahan",
+      "summary": "Usulan perubahan slot oleh admin dengan alasan wajib, TTL kunci, dan batas waktu jawab pasien.",
+      "tags": ["rescheduling", "proposal", "ttl"]
+    },
+    {
+      "id": "QueueTicket",
+      "type": "domain",
+      "table": "tiket_antrian",
+      "summary": "Tiket antrian dengan nomor estimasi (janji) dan nomor final (check-in, unik per hari).",
+      "tags": ["queue", "check-in", "antrian"]
+    },
+    {
+      "id": "ControlRule",
+      "type": "domain",
+      "table": "aturan_kontrol",
+      "summary": "Aturan kontrol berulang (interval 7/14/30 hari, anchor tanggal) dicatat admin sesuai anjuran dokter.",
+      "tags": ["recurring-schedule", "reminder"]
+    },
+    {
+      "id": "ControlSchedule",
+      "type": "domain",
+      "table": "jadwal_kontrol",
+      "summary": "Jadwal kontrol terjadwal yang terbentuk otomatis dari aturan kontrol.",
+      "tags": ["schedule", "follow-up"]
+    },
+    {
+      "id": "Notification",
+      "type": "domain",
+      "table": "notifikasi",
+      "summary": "Pemberitahuan in-app. Tidak ada push/email/WhatsApp. Hanya milik pengguna yang bersangkutan.",
+      "tags": ["notification", "in-app"]
+    },
+    {
+      "id": "AuditLog",
+      "type": "domain",
+      "table": "audit_log",
+      "summary": "Audit log append-only untuk setiap tindakan admin. Tanpa updated_at, tanpa endpoint ubah/hapus.",
+      "tags": ["audit", "accountability", "append-only"]
+    },
+    {
+      "id": "ActivityLog",
+      "type": "domain",
+      "table": "log_aktivitas",
+      "summary": "Log aktivitas akun pasien (masuk, janji, check-in, obat). Append-only, hanya milik sendiri.",
+      "tags": ["activity-log", "append-only"]
+    },
+    {
+      "id": "Prescription",
+      "type": "domain",
+      "table": "resep",
+      "summary": "Resep klinis yang dikeluarkan oleh admin atas nama dokter. Berisi nomor resep, diagnosis, catatan.",
+      "tags": ["prescription", "medication-record"]
+    },
+    {
+      "id": "Medication",
+      "type": "domain",
+      "table": "obat",
+      "summary": "Obat dalam resep: nama, dosis, aturan pakai, periode, rujukan Fornas. Label bukan saran medis.",
+      "tags": ["medication", "fornas-reference"]
+    },
+    {
+      "id": "MedicationIntakeLog",
+      "type": "domain",
+      "table": "catatan_minum_obat",
+      "summary": "Catatan minum obat per pasien, per obat, per tanggal (unique composite index). Status sudah/belum minum.",
+      "tags": ["intake-log", "adherence"]
+    },
+    {
+      "id": "PatientReportedMedication",
+      "type": "domain",
+      "table": "obat_pasien",
+      "summary": "Catatan obat yang dilaporkan pasien sendiri dengan referensi ke katalog Fornas.",
+      "tags": ["patient-reported", "fornas-catalog"]
+    },
+    {
+      "id": "StaticContent",
+      "type": "domain",
+      "table": "konten_statis",
+      "summary": "Materi konten statis bersumber Kemenkes/WHO. Tampil hanya bila kondisi terkait di profil.",
+      "tags": ["static-content", "health-education"]
+    },
+    {
+      "id": "FornasCatalog",
+      "type": "domain",
+      "table": "katalog_obat_fornas",
+      "summary": "Katalog Formularium Nasional (e-fornas.kemkes.go.id) sebagai rujukan sumber data obat.",
+      "tags": ["fornas", "drug-catalog"]
+    },
+    {
+      "id": "WibClock",
+      "type": "infrastructure",
+      "summary": "Layanan waktu terpadu Asia/Jakarta (WIB, UTC+7), dapat dikontrol dalam pengujian.",
+      "tags": ["timezone", "clock-testing", "infrastructure"]
+    },
+    {
+      "id": "DatabaseSafetyGuard",
+      "type": "infrastructure",
+      "summary": "Perlindungan database: menolak koneksi produksi, membedakan pooled/direct, memastikan TLS, kompatibilitas bcrypt legacy.",
+      "tags": ["database-safety", "infrastructure", "security"]
+    }
+  ],
+  "flows": [
+    {
+      "id": "uc-1-hipertensi",
+      "name": "Alur Hipertensi (UC-1, 10 langkah)",
+      "summary": "Pasien masuk → Isi profil (hipertensi) → Admin catat aturan kontrol → Jadwal terbentuk otomatis → Pengingat 3 hari sebelum → Pasien pilih spesialis & buat janji → Admin usulkan perubahan → Pasien check-in dapat nomor antrian → Admin gerakkan status antrian → Jadwal berikutnya terbentuk → Pasien catat kebiasaan & lihat ringkasan.",
+      "steps": [
+        "Pasien masuk dan mengisi profil dengan kondisi hipertensi",
+        "Admin mencatat anjuran kontrol bulanan dari dokter",
+        "Jadwal kontrol terbentuk otomatis",
+        "Pengingat muncul tiga hari sebelum jatuh tempo",
+        "Pasien memilih spesialis dan membuat janji sehingga slot terkunci",
+        "Admin mengusulkan perubahan slot karena dokter berhalangan dan pasien menyetujuinya",
+        "Pasien datang dan check-in sehingga mendapat nomor antrian",
+        "Admin menggerakkan status menunggu lalu diperiksa lalu selesai",
+        "Jadwal kontrol berikutnya terbentuk otomatis",
+        "Di antara kunjungan pasien mencatat kebiasaan serta melihat ringkasan kepatuhan"
+      ],
+      "entities": ["User", "PatientProfile", "ControlRule", "ControlSchedule", "Notification", "Appointment", "RescheduleProposal", "QueueTicket", "HabitLog"]
+    },
+    {
+      "id": "uc-2-slot-contention",
+      "name": "Rebutan Slot (UC-2)",
+      "summary": "Dua pasien membuka slot yang sama dan menyimpan hampir bersamaan. Tepat satu berhasil, yang lain menerima pesan jelas bahwa slot sudah diambil, dan tidak ada data setengah tersimpan.",
+      "steps": [
+        "Pasien A dan B membuka slot yang sama",
+        "Keduanya menyimpan janji hampir bersamaan",
+        "Transaksi database + partial unique index memastikan tepat satu berhasil",
+        "Yang kalah menerima pesan jelas bahwa slot sudah diambil",
+        "Tidak ada data setengah tersimpan (rollback transaksi)"
+      ],
+      "entities": ["Appointment", "Slot"],
+      "constraints": ["Partial unique index: satu janji aktif per slot", "Database transaction for atomicity"]
+    },
+    {
+      "id": "uc-6-reschedule-proposal",
+      "name": "Usulan Perubahan Janji (UC-6)",
+      "summary": "Admin mengusulkan slot baru beserta alasan, pasien menerima pemberitahuan, lalu menyetujui, menolak, atau memilih slot lain. Janji lama tetap aktif sampai pasien menjawab. Batas waktu jawab (24 jam sebelum janji lama). TTL habis → slot dilepas, usulan batal.",
+      "steps": [
+        "Admin mengusulkan slot baru dengan alasan wajib",
+        "Status berubah menjadi perubahan_diusulkan, slot baru dikunci (TTL)",
+        "Janji lama tetap aktif sampai pasien menjawab",
+        "Pasien menerima pemberitahuan dengan alasan, slot lama, dan slot baru",
+        "Pasien setuju / tolak / pilih slot lain (maksimal 3 ketukan)",
+        "Batas waktu jawab tercapai → janji lama tetap aktif, slot dilepas, usulan batal"
+      ],
+      "entities": ["Appointment", "RescheduleProposal", "Slot", "Notification"],
+      "constraints": ["Alasan wajib untuk usulan", "TTL kunci slot lebih pendek dari batas jawab pasien", "Satu slot satu janji tetap berlaku"]
+    },
+    {
+      "id": "uc-4-tamu",
+      "name": "Akses Tamu (UC-4)",
+      "summary": "Pengunjung tanpa sesi membuka halaman inti (profil, jadwal, janji, antrian, catatan kebiasaan). Semua permintaan ditolak dan diarahkan ke halaman masuk.",
+      "steps": [
+        "Tamu tanpa sesi membuka halaman terlindungi",
+        "Middleware guest/auth menolak akses",
+        "Diarahkan ke halaman masuk",
+        "Tidak ada data yang bocor sebelum masuk"
+      ],
+      "entities": ["User", "LoginController"],
+      "constraints": ["Tidak ada data yang dilihat tamu"]
+    },
+    {
+      "id": "uc-8-role-isolation",
+      "name": "Akses Lintas Peran (UC-8)",
+      "summary": "Pasien membuka halaman admin → 403. Admin membuka catatan kebiasaan pasien → 403. Setiap endpoint memeriksa sesi dan peran di server.",
+      "steps": [
+        "Pasien mencoba mengakses halaman admin",
+        "Role guard menolak akses (403)",
+        "Admin mencoba mengakses catatan kebiasaan pasien",
+        "Otorisasi server menolak akses",
+        "Setiap mutasi divalidasi server-side"
+      ],
+      "entities": ["User", "DashboardController"],
+      "constraints": ["Pasien tidak bisa mengakses area admin", "Admin tidak bisa melihat catatan kebiasaan atau ringkasan kepatuhan pasien"]
+    },
+    {
+      "id": "uc-3-cross-patient",
+      "name": "Akses Lintas Pasien (UC-3)",
+      "summary": "Pasien yang sudah masuk mengubah ID di URL ke ID pasien atau janji lain. Sistem menolak, bukan menampilkan data tersebut.",
+      "steps": [
+        "Pasien A masuk dan mencoba membuka profil/janji pasien B lewat URL",
+        "Server-side ownership check menolak permintaan",
+        "Tidak ada satu baris data pasien B yang ditampilkan"
+      ],
+      "entities": ["User", "PatientProfile", "Appointment"],
+      "constraints": ["Pasien hanya data sendiri", "Server-side authorization, not UI-only"]
+    }
+  ],
+  "businessRules": [
+    "Satu slot hanya boleh punya satu janji aktif, dijaga dengan indeks unik parsial atau transaksi di level database, termasuk slot yang dikunci oleh usulan",
+    "Nomor antrian unik per hari WIB",
+    "Satu catatan minum obat per pasien, per obat, per tanggal (indeks unik gabungan)",
+    "Audit log hanya dapat ditambah (append-only) dan tidak memiliki operasi ubah atau hapus dari aplikasi",
+    "Log aktivitas bersifat append-only, sama seperti audit log",
+    "Seluruh tanggal disimpan dengan zona waktu eksplisit (WIB) dan diuji pada batas tengah malam",
+    "Tidak ada tabel maupun kolom yang memetakan kondisi ke obat (larangan rekomendasi obat ditegakkan di level data dan kode)",
+    "Akun admin dibuat lewat seed, bukan registrasi",
+    "Dokter hanya berupa data tanpa kredensial",
+    "Role registrasi selalu pasien; admin individual melalui seed",
+    "Setiap mutasi admin dan audit wajib dalam satu transaksi. Audit gagal berarti rollback.",
+    "Slot lama selama usulan dan slot usulan harus dilindungi bersama. Locks, constraints dan test konkurensi PostgreSQL wajib"
+  ],
+  "nonGoals": [
+    "Rekomendasi gaya hidup personal",
+    "Pemberian resep oleh aplikasi, farmasi/penebusan obat, pembayaran",
+    "Aplikasi mobile native",
+    "Integrasi ke sistem klinik sungguhan termasuk SATUSEHAT Kemenkes",
+    "Notifikasi push, email, atau WhatsApp",
+    "Reset password, verifikasi email, login pihak ketiga (OAuth), dan registrasi mandiri untuk akun admin",
+    "Akun dokter"
+  ],
+  "metadata": {
+    "source": "Codebase Laravel + docs/rancangan (PRD v0.3 read-only)",
+    "analyzedAt": "2026-11-02",
+    "totalEntities": 19,
+    "totalFlows": 6,
+    "status": "complete"
+  }
+}

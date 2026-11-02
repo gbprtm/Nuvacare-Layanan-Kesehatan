@@ -1,89 +1,53 @@
-# Status Tugas
+# Status tugas Laravel
 
-Satu-satunya tempat status 44 tugas ditulis. Spesifikasi tugas ada di vault:
-`brain-project/docs/to-do/rencana-agen.md` (read-only), salinan bacanya di
-`docs/rancangan/rencana-agen.md`.
+**Satu-satunya sumber status hidup** untuk L01–L17. Spesifikasi aktif:
+[`rencana-agen.md`](rencana-agen.md); jadwal relatif 10 hari dan gerbang:
+[`to-do.md`](to-do.md); pemetaan FR: [`peta-bagian.md`](peta-bagian.md).
 
-Status yang sah: `todo` · `doing` · `blocked` · `done`.
-Tugas `blocked` wajib punya satu kalimat sebab di kolom catatan.
-Tugas `done` wajib punya hash commit dan berkas bukti.
+Snapshot status Next.js sebelumnya, termasuk perubahan lokal yang belum
+ter-commit, dipertahankan di `_arsip/nextjs-2026-11-02/docs/status-tugas.md`.
+Hasil A/B/C/D lama bukan bukti Laravel dan tidak diwariskan sebagai `done`.
+`docs/rancangan/rencana-agen.md` adalah salinan read-only rencana lama,
+bukan antrean implementasi aktif.
 
-Aturan: **satu tugas satu commit** dengan pesan `ID: judul`.
-Jangan mengubah status tugas milik agen lain.
+## Aturan
 
----
+- Status sah: `todo`, `doing`, `blocked`, `done`.
+- Seluruh tugas dimulai `todo`: sesi ini dokumentasi/arsip, bukan implementasi.
+  PHP dan Composer sebelumnya tidak ditemukan di PATH, dan belum ada
+  `composer.json`/`artisan`. Itu risiko prasyarat, bukan percobaan L01 baru.
+  Jika saat L01 dieksekusi prasyarat masih tidak tersedia, ubah ke `blocked`.
+- Ambil hanya tugas yang semua dependensinya `done`; dependensi di rencana
+  agen. Status `blocked` wajib satu kalimat sebab dan kebutuhan pembuka.
+- `done` hanya bila seluruh accept/verify terbukti dalam `docs/bukti/Lxx.md`.
+  Bukti parsial gerbang hosting hari 2 tidak mengubah seluruh L04 menjadi done.
+- Commit hanya setelah izin pemilik; kolom commit diisi hash nyata bila ada,
+  atau `Belum diizinkan` jika implementasi sudah diterima tanpa izin commit.
+  Pada sesi ini tidak ada commit dan tidak ada klaim implementasi selesai.
+- Jangan ubah status tugas yang sedang dipegang agen lain. Perubahan status
+  bersama diserialkan. Jangan menduplikasi papan status di dokumen lain.
 
-## F0 — Fondasi
+## Antrean
 
-| ID | Status | Commit | Catatan |
-|---|---|---|---|
-| A01 | done | f14d535 | — |
-| A02 | done | 251524b | — |
-| A03 | done | 14c8dbf | — |
-| A04 | done | eff355a | — |
-| A05 | done | b92a1d8 | — |
-| A06 | done | 1707688 | — |
-| A07 | done | d504eb8 | — |
-| A08 | done | 53c3b62 | — |
-| A09 | blocked | 90bc13e | accept hosting belum terbukti: URL Vercel dan handler login belum ada |
+| ID | Tugas | Status | Commit | Bukti target (belum hasil uji) | Catatan |
+|---|---|---|---|---|---|
+| L01 | Prasyarat, scaffold Laravel bersih, runner/CI dan hosting awal | done | - | `docs/bukti/L01.md` | Selesai: PHP 8.4, Composer 2.11, Laravel 13, Vite, PHPUnit, Pint, Playwright Chrome lulus. |
+| L02 | Inventaris DB, backup/restore dan keputusan pemetaan | done | - | `docs/bukti/L02.md` | Selesai: Inventaris 21 tabel, guard isolasi produksi, drill backup/restore, DatabaseSafetyTest lulus. |
+| L03 | Migrasi, model, factory dan seed PostgreSQL terisolasi | done | - | `docs/bukti/L03.md` | Selesai: 18 Model Eloquent, WibClock, migrasi DDL, partial unique indexes, seed fiktif aman, SchemaMappingTest lulus. |
+| L04 | Auth, role, idle 15 menit dan formulir Blade | done | - | `docs/bukti/L04.md` | Selesai: Registrasi pasien, login/logout, rotasi session ID, idle 15 menit, rate limit, Blade DESIGN.md, 13 test PHPUnit + 3 E2E Chrome lulus. |
+| L05 | Layout bersama, CSS/JS dan aksesibilitas | todo | - | `docs/bukti/L05.md` | Setelah auth. |
+| L06 | Audit atomik dan log hanya baca | todo | - | `docs/bukti/L06.md` | Sebelum mutasi admin fitur. |
+| L07 | Profil, katalog dan obat laporan pasien | todo | - | `docs/bukti/L07.md` | Data legacy/pemilik harus terjaga. |
+| L08 | Dokter, slot dan janji anti-race beserta UI | todo | - | `docs/bukti/L08.md` | Race harus memakai PostgreSQL. |
+| L09 | Usulan, tanggapan, expiry, notifikasi dan pembatalan | todo | - | `docs/bukti/L09.md` | Keputusan TTL/cutoff diperlukan. |
+| L10 | Kontrol berulang, reminder dan agenda/bulan | todo | - | `docs/bukti/L10.md` | Anchor asli dan retry idempoten. |
+| L11 | Check-in, antrian, tutup hari dan hook kontrol | todo | - | `docs/bukti/L11.md` | Bergantung pada L10. |
+| L12 | Resep klinik, label Fornas dan kepatuhan obat | todo | - | `docs/bukti/L12.md` | Terpisah dari obat laporan sendiri. |
+| L13 | Kebiasaan dan ringkasan wajib FB-5 | todo | - | `docs/bukti/L13.md` | Ambang belum diputus, bukan fitur opsional. |
+| L14 | Timeline tunggal FR-11 + FR-13 | todo | - | `docs/bukti/L14.md` | Hanya data pasien yang masuk. |
+| L15 | Browser lengkap dan regresi keamanan | todo | - | `docs/bukti/L15.md` | Chrome, IDOR, CSRF, sesi dan role. |
+| L16 | Beban, UAT dan bukti rilis | todo | - | `docs/bukti/L16.md` | Cutover produksi perlu izin terpisah. |
+| L17 | Opsional: konten resmi dan log akun | todo | - | `docs/bukti/L17.md` | Tidak memblokir L16; persetujuan rilis terpisah. |
 
-## F1 — Data
-
-| ID | Status | Commit | Catatan |
-|---|---|---|---|
-| A10 | done | dac5b94 | — |
-| A11 | done | 9b6db0d | — |
-| A12 | done | 347cb12 | commit memuat berkas di luar `paths`; dicatat di A12.md |
-| A13 | done | 5c1add3 | commit 8ef5fe7 hanya menambah newline, bukan bukti |
-| A14 | done | 8fbe462 | — |
-| A15 | done | 8fbe462 | — |
-| A16 | done | 8fbe462 | — |
-
-## F2 — Backend
-
-| ID | Status | Commit | Catatan |
-|---|---|---|---|
-| B01 | done | 53f9a92 | Auth, sesi idle 15 menit, lockout, guard role, dan verifikasi selesai |
-| B02 | done | 9b3b9ad | Profil, katalog Fornas parsial A, import snapshot, tabel obat pasien, dan capture GET profil teruji; mutasi obat diteruskan ke B09 |
-| B03 | todo | — | — |
-| B04 | todo | — | — |
-| B05 | todo | — | — |
-| B06 | todo | — | — |
-| B07 | todo | — | — |
-| B08 | todo | — | — |
-| B09 | todo | — | — |
-| B10 | todo | — | — |
-| B11 | todo | — | — |
-| B12 | todo | — | — | opsional, dipotong pertama |
-| B13 | todo | — | — | opsional, dipotong kedua |
-
-## F3 — Frontend
-
-| ID | Status | Commit | Catatan |
-|---|---|---|---|
-| C01 | todo | — | — |
-| C02 | todo | — | — |
-| C03 | todo | — | — |
-| C04 | todo | — | — |
-| C05 | todo | — | — |
-| C06 | todo | — | — |
-| C07 | todo | — | — |
-| C08 | todo | — | — |
-| C09 | todo | — | — | layar kebiasaan P10-P11; P12 konten tidak dibangun |
-
-## F4 — Uji dan rilis
-
-| ID | Status | Commit | Catatan |
-|---|---|---|---|
-| D01 | todo | — | — |
-| D02 | todo | — | — |
-| D03 | todo | — | — |
-| D04 | todo | — | — |
-| D05 | todo | — | — |
-| D06 | todo | — | — |
-
----
-
-## Ringkasan
-
-Diperbarui: 1 November 2026 · total 44 · `todo` 26 · `doing` 0 · `blocked` 1 · `done` 17
+Tanggal akhir kalender belum dikonfirmasi: gunakan hari relatif 1–10, bukan
+menganggap tenggat 2 November dalam PRD telah berubah otomatis.

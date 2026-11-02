@@ -1,23 +1,44 @@
-# docs/ — dokumen kerja repo kode
+# Dokumentasi aktif migrasi Laravel
 
-Folder ini berisi dokumen yang **hidup bersama kode**. Rancangan (PRD, wireframe,
-risiko) tidak disalin ke sini; letaknya di vault
-`C:\Users\HYPE AMD\Documents\brain-project`.
+Dokumentasi ini membedakan **target Laravel**, **kebutuhan produk read-only**,
+dan **sejarah Next.js**. Aplikasi Laravel belum dibuat; status implementasi
+hanya di [status-tugas.md](status-tugas.md).
 
-| Berkas | Isi | Diperbarui oleh |
-|---|---|---|
-| `rancangan/` | salinan read-only dokumen rancangan (PRD, wireframe, rencana tugas) | `scripts/sinkron-rancangan.ps1` |
-| `peta-bagian.md` | FR → potongan PRD → layar → modul kode | pemilik proyek |
-| `panduan-arsitektur.md` | pembagian struktur: Frontend, Backend, dan Testing | pemilik proyek |
-| `status-tugas.md` | status 44 tugas | agen, setiap tugas |
-| `keputusan/` | catatan keputusan (ADR) yang menyimpang dari rancangan | pemilik proyek + agen |
-| `api-contract.md` | kontrak API v1 | tugas A15, lalu tiap tugas backend |
-| `database-schema.md` | skema tabel + diagram | tugas A16, lalu tiap tugas data |
-| `01-laporan-unit/` | bukti unit test per FR | tugas A* dan B* |
-| `02-integration/` | bukti integration test | tugas B* dan D01 |
-| `03-system-uat/` | bukti e2e, skrip UAT, SUS | tugas C*, D03, D05 |
-| `04-bukti-security/` | bukti uji keamanan | tugas D02 |
-| `05-bukti-performa/` | skrip autocannon + p95 | tugas D04 |
+## Urutan mulai
 
-Aturan: satu berkas satu pemilik. Status tugas **hanya** ditulis di
-`status-tugas.md`, bukan di vault.
+1. [ADR migrasi](keputusan/0002-migrasi-laravel.md): keputusan stack dan batasnya.
+2. [Bootstrap L01](migrasi/bootstrap.md): prasyarat dan cara memulai dengan aman.
+3. [Rencana 10 hari](to-do.md): urutan, gerbang, keputusan tertunda.
+4. [Rencana agen](rencana-agen.md): `depends`, `paths`, `accept`, `verify`, `evidence`.
+5. [Peta bagian](peta-bagian.md): hanya potongan PRD/layar yang terkait tugas.
+
+## Kontrak teknis aktif
+
+| Dokumen | Fungsi |
+|---|---|
+| [Arsitektur](panduan-arsitektur.md) | Controller, Form Request, policy, service, Eloquent, Blade |
+| [Kontrak route](api-contract.md) | HTML/form, PRG, CSRF, galat, satu pemilik tiap route |
+| [Rencana data](database-schema.md) | Inventaris lama, Eloquent dan strategi isolasi sebelum migrasi |
+| [Gerbang backend](tinjauan-backend-agen.md) | Risiko transaksi, privasi, sesi dan kalender yang wajib dibuktikan |
+| [Sistem dan use case](tinjauan-sistem-dan-use-case.md) | Batas produk dan skenario yang tetap wajib |
+| [Arah visual](../DESIGN.md) | Identitas/perilaku; usulan yang belum disetujui tetap usulan |
+| [Kebijakan bukti](bukti/README.md) | Format hasil aktual per tugas, bukan bukti uji palsu |
+| [Inventaris arsip](migrasi/arsip.md) | Apa yang dipindahkan dan cara memeriksa isinya |
+| [Bukti penataan](migrasi/00-penataan.md) | Validasi dokumentasi dan integritas arsip sesi ini |
+
+## Dokumen yang sengaja tidak diubah
+
+- `rancangan/`: salinan generate dari vault, **read-only**, termasuk PRD,
+  wireframe dan rencana lama. Stack/alat/perintah Next.js di sana sudah tidak
+  mengatur implementasi baru, sesuai ADR migrasi. Aturan produk tetap berlaku.
+- `C:\Users\HYPE AMD\Documents\brain-project`: vault read-only dari sesi ini.
+  Pemilik memperbarui ketentuan teknis di sumber sebelum sinkron berikutnya.
+- [ADR Chrome](keputusan/0001-chrome-bawaan-playwright.md): keputusan browser
+  tetap berlaku; nama tugas dan konfigurasi Next.js di dalamnya adalah sejarah.
+- Laporan dan bukti Next.js lama ada di
+  [`_arsip/nextjs-2026-11-02/docs/`](../_arsip/nextjs-2026-11-02/docs/).
+  Jangan mengubah bukti historis menjadi seolah-olah hasil Laravel.
+
+Skrip `scripts/sinkron-rancangan.ps1` tetap alat sinkron pemilik. Ia bukan
+langkah bootstrap Laravel; jangan menjalankannya otomatis untuk mengubah
+salinan read-only atau menutupi perbedaan vault dengan keputusan stack baru.

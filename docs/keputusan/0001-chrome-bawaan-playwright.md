@@ -1,5 +1,9 @@
 # ADR 0001 — Playwright memakai Chrome bawaan sistem
 
+> Keputusan browser tetap berlaku untuk Laravel. Path konfigurasi dan ID tugas
+> Next.js di bawah merupakan konteks historis, bukan perintah aktif. Konfigurasi
+> target dibuat oleh L01 sesuai [ADR migrasi](0002-migrasi-laravel.md).
+
 - **Status**: diterima
 - **Tanggal**: 2026-10-29
 - **Pemilik keputusan**: pemilik proyek

@@ -1,0 +1,46 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class Notification extends Model
+{
+    use HasFactory, HasUuids;
+
+    protected $table = 'notifikasi';
+
+    protected $keyType = 'string';
+
+    public $incrementing = false;
+
+    public $timestamps = false;
+
+    protected $fillable = [
+        'id',
+        'user_id',
+        'judul',
+        'pesan',
+        'tipe',
+        'dibaca',
+        'data_terkait',
+        'created_at',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'dibaca' => 'boolean',
+            'data_terkait' => 'array',
+            'created_at' => 'immutable_datetime',
+        ];
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+}

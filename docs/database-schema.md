@@ -1,721 +1,145 @@
-# Skema Database
+# Database: pemetaan dan rencana migrasi Laravel
 
-Status: dokumentasi skema Drizzle saat ini  
-Tanggal: 31 Oktober 2026  
-Sumber kode: `src/db/schema/auth.ts`, `src/db/schema/klinik.ts`,
-`src/db/schema/pasien.ts`  
-Database: PostgreSQL melalui Drizzle ORM
+Tanggal: 2 November 2026. **Rancangan target Eloquent/PostgreSQL Neon, bukan skema Laravel terpasang atau hasil inspeksi database live.** Tidak ada koneksi, pembacaan env/secret, migrasi, seed, atau perubahan database pada pekerjaan dokumentasi ini.
 
-Dokumen ini mendokumentasikan skema yang ada di kode. Nama kolom menggunakan
-snake_case karena mengikuti nama database. Nama properti TypeScript memakai
-camelCase.
+## 1. Tiga hal yang tidak boleh disamakan
 
-## 1. Ringkasan
-
-Skema terdiri dari 18 tabel dalam tiga kelompok:
-
-- **Auth:** `users`, `sessions`
-- **Klinik:** `dokter`, `slot`, `janji`, `usulan_perubahan`, `notifikasi`,
-  `audit_log`, `aturan_kontrol`
-- **Pasien:** `profil`, `jadwal_kontrol`, `tiket_antrian`,
-  `catatan_kebiasaan`, `resep`, `obat`, `catatan_minum_obat`, `log_aktivitas`,
-  `konten_statis`
-
-Nomor antrean estimasi tidak disimpan sebagai kolom. Nilai tersebut diturunkan
-saat runtime. Nomor antrean final disimpan setelah pasien melakukan check-in.
-
-## 2. Diagram relasi
-
-```mermaid
-erDiagram
-    users ||--o{ sessions : memiliki
-    users ||--o| profil : memiliki
-    users ||--o{ janji : membuat
-    users ||--o{ aturan_kontrol : memiliki
-    users ||--o{ jadwal_kontrol : memiliki
-    users ||--o{ tiket_antrian : memiliki
-    users ||--o{ catatan_kebiasaan : mencatat
-    users ||--o{ resep : menerima
-    users ||--o{ catatan_minum_obat : mencatat
-    users ||--o{ log_aktivitas : menghasilkan
-    users ||--o{ notifikasi : menerima
-    users ||--o{ audit_log : melakukan
-    users ||--o{ usulan_perubahan : membuat
-
-    dokter ||--o{ slot : memiliki
-    dokter ||--o{ janji : menangani
-    dokter ||--o{ aturan_kontrol : menganjurkan
-    dokter ||--o{ jadwal_kontrol : terkait
-    dokter ||--o{ resep : meresepkan
-
-    slot ||--o{ janji : dipesan
-    slot ||--o{ usulan_perubahan : menjadi_slot_baru
-
-    janji ||--o| tiket_antrian : menghasilkan
-    janji ||--o{ usulan_perubahan : memiliki
-    janji ||--o{ resep : terkait
-    aturan_kontrol ||--o{ jadwal_kontrol : menghasilkan
-
-    resep ||--o{ obat : berisi
-    obat ||--o{ catatan_minum_obat : dicatat
-```
-
-Keterangan kardinalitas:
-
-- `||--o|`: satu ke nol atau satu.
-- `||--o{`: satu ke nol atau banyak.
-- Dokter tidak memiliki relasi ke `users` untuk login. Dokter hanya data master.
-
-## 3. Tipe data PostgreSQL yang digunakan
-
-| Drizzle | PostgreSQL | Penggunaan |
+| Artefak | Arti | Bukan bukti |
 |---|---|---|
-| `uuid` | `uuid` | ID dan foreign key |
-| `varchar` | `varchar(n)` | Nama, status teks, kode, waktu string |
-| `text` | `text` | Catatan dan payload teks |
-| `timestamp({ withTimezone: true })` | `timestamptz` | Waktu absolut dengan zona waktu |
-| `date` | `date` | Tanggal bisnis berbasis WIB |
-| `integer` | `integer` | Nilai jumlah, ukuran, durasi |
-| `boolean` | `boolean` | Flag aktif, tersedia, dibaca |
-| `jsonb` | `jsonb` | Nilai audit sebelum/sesudah dan data terkait |
-| `pgEnum` | `enum` PostgreSQL | Nilai status dan role yang dibatasi |
+| [Skema rinci arsip Next/Drizzle](../_arsip/nextjs-2026-11-02/docs/database-schema.md) | Dokumen lama 31 Oktober 2026: kolom, tipe, null/default, FK, enum, index dan riwayat migrasi | Kondisi aktual Neon saat ini |
+| Dokumen ini | Kontrak pemetaan dan rencana target Laravel | DDL yang telah diterapkan |
+| Inventaris L02 dan bukti L03 kelak | Hasil inspeksi berizin pada lingkungan yang disebutkan dan hasil migrasi terisolasi | Izin menghapus database lama/live |
 
-## 4. Enum
+**Skema lama rinci dipertahankan utuh sebagai referensi arsip**, bukan diganti dengan asumsi schema scaffold Laravel. Rujuk arsip §3–4 untuk tipe/enum, §5–7 untuk seluruh tabel/kolom, §8 untuk FK/on-delete, §9 untuk constraint, dan §10 untuk migrasi Drizzle. Pernyataan “saat ini” dalam arsip hanya berlaku pada dokumentasi kode saat arsip dibuat, bukan pada database live atau target Laravel.
 
-### `user_role`
+Dokumentasi resmi yang diperiksa koordinator: [Laravel 13.x database](https://laravel.com/docs/13.x/database) dan [installation](https://laravel.com/docs/13.x/installation). Versi tepat dan driver/host kompatibel harus divalidasi serta dipatok di L01. PHP/Composer belum tersedia di PATH menurut inventaris migrasi; `artisan` dan `composer.json` belum ada. Contoh konfigurasi/operasi di sini hanya rencana.
 
-Nilai: `pasien`, `admin`.
+## 2. Keputusan L02 wajib sebelum L03
 
-Digunakan oleh `users.role`. Tidak ada role dokter.
+Neon/PostgreSQL tetap dipakai. Memilih Eloquent **tidak** berarti membuat ulang database lama dengan default Laravel.
 
-### `status_janji`
+| Strategi yang harus dipilih | Cara aman | Syarat bukti |
+|---|---|---|
+| Baseline baru terisolasi | Buat database/branch test baru yang ditetapkan khusus, migrasi target baru, seed fiktif | Target benar-benar terisolasi; database lama tetap utuh; rencana pemindahan data terpisah jika nanti diperlukan |
+| Adopsi skema lama | Inventaris berizin, petakan model, rekonsiliasi DDL dan riwayat migrasi, migrasi perubahan secara terkontrol | Backup dan restore drill terisolasi; perbedaan skema dicatat; review DDL/up/down sebelum dijalankan |
 
-Nilai:
+L02 mencatat inventaris tabel, index, enum, FK, migration history, kebutuhan retensi, data demo vs data lain, strategi sesi, dan target backup **tanpa menyalin isi data kesehatan/secret ke laporan**. Restore diuji ke target terisolasi, bukan menimpa database asal. Database test menggunakan kredensial dan penanda lingkungan berbeda; seed sintetis agar branch salinan data sensitif tidak dianggap fixture aman otomatis.
 
-- `aktif`
-- `perubahan_diusulkan`
-- `dibatalkan`
-- `selesai`
-- `tidak_hadir`
+Keputusan baseline/adopsi dan persetujuan target wajib ada sebelum L03 menulis/menjalankan migrasi. Tidak ada keputusan tersirat bahwa semua tabel di bawah boleh di-drop atau semua data harus disalin.
 
-Digunakan oleh `janji.status`.
+**Dilarang pada database lama, existing, atau produksi:** `migrate:fresh`, `db:wipe`, `migrate:reset`, drop schema/table, reset destruktif, seed penimpa, dan pembersihan fixture massal. Jangan menjalankan scaffold/default migrations yang membuat `users`/`sessions` terhadap Neon lama. Bahkan test dengan trait reset database harus memiliki guard target PostgreSQL test terisolasi dan berhenti bila identitas target tidak cocok. Jangan mengandalkan nama environment `testing` saja.
 
-### `status_usulan`
+Perintah migrasi biasa pun baru boleh dijalankan sesudah target, backup dan DDL disetujui. Koneksi TLS serta koneksi pooled/direct yang cocok untuk migrasi/locks ditetapkan L02; jangan mengubah URL lama atau menyalin secret untuk menyusun dokumen.
 
-Nilai:
+## 3. Inventaris arsip, bukan deklarasi kolom target/current live
 
-- `menunggu_tanggapan`
-- `disetujui`
-- `ditolak`
-- `kedaluwarsa`
+Arsip mendeskripsikan **18 tabel**. Nama Indonesia dipertahankan di tabel inventaris ini agar dapat dicocokkan dengan arsip; nama class/property PHP target berbahasa Inggris dengan pemetaan eksplisit.
 
-Digunakan oleh `usulan_perubahan.status`.
-
-### `tipe_notifikasi`
-
-Nilai: `pengingat_janji`, `usulan_perubahan`, `pengingat_obat`, `antrian`,
-`sistem`.
-
-Digunakan oleh `notifikasi.tipe`.
-
-### `status_antrian`
-
-Nilai:
-
-- `belum_check_in`
-- `menunggu`
-- `diperiksa`
-- `selesai`
-- `tidak_hadir`
-
-Digunakan oleh `tiket_antrian.status`.
-
-### `status_jadwal_kontrol`
-
-Nilai: `terjadwal`, `selesai`, `terlewat`, `dibatalkan`.
-
-Digunakan oleh `jadwal_kontrol.status`.
-
-### `jenis_kelamin`
-
-Nilai: `laki_laki`, `perempuan`.
-
-Digunakan oleh `profil.jenis_kelamin`.
-
-### `status_minum_obat`
-
-Nilai: `sudah`, `belum`.
-
-Digunakan oleh `catatan_minum_obat.status`.
-
-## 5. Tabel auth
-
-### 5.1 `users`
-
-Pengguna aplikasi. Hanya pasien dan admin yang dapat menjadi pengguna.
-
-| Kolom | Tipe | Null | Default | Keterangan |
-|---|---|---:|---|---|
-| `id` | uuid | tidak | random | Primary key |
-| `name` | varchar(255) | tidak | - | Nama pengguna |
-| `email` | varchar(255) | tidak | - | Email unik |
-| `password_hash` | text | tidak | - | Hash password, bukan password mentah |
-| `role` | `user_role` | tidak | `pasien` | Role akses |
-| `created_at` | timestamptz | tidak | now | Waktu dibuat |
-| `updated_at` | timestamptz | tidak | now | Waktu diperbarui |
-
-Constraint dan indeks:
-
-- Primary key: `id`.
-- Unique: `email`.
-- Index: `users_email_idx`, `users_role_idx`.
-
-Aturan:
-
-- Admin dibuat melalui seed, bukan registrasi publik.
-- Tidak ada kredensial dokter di tabel ini.
-- Password tidak boleh dikembalikan melalui API.
-
-### 5.2 `sessions`
-
-Sesi login pengguna.
-
-| Kolom | Tipe | Null | Default | Keterangan |
-|---|---|---:|---|---|
-| `id` | uuid | tidak | random | Primary key |
-| `user_id` | uuid | tidak | - | FK ke `users.id` |
-| `token_hash` | text | tidak | - | Hash token sesi, unik |
-| `expires_at` | timestamptz | tidak | - | Waktu kedaluwarsa |
-| `created_at` | timestamptz | tidak | now | Waktu dibuat |
-
-Constraint dan indeks:
-
-- Primary key: `id`.
-- Unique: `token_hash`.
-- Foreign key: `user_id -> users.id`, `ON DELETE CASCADE`.
-- Index: `sessions_user_id_idx`, `sessions_token_hash_idx`,
-  `sessions_expires_at_idx`.
-
-## 6. Tabel klinik
-
-### 6.1 `dokter`
-
-Data master dokter tanpa akun login.
-
-| Kolom | Tipe | Null | Default | Keterangan |
-|---|---|---:|---|---|
-| `id` | uuid | tidak | random | Primary key |
-| `nama` | varchar(255) | tidak | - | Nama dokter |
-| `spesialisasi` | varchar(255) | tidak | - | Spesialisasi |
-| `nomor_izin` | varchar(100) | ya | - | Nomor izin praktik |
-| `aktif` | boolean | tidak | true | Apakah dokter masih tersedia |
-| `created_at` | timestamptz | tidak | now | Waktu dibuat |
-| `updated_at` | timestamptz | tidak | now | Waktu diperbarui |
-
-Indeks:
-
-- Primary key: `id`.
-- Index: `dokter_spesialisasi_idx`, `dokter_aktif_idx`.
-
-### 6.2 `slot`
-
-Blok waktu praktik seorang dokter pada satu tanggal.
-
-| Kolom | Tipe | Null | Default | Keterangan |
-|---|---|---:|---|---|
-| `id` | uuid | tidak | random | Primary key |
-| `dokter_id` | uuid | tidak | - | FK ke `dokter.id` |
-| `tanggal` | date | tidak | - | Tanggal slot dalam WIB |
-| `jam_mulai` | varchar(10) | tidak | - | Jam mulai, format domain `HH:mm` |
-| `jam_selesai` | varchar(10) | tidak | - | Jam selesai, format domain `HH:mm` |
-| `kuota` | integer | tidak | 1 | Kuota slot |
-| `tersedia` | boolean | tidak | true | Flag ketersediaan |
-| `dikunci_sampai` | timestamptz | ya | - | TTL kunci sementara |
-| `created_at` | timestamptz | tidak | now | Waktu dibuat |
-| `updated_at` | timestamptz | tidak | now | Waktu diperbarui |
-
-Constraint dan indeks:
-
-- Primary key: `id`.
-- Foreign key: `dokter_id -> dokter.id`, `ON DELETE CASCADE`.
-- Index: `slot_dokter_tanggal_idx`, `slot_tersedia_idx`.
-
-### 6.3 `janji`
-
-Janji temu pasien dengan dokter dan slot.
-
-| Kolom | Tipe | Null | Default | Keterangan |
-|---|---|---:|---|---|
-| `id` | uuid | tidak | random | Primary key |
-| `pasien_id` | uuid | tidak | - | FK ke `users.id` |
-| `dokter_id` | uuid | tidak | - | FK ke `dokter.id` |
-| `slot_id` | uuid | tidak | - | FK ke `slot.id` |
-| `status` | `status_janji` | tidak | `aktif` | Siklus status janji |
-| `keluhan` | text | ya | - | Keluhan singkat pasien |
-| `catatan` | text | ya | - | Catatan operasional |
-| `alasan_batal` | text | ya | - | Wajib saat pembatalan admin |
-| `dibatalkan_oleh` | uuid | ya | - | FK ke `users.id` |
-| `created_at` | timestamptz | tidak | now | Waktu dibuat |
-| `updated_at` | timestamptz | tidak | now | Waktu diperbarui |
-
-Constraint dan indeks:
-
-- Primary key: `id`.
-- Foreign key `pasien_id -> users.id`, `ON DELETE CASCADE`.
-- Foreign key `dokter_id -> dokter.id`, `ON DELETE RESTRICT`.
-- Foreign key `slot_id -> slot.id`, `ON DELETE RESTRICT`.
-- Foreign key `dibatalkan_oleh -> users.id`, `ON DELETE SET NULL`.
-- Index: `janji_pasien_idx`, `janji_dokter_idx`, `janji_slot_idx`,
-  `janji_status_idx`.
-- Unique partial index: `janji_slot_aktif_unique_idx` pada `slot_id` ketika
-  `status = 'aktif'`.
-
-Unique partial index adalah pengaman database agar hanya ada satu janji aktif
-pada satu slot. Janji yang sudah dibatalkan atau selesai dapat memiliki slot
-yang sama sesuai aturan riwayat.
-
-### 6.4 `usulan_perubahan`
-
-Usulan admin untuk memindahkan janji ke slot baru.
-
-| Kolom | Tipe | Null | Default | Keterangan |
-|---|---|---:|---|---|
-| `id` | uuid | tidak | random | Primary key |
-| `janji_id` | uuid | tidak | - | FK ke `janji.id` |
-| `slot_baru_id` | uuid | tidak | - | FK ke `slot.id` |
-| `alasan` | text | tidak | - | Alasan wajib |
-| `status` | `status_usulan` | tidak | `menunggu_tanggapan` | Status usulan |
-| `batas_waktu_jawab` | timestamptz | tidak | - | Batas respons pasien |
-| `ttl_kunci_slot` | timestamptz | tidak | - | Waktu pelepasan kunci slot |
-| `dibuat_oleh` | uuid | tidak | - | FK ke `users.id`, admin |
-| `created_at` | timestamptz | tidak | now | Waktu dibuat |
-| `updated_at` | timestamptz | tidak | now | Waktu diperbarui |
-
-Constraint dan indeks:
-
-- Primary key: `id`.
-- Foreign key `janji_id -> janji.id`, `ON DELETE CASCADE`.
-- Foreign key `slot_baru_id -> slot.id`, `ON DELETE RESTRICT`.
-- Foreign key `dibuat_oleh -> users.id`, `ON DELETE RESTRICT`.
-- Index: `usulan_janji_idx`, `usulan_slot_baru_idx`, `usulan_status_idx`.
-
-### 6.5 `notifikasi`
-
-Pemberitahuan dalam aplikasi untuk pengguna.
-
-| Kolom | Tipe | Null | Default | Keterangan |
-|---|---|---:|---|---|
-| `id` | uuid | tidak | random | Primary key |
-| `user_id` | uuid | tidak | - | FK ke `users.id` |
-| `judul` | varchar(255) | tidak | - | Judul notifikasi |
-| `pesan` | text | tidak | - | Isi notifikasi |
-| `tipe` | `tipe_notifikasi` | tidak | `sistem` | Jenis notifikasi |
-| `dibaca` | boolean | tidak | false | Status dibaca |
-| `data_terkait` | jsonb | ya | - | Referensi data domain |
-| `created_at` | timestamptz | tidak | now | Waktu dibuat |
-
-Constraint dan indeks:
-
-- Primary key: `id`.
-- Foreign key: `user_id -> users.id`, `ON DELETE CASCADE`.
-- Index: `notifikasi_user_idx`, `notifikasi_dibaca_idx`.
-- Notifikasi hanya in-app. Tidak ada integrasi WhatsApp, email, atau push pada
-  rilis ini.
-
-### 6.6 `audit_log`
-
-Catatan perubahan admin yang bersifat append-only dari sisi aplikasi.
-
-| Kolom | Tipe | Null | Default | Keterangan |
-|---|---|---:|---|---|
-| `id` | uuid | tidak | random | Primary key |
-| `user_id` | uuid | ya | - | Pelaku, FK ke `users.id` |
-| `aksi` | varchar(100) | tidak | - | Nama aksi |
-| `objek` | varchar(100) | tidak | - | Jenis objek |
-| `objek_id` | varchar(100) | tidak | - | ID objek yang berubah |
-| `nilai_sebelum` | jsonb | ya | - | Snapshot sebelum perubahan |
-| `nilai_sesudah` | jsonb | ya | - | Snapshot sesudah perubahan |
-| `alasan` | text | ya | - | Alasan tindakan atau koreksi |
-| `ip_address` | varchar(45) | ya | - | IP bila dicatat |
-| `created_at` | timestamptz | tidak | now | Waktu pencatatan |
-
-Constraint dan indeks:
-
-- Primary key: `id`.
-- Foreign key: `user_id -> users.id`, `ON DELETE SET NULL`.
-- Tidak ada `updated_at`.
-- Index: `audit_user_idx`, `audit_objek_idx`, `audit_created_at_idx`.
-- Tidak ada endpoint aplikasi untuk `UPDATE` atau `DELETE`.
-
-Catatan: tidak adanya `updated_at` dan tidak adanya endpoint ubah/hapus belum
-menjadi trigger database yang menolak `UPDATE` atau `DELETE`. Jika append-only
-harus ditegakkan pada level database, perlu trigger atau hak akses database
-tambahan.
-
-### 6.7 `aturan_kontrol`
-
-Aturan kontrol berulang yang dicatat admin berdasarkan anjuran dokter.
-
-| Kolom | Tipe | Null | Default | Keterangan |
-|---|---|---:|---|---|
-| `id` | uuid | tidak | random | Primary key |
-| `pasien_id` | uuid | tidak | - | FK ke `users.id` |
-| `dokter_id` | uuid | ya | - | FK ke `dokter.id` |
-| `interval_hari` | integer | tidak | - | Domain: 7, 14, atau 30 |
-| `tanggal_mulai` | date | tidak | - | Tanggal anchor awal |
-| `anchor_hari` | integer | tidak | - | Hari asli dalam bulan |
-| `aktif` | boolean | tidak | true | Status aturan |
-| `catatan` | text | ya | - | Catatan admin |
-| `dibuat_oleh` | uuid | tidak | - | FK ke `users.id`, admin |
-| `created_at` | timestamptz | tidak | now | Waktu dibuat |
-| `updated_at` | timestamptz | tidak | now | Waktu diperbarui |
-
-Constraint dan indeks:
-
-- Primary key: `id`.
-- Foreign key `pasien_id -> users.id`, `ON DELETE CASCADE`.
-- Foreign key `dokter_id -> dokter.id`, `ON DELETE SET NULL`.
-- Foreign key `dibuat_oleh -> users.id`, `ON DELETE RESTRICT`.
-- Index: `aturan_kontrol_pasien_idx`, `aturan_kontrol_aktif_idx`.
-
-## 7. Tabel pasien
-
-### 7.1 `profil`
-
-Profil kesehatan dan kontak pasien. Satu pengguna memiliki paling banyak satu
-profil.
-
-Keputusan pemilik, 1 November 2026: NIK dan nomor Kartu Keluarga (KK) tidak
-dikumpulkan melalui fitur profil atau autentikasi; kontrak identitas ada di
-`api-contract.md`, FR-07. Tabel berikut tetap mendeskripsikan skema yang ada:
-kolom `nik` masih tersimpan sebagai kolom lama yang nullable, bukan field API.
-Penghapusan kolom membutuhkan migrasi dan penyesuaian seed/test yang disetujui;
-perubahan dokumentasi ini belum mengubah database.
-
-| Kolom | Tipe | Null | Default | Keterangan |
-|---|---|---:|---|---|
-| `id` | uuid | tidak | random | Primary key |
-| `user_id` | uuid | tidak | - | FK ke `users.id`, unik |
-| `nik` | varchar(16) | ya | - | Kolom lama; tidak dikumpulkan atau diekspos API; belum dihapus dari skema |
-| `nomor_telepon` | varchar(20) | ya | - | Nomor telepon |
-| `tanggal_lahir` | date | ya | - | Tanggal lahir |
-| `jenis_kelamin` | `jenis_kelamin` | ya | - | Jenis kelamin |
-| `golongan_darah` | varchar(5) | ya | - | Golongan darah |
-| `tinggi_badan` | integer | ya | - | Sentimeter |
-| `berat_badan` | integer | ya | - | Kilogram |
-| `kondisi_kesehatan` | text | ya | - | Kondisi yang dipantau |
-| `riwayat_alergi` | text | ya | - | Riwayat alergi |
-| `kontak_darurat_nama` | varchar(255) | ya | - | Nama kontak darurat |
-| `kontak_darurat_telepon` | varchar(20) | ya | - | Telepon kontak darurat |
-| `created_at` | timestamptz | tidak | now | Waktu dibuat |
-| `updated_at` | timestamptz | tidak | now | Waktu diperbarui |
-
-Constraint dan indeks:
-
-- Primary key: `id`.
-- Unique: `user_id`.
-- Foreign key: `user_id -> users.id`, `ON DELETE CASCADE`.
-- Index: `profil_user_id_idx`.
-
-### 7.2 `jadwal_kontrol`
-
-Tanggal kontrol yang dihasilkan dari aturan atau dijadwalkan untuk pasien.
-
-| Kolom | Tipe | Null | Default | Keterangan |
-|---|---|---:|---|---|
-| `id` | uuid | tidak | random | Primary key |
-| `pasien_id` | uuid | tidak | - | FK ke `users.id` |
-| `aturan_kontrol_id` | uuid | ya | - | FK ke `aturan_kontrol.id` |
-| `dokter_id` | uuid | ya | - | FK ke `dokter.id` |
-| `tanggal_rencana` | date | tidak | - | Tanggal kontrol |
-| `status` | `status_jadwal_kontrol` | tidak | `terjadwal` | Status jadwal |
-| `janji_id` | uuid | ya | - | FK ke `janji.id` |
-| `catatan` | text | ya | - | Catatan |
-| `created_at` | timestamptz | tidak | now | Waktu dibuat |
-| `updated_at` | timestamptz | tidak | now | Waktu diperbarui |
-
-Constraint dan indeks:
-
-- Primary key: `id`.
-- Foreign key `pasien_id -> users.id`, `ON DELETE CASCADE`.
-- Foreign key `aturan_kontrol_id -> aturan_kontrol.id`, `ON DELETE SET NULL`.
-- Foreign key `dokter_id -> dokter.id`, `ON DELETE SET NULL`.
-- Foreign key `janji_id -> janji.id`, `ON DELETE SET NULL`.
-- Index: `jadwal_kontrol_pasien_idx`, `jadwal_kontrol_tanggal_idx`,
-  `jadwal_kontrol_status_idx`.
-
-### 7.3 `tiket_antrian`
-
-Tiket antrean yang terhubung satu-ke-satu dengan janji.
-
-| Kolom | Tipe | Null | Default | Keterangan |
-|---|---|---:|---|---|
-| `id` | uuid | tidak | random | Primary key |
-| `janji_id` | uuid | tidak | - | FK ke `janji.id`, unik |
-| `pasien_id` | uuid | tidak | - | FK ke `users.id` |
-| `tanggal` | date | tidak | - | Hari antrean dalam WIB |
-| `nomor_antrian_final` | integer | ya | - | Terbit saat check-in |
-| `status` | `status_antrian` | tidak | `belum_check_in` | Status antrean |
-| `waktu_check_in` | timestamptz | ya | - | Waktu check-in |
-| `waktu_panggil` | timestamptz | ya | - | Waktu dipanggil |
-| `waktu_selesai` | timestamptz | ya | - | Waktu selesai |
-| `alasan_koreksi` | text | ya | - | Alasan koreksi status |
-| `created_at` | timestamptz | tidak | now | Waktu dibuat |
-| `updated_at` | timestamptz | tidak | now | Waktu diperbarui |
-
-Constraint dan indeks:
-
-- Primary key: `id`.
-- Unique `janji_id`, sehingga satu janji memiliki paling banyak satu tiket.
-- Foreign key `janji_id -> janji.id`, `ON DELETE CASCADE`.
-- Foreign key `pasien_id -> users.id`, `ON DELETE CASCADE`.
-- Index: `tiket_antrian_pasien_idx`, `tiket_antrian_tanggal_idx`,
-  `tiket_antrian_status_idx`.
-- Unique partial index `tiket_antrian_tanggal_nomor_final_unique_idx` pada
-  `(tanggal, nomor_antrian_final)` saat nomor final tidak null.
-
-Nomor estimasi tidak disimpan sebagai kolom. Nomor final hanya diisi saat
-check-in dan unik per tanggal.
-
-### 7.4 `catatan_kebiasaan`
-
-Catatan hidrasi, tidur, aktivitas, dan catatan harian pasien.
-
-| Kolom | Tipe | Null | Default | Keterangan |
-|---|---|---:|---|---|
-| `id` | uuid | tidak | random | Primary key |
-| `pasien_id` | uuid | tidak | - | FK ke `users.id` |
-| `tanggal` | date | tidak | - | Tanggal catatan dalam WIB |
-| `hidrasi_ml` | integer | ya | - | Hidrasi dalam mililiter |
-| `jam_tidur` | integer | ya | - | Durasi tidur dalam jam |
-| `aktivitas_menit` | integer | ya | - | Durasi aktivitas |
-| `catatan` | text | ya | - | Catatan bebas |
-| `created_at` | timestamptz | tidak | now | Waktu dibuat |
-| `updated_at` | timestamptz | tidak | now | Waktu diperbarui |
-
-Constraint dan indeks:
-
-- Primary key: `id`.
-- Foreign key: `pasien_id -> users.id`, `ON DELETE CASCADE`.
-- Index: `catatan_kebiasaan_pasien_idx`, `catatan_kebiasaan_tanggal_idx`.
-- Validasi nilai dilakukan di schema/service, bukan hanya UI.
-
-### 7.5 `resep`
-
-Catatan resep yang dimasukkan admin berdasarkan resep dokter. Aplikasi tidak
-menghasilkan rekomendasi obat.
-
-| Kolom | Tipe | Null | Default | Keterangan |
-|---|---|---:|---|---|
-| `id` | uuid | tidak | random | Primary key |
-| `pasien_id` | uuid | tidak | - | FK ke `users.id` |
-| `janji_id` | uuid | ya | - | FK ke `janji.id` |
-| `dokter_id` | uuid | ya | - | FK ke `dokter.id` |
-| `nomor_resep` | varchar(100) | ya | - | Nomor resep |
-| `diagnosis` | text | ya | - | Catatan diagnosis dari resep, bila ada |
-| `catatan` | text | ya | - | Catatan resep |
-| `dibuat_oleh` | uuid | tidak | - | FK ke `users.id`, admin |
-| `tanggal_resep` | date | tidak | - | Tanggal resep |
-| `created_at` | timestamptz | tidak | now | Waktu dibuat |
-| `updated_at` | timestamptz | tidak | now | Waktu diperbarui |
-
-Constraint dan indeks:
-
-- Primary key: `id`.
-- Foreign key `pasien_id -> users.id`, `ON DELETE CASCADE`.
-- Foreign key `janji_id -> janji.id`, `ON DELETE SET NULL`.
-- Foreign key `dokter_id -> dokter.id`, `ON DELETE SET NULL`.
-- Foreign key `dibuat_oleh -> users.id`, `ON DELETE RESTRICT`.
-- Index: `resep_pasien_idx`, `resep_tanggal_idx`.
-
-### 7.6 `obat`
-
-Obat yang menjadi bagian dari catatan resep.
-
-| Kolom | Tipe | Null | Default | Keterangan |
-|---|---|---:|---|---|
-| `id` | uuid | tidak | random | Primary key |
-| `resep_id` | uuid | tidak | - | FK ke `resep.id` |
-| `nama_obat` | varchar(255) | tidak | - | Nama obat dari resep |
-| `dosis` | varchar(100) | tidak | - | Dosis |
-| `aturan_pakai` | varchar(100) | tidak | - | Aturan pakai |
-| `frekuensi_per_hari` | integer | tidak | 1 | Frekuensi |
-| `tanggal_mulai` | date | tidak | - | Awal periode |
-| `tanggal_selesai` | date | tidak | - | Akhir periode |
-| `rujukan_fornas` | varchar(255) | ya | - | URL rujukan Fornas |
-| `keterangan` | text | ya | - | Keterangan tambahan |
-| `aktif` | boolean | tidak | true | Status aktif |
-| `created_at` | timestamptz | tidak | now | Waktu dibuat |
-| `updated_at` | timestamptz | tidak | now | Waktu diperbarui |
-
-Constraint dan indeks:
-
-- Primary key: `id`.
-- Foreign key: `resep_id -> resep.id`, `ON DELETE CASCADE`.
-- Index: `obat_resep_idx`, `obat_aktif_idx`.
-- Tidak ada relasi kondisi kesehatan ke obat. Data obat hanya berasal dari
-  resep yang dicatat admin.
-
-### 7.7 `catatan_minum_obat`
-
-Status minum obat pasien per obat dan per tanggal.
-
-| Kolom | Tipe | Null | Default | Keterangan |
-|---|---|---:|---|---|
-| `id` | uuid | tidak | random | Primary key |
-| `pasien_id` | uuid | tidak | - | FK ke `users.id` |
-| `obat_id` | uuid | tidak | - | FK ke `obat.id` |
-| `tanggal` | date | tidak | - | Tanggal pencatatan dalam WIB |
-| `status` | `status_minum_obat` | tidak | `sudah` | Status dosis |
-| `waktu_minum` | timestamptz | ya | - | Waktu penandaan |
-| `catatan` | text | ya | - | Catatan pasien |
-| `created_at` | timestamptz | tidak | now | Waktu dibuat |
-| `updated_at` | timestamptz | tidak | now | Waktu diperbarui |
-
-Constraint dan indeks:
-
-- Primary key: `id`.
-- Foreign key `pasien_id -> users.id`, `ON DELETE CASCADE`.
-- Foreign key `obat_id -> obat.id`, `ON DELETE CASCADE`.
-- Unique gabungan: `catatan_minum_obat_unique_idx` pada
-  `(pasien_id, obat_id, tanggal)`.
-- Index: `catatan_minum_obat_pasien_tanggal_idx`.
-
-Unique gabungan membuat penandaan dosis pada tanggal yang sama menjadi upsert,
-bukan baris duplikat.
-
-### 7.8 `log_aktivitas`
-
-Jejak aktivitas akun pasien. Fitur ini opsional dan dapat dipotong lebih dulu
-menurut rencana rilis.
-
-| Kolom | Tipe | Null | Default | Keterangan |
-|---|---|---:|---|---|
-| `id` | uuid | tidak | random | Primary key |
-| `user_id` | uuid | tidak | - | FK ke `users.id` |
-| `jenis_aksi` | varchar(100) | tidak | - | Jenis aktivitas |
-| `objek` | varchar(100) | tidak | - | Objek yang terkait |
-| `objek_id` | varchar(100) | ya | - | ID objek bila ada |
-| `keterangan` | text | tidak | - | Ringkasan aktivitas |
-| `created_at` | timestamptz | tidak | now | Waktu aktivitas |
-
-Constraint dan indeks:
-
-- Primary key: `id`.
-- Foreign key: `user_id -> users.id`, `ON DELETE CASCADE`.
-- Tidak ada `updated_at`.
-- Index: `log_aktivitas_user_idx`, `log_aktivitas_created_at_idx`.
-- Tidak ada endpoint aplikasi untuk mengubah atau menghapus log.
-- Trigger database append-only belum tersedia pada skema saat ini.
-
-### 7.9 `konten_statis`
-
-Materi edukasi yang dapat ditampilkan berdasarkan kondisi terkait. Fitur ini
-pelengkap dan dapat dipotong dari rilis.
-
-| Kolom | Tipe | Null | Default | Keterangan |
-|---|---|---:|---|---|
-| `id` | uuid | tidak | random | Primary key |
-| `slug` | varchar(150) | tidak | - | Slug unik |
-| `judul` | varchar(255) | tidak | - | Judul materi |
-| `ringkasan` | text | tidak | - | Ringkasan |
-| `isi` | text | tidak | - | Isi materi |
-| `kategori` | varchar(100) | tidak | - | Kategori |
-| `kondisi_terkait` | varchar(100) | ya | - | Kondisi pemicu |
-| `url_sumber` | varchar(500) | tidak | - | URL sumber resmi |
-| `tanggal_pengambilan` | date | tidak | - | Tanggal sumber diambil |
-| `aktif` | boolean | tidak | true | Status publikasi |
-| `created_at` | timestamptz | tidak | now | Waktu dibuat |
-| `updated_at` | timestamptz | tidak | now | Waktu diperbarui |
-
-Constraint dan indeks:
-
-- Primary key: `id`.
-- Unique: `slug`.
-- Index: `konten_kategori_idx`, `konten_kondisi_terkait_idx`.
-- Setiap materi yang aktif wajib memiliki URL sumber dan tanggal pengambilan.
-
-## 8. Ringkasan foreign key dan perilaku hapus
-
-| Tabel.child | Kolom | Referensi | On delete |
+| Kelompok/tabel arsip | Kolom penting yang DIDOKUMENTASIKAN lama | Implikasi target | Pemilik model/migrasi fondasi |
 |---|---|---|---|
-| `sessions` | `user_id` | `users.id` | cascade |
-| `profil` | `user_id` | `users.id` | cascade |
-| `dokter` | - | - | - |
-| `slot` | `dokter_id` | `dokter.id` | cascade |
-| `janji` | `pasien_id` | `users.id` | cascade |
-| `janji` | `dokter_id` | `dokter.id` | restrict |
-| `janji` | `slot_id` | `slot.id` | restrict |
-| `janji` | `dibatalkan_oleh` | `users.id` | set null |
-| `usulan_perubahan` | `janji_id` | `janji.id` | cascade |
-| `usulan_perubahan` | `slot_baru_id` | `slot.id` | restrict |
-| `usulan_perubahan` | `dibuat_oleh` | `users.id` | restrict |
-| `notifikasi` | `user_id` | `users.id` | cascade |
-| `audit_log` | `user_id` | `users.id` | set null |
-| `aturan_kontrol` | `pasien_id` | `users.id` | cascade |
-| `aturan_kontrol` | `dokter_id` | `dokter.id` | set null |
-| `aturan_kontrol` | `dibuat_oleh` | `users.id` | restrict |
-| `jadwal_kontrol` | `pasien_id` | `users.id` | cascade |
-| `jadwal_kontrol` | `aturan_kontrol_id` | `aturan_kontrol.id` | set null |
-| `jadwal_kontrol` | `dokter_id` | `dokter.id` | set null |
-| `jadwal_kontrol` | `janji_id` | `janji.id` | set null |
-| `tiket_antrian` | `janji_id` | `janji.id` | cascade |
-| `tiket_antrian` | `pasien_id` | `users.id` | cascade |
-| `catatan_kebiasaan` | `pasien_id` | `users.id` | cascade |
-| `resep` | `pasien_id` | `users.id` | cascade |
-| `resep` | `janji_id` | `janji.id` | set null |
-| `resep` | `dokter_id` | `dokter.id` | set null |
-| `resep` | `dibuat_oleh` | `users.id` | restrict |
-| `obat` | `resep_id` | `resep.id` | cascade |
-| `catatan_minum_obat` | `pasien_id` | `users.id` | cascade |
-| `catatan_minum_obat` | `obat_id` | `obat.id` | cascade |
-| `log_aktivitas` | `user_id` | `users.id` | cascade |
+| Auth: `users` | UUID `id`, `name`, `email`, `password_hash`, enum `role`, `created_at`, `updated_at` | Mapping auth UUID/password eksplisit; role server-side | L03, rancangan auth L04 |
+| Auth: `sessions` | UUID `id`, `user_id`, `token_hash`, `expires_at`, `created_at` | **Tidak kompatibel langsung** dengan database session driver Laravel | L03, strategi L02/L04 |
+| Klinik: `dokter` | UUID `id`, `nama`, `spesialisasi`, `nomor_izin`, `aktif`, timestamps | Model `Doctor`, bukan user login | L03 |
+| Klinik: `slot` | `dokter_id`, `tanggal`, `jam_mulai`, `jam_selesai`, `kuota`, `tersedia`, `dikunci_sampai`, timestamps | Jangan anggap TTL sebagai lock; kuota lama bukan izin multi-pasien | L03 |
+| Klinik: `janji` | `pasien_id`, `dokter_id`, `slot_id`, enum `status`, `keluhan`, `catatan`, `alasan_batal`, `dibatalkan_oleh`, timestamps | Model `Appointment`, state dan reservasi konsisten | L03 |
+| Klinik: `usulan_perubahan` | `janji_id`, `slot_baru_id`, `alasan`, enum `status`, `batas_waktu_jawab`, `ttl_kunci_slot`, `dibuat_oleh`, timestamps | Model `RescheduleProposal`, perlu keputusan penyimpanan hasil alternatif | L03 |
+| Klinik: `notifikasi` | `user_id`, `judul`, `pesan`, enum `tipe`, `dibaca`, JSONB `data_terkait`, `created_at` | In-app; referensi domain dan deduplikasi harus aman | L03 |
+| Klinik: `audit_log` | `user_id`, `aksi`, `objek`, `objek_id`, JSONB before/after, `alasan`, `ip_address`, `created_at` | Tidak memiliki `updated_at`; bukan alasan mengklaim DB append-only | L03 |
+| Klinik: `aturan_kontrol` | `pasien_id`, `dokter_id`, `interval_hari`, `tanggal_mulai`, `anchor_hari`, `aktif`, `catatan`, `dibuat_oleh`, timestamps | Ambiguitas 30 hari vs bulan belum diputuskan | L03 |
+| Pasien: `profil` | `user_id`, `nik` nullable lama, kontak, lahir/kelamin, darah, tinggi/berat, `kondisi_kesehatan`, `riwayat_alergi`, kontak darurat, timestamps | Tidak kumpulkan/tampilkan NIK/KK; jangan ekspor kolom lama ke form | L03 |
+| Pasien: `jadwal_kontrol` | `pasien_id`, `aturan_kontrol_id`, `dokter_id`, `tanggal_rencana`, enum `status`, `janji_id`, `catatan`, timestamps | Generator L10; satu hasil per periode/idempotency key yang disepakati | L03 |
+| Pasien: `tiket_antrian` | `janji_id`, `pasien_id`, `tanggal`, `nomor_antrian_final`, enum `status`, waktu check-in/panggil/selesai, `alasan_koreksi`, timestamps | Nomor final setelah check-in, unik harian WIB | L03 |
+| Pasien: `catatan_kebiasaan` | `pasien_id`, `tanggal`, `hidrasi_ml`, integer `jam_tidur`, `aktivitas_menit`, `catatan`, timestamps | Perlu unique pasien+tanggal dan keputusan presisi tidur/rentang | L03 |
+| Pasien: `resep` | `pasien_id`, `janji_id`, `dokter_id`, `nomor_resep`, `diagnosis`, `catatan`, `dibuat_oleh`, `tanggal_resep`, timestamps | Catatan klinis admin, bukan laporan obat pasien; diagnosis bukan input target otomatis | L03 |
+| Pasien: `obat` | `resep_id`, `nama_obat`, `dosis`, `aturan_pakai`, `frekuensi_per_hari`, `tanggal_mulai`, `tanggal_selesai`, `rujukan_fornas`, `keterangan`, `aktif`, timestamps | Resep klinis; tidak ada engine kondisi -> obat | L03 |
+| Pasien: `catatan_minum_obat` | `pasien_id`, `obat_id`, `tanggal`, enum `status`, `waktu_minum`, `catatan`, timestamps | Catatan **harian**, bukan per dosis | L03 |
+| Opsional: `log_aktivitas` | `user_id`, `jenis_aksi`, `objek`, `objek_id`, `keterangan`, `created_at` | Tanpa `updated_at`; implementasi rilis mengikuti keputusan L17 | L03 jika dipilih |
+| Opsional: `konten_statis` | `slug`, `judul`, `ringkasan`, `isi`, `kategori`, `kondisi_terkait`, `url_sumber`, `tanggal_pengambilan`, `aktif`, timestamps | Sumber/peninjauan wajib jika dibangun | L03 jika dipilih |
 
-## 9. Constraint bisnis utama
+Setiap tabel domain arsip mempunyai UUID `id`. Rincian null/default/FK tidak disalin sebagai DDL target; tetap ada pada arsip utuh. Keberadaan kolom dalam inventaris **bukan izin menerima field itu dari request**. Input target ada di [kontrak web](api-contract.md).
 
-### Satu janji aktif per slot
+Enum arsip:
 
-Index parsial `janji_slot_aktif_unique_idx` menolak lebih dari satu baris pada
-slot yang sama ketika statusnya `aktif`. Aturan ini harus tetap ditegakkan di
-database karena dua request dapat datang hampir bersamaan.
-
-### Satu nomor final per hari
-
-Index parsial `tiket_antrian_tanggal_nomor_final_unique_idx` memastikan pasangan
-`tanggal` dan `nomor_antrian_final` unik ketika nomor final tidak null.
-
-### Satu catatan minum per obat per hari
-
-Index `catatan_minum_obat_unique_idx` memastikan kombinasi pasien, obat, dan
-tanggal tidak memiliki duplikat.
-
-### Anchor jadwal kontrol
-
-`aturan_kontrol.anchor_hari` menyimpan hari asli dari tanggal mulai. Interval
-30 hari dari tanggal 31 harus di-clamp ke tanggal terakhir bulan yang lebih
-pendek, kemudian anchor tetap dipertahankan untuk periode berikutnya.
-
-### Data demo dan privasi
-
-- Data seed harus fiktif.
-- `password_hash` tidak pernah ditampilkan.
-- Admin tidak mendapat akses ke `catatan_kebiasaan` atau ringkasan kepatuhan.
-- Dokter tidak memiliki akun pengguna.
-- Tidak ada tabel atau kolom pemetaan kondisi kesehatan ke rekomendasi obat.
-
-## 10. Riwayat migrasi
-
-| Migrasi | Isi utama |
+| Enum | Nilai lama terdokumentasi |
 |---|---|
-| `0000_faithful_ultimates.sql` | Fondasi awal skema |
-| `0001_spooky_ken_ellis.sql` | Domain klinik: dokter, slot, janji, usulan, notifikasi, audit, aturan kontrol |
-| `0002_remarkable_daimon_hellstrom.sql` | Domain pasien: profil, jadwal, antrean, kebiasaan, resep, obat, konten, aktivitas |
-| `0003_keen_chamber.sql` | Unique partial index janji aktif dan nomor antrean final |
+| `user_role` | `pasien`, `admin` |
+| `status_janji` | `aktif`, `perubahan_diusulkan`, `dibatalkan`, `selesai`, `tidak_hadir` |
+| `status_usulan` | `menunggu_tanggapan`, `disetujui`, `ditolak`, `kedaluwarsa` |
+| `tipe_notifikasi` | `pengingat_janji`, `usulan_perubahan`, `pengingat_obat`, `antrian`, `sistem` |
+| `status_antrian` | `belum_check_in`, `menunggu`, `diperiksa`, `selesai`, `tidak_hadir` |
+| `status_jadwal_kontrol` | `terjadwal`, `selesai`, `terlewat`, `dibatalkan` |
+| `jenis_kelamin` | `laki_laki`, `perempuan` |
+| `status_minum_obat` | `sudah`, `belum` |
 
-## 11. Batas dokumentasi
+Tidak ada enum “menunggu konfirmasi admin” pada arsip, dan alur alternatif tidak membutuhkannya. Transisi target dan perubahan enum membutuhkan rancangan/migrasi/test, tidak cukup menambahkan string di controller.
 
-Dokumen ini mencerminkan skema Drizzle yang ada di repository saat dibuat. Ia
-tidak membuktikan keadaan database Neon live tanpa menjalankan migrasi atau
-inspeksi database. Jika skema kode dan database live berbeda, migrasi serta
-hasil inspeksi database menjadi dasar verifikasi teknis, sedangkan perubahan
-desain harus dicatat kembali di dokumen ini.
+## 4. Pemetaan Eloquent dan autentikasi
+
+Semua path/class di bagian ini rencana. Untuk mengadopsi tabel lama:
+
+- Tetapkan `$table`, primary key UUID, key type string dan non-incrementing. Jangan biarkan Eloquent mengasumsikan `doctors`, `appointments`, atau integer ID untuk tabel `dokter`/`janji` lama. Cara pembangkitan UUID (database atau aplikasi) dipilih eksplisit dan diuji konsisten pada FK.
+- Model auth `User` mengimplementasikan kontrak auth Laravel dengan password column **`password_hash`**, melalui mapping/metode yang sesuai versi Laravel dipatok L01. Jangan mengasumsikan kolom `password` ada. Hash lama diverifikasi kompatibilitasnya secara aman sebelum adopsi; jangan menyalin hash/kredensial ke bukti.
+- Batasi fillable/assignment, sembunyikan hash/token, cast enum role/status ke enum PHP yang cocok, boolean ke boolean, JSONB ke struktur yang ditetapkan, tanggal ke tanggal bisnis, timestamp ke immutable datetime bila dipilih.
+- `created_at` dan `updated_at` eksplisit. Untuk `sessions`, `notifikasi`, `audit_log`, dan `log_aktivitas` arsip tidak ada `updated_at`: konfigurasi timestamp model agar tidak menulis kolom fiktif. Waktu audit tidak diterima dari client.
+- Semua query pasien, relasi, route model binding dan agregasi harus mengikuti kepemilikan. Scope tidak boleh hanya pada daftar lalu detail mengambil objek tanpa policy. Admin memakai proyeksi minimal, bukan eager-load profil penuh/kebiasaan.
+- Mapping input Inggris -> kolom lama antara lain `patient_id` -> `pasien_id`, `doctor_id` -> `dokter_id`, `appointment_id` -> `janji_id`, `name` -> `nama` pada dokter, `health_conditions` -> `kondisi_kesehatan`, `allergies` -> `riwayat_alergi`. Ini transformasi aplikasi, bukan deklarasi rename kolom telah terjadi.
+
+### Sesi Laravel bukan tabel token lama
+
+Arsip `sessions` menyimpan UUID + `token_hash` + `expires_at`. Driver sesi database Laravel memakai struktur payload/activity/session identifier yang berbeda; detail DDL persis mengikuti versi yang dipatok. Jangan menunjuk driver bawaan ke tabel itu atau menjalankan migrasi sesi default bernama sama.
+
+L02/L04 harus memilih dan mendokumentasikan salah satu:
+
+1. Tabel sesi Laravel **baru dan terisolasi**, nama dikonfigurasi khusus, FK user UUID yang kompatibel, dengan invalidasi/retensi yang disetujui; atau
+2. Adapter/session handler eksplisit yang benar-benar memetakan schema token lama, termasuk persistensi, expiry, idle, rotasi dan pencabutan. Ini memerlukan test khusus, bukan klaim kompatibilitas otomatis.
+
+Sesi lama tidak diterima sebagai sesi Laravel secara diam-diam. Rencana cutover menetapkan pencabutan dan login ulang. Cookie HttpOnly/Secure produksi/SameSite, regenerasi saat login dan invalidasi server-side saat logout/idle diuji. Store rate limit persisten/bersama juga harus tersedia; tabel cache/session scaffolding bukan izin menimpa tabel existing.
+
+## 5. Perubahan target yang perlu dirancang, BELUM ada
+
+| Kebutuhan target | Celah pada arsip | Rencana/keputusan sebelum migrasi |
+|---|---|---|
+| Obat laporan pasien (L07) | Tabel `resep`/`obat` hanya klinis | Rancang penyimpanan terpisah, misalnya tabel `patient_reported_medications` (nama kandidat, **belum ada**), relasi profil/pemilik, katalog opsional, catatan dan periode; tentukan aturan hapus profil |
+| Katalog Fornas (L07) | Inventaris 18 tabel bukan inventaris seluruh katalog yang mungkin ditambahkan kemudian | Inventaris L02 atas artefak yang diizinkan; pilih format baca/import idempoten dan metadata sumber. Jangan menganggap kolom katalog sudah ada |
+| Sumber resep (L12) | Arsip obat punya `rujukan_fornas`, belum mendokumentasikan tanggal pengambilan per item | Rancang metadata sumber/tanggal dan validasi tanpa mengubah data lama diam-diam |
+| Klaim slot selama usulan (L08/L09) | Index lama hanya `janji.status = 'aktif'` | Pilih constraint/ledger reservasi atau strategi locks yang melindungi slot lama **dan** slot usulan secara menyeluruh; draft DDL dan race tests wajib |
+| Hasil slot alternatif/pembatalan usulan (L09) | Tidak ada field alternatif/enum pembatalan khusus pada arsip | Tentukan penyimpanan hasil terminal + slot terpilih; jangan menambah konfirmasi admin |
+| Idempotensi kontrol/pengingat (L10) | Index biasa tidak membuktikan satu jadwal/pengingat per periode | Tentukan unique/idempotency key, aturan pengganti terlewat, dan transaksi selesai -> jadwal berikutnya |
+| Kebiasaan harian (L13) | Arsip hanya index biasa, `jam_tidur` integer | Tentukan unique pasien+tanggal, nullable/partial update, presisi dan constraint nilai sesuai acceptance |
+| Append-only audit (L06) | Tidak ada updated_at/route ubah bukan proteksi database | Pilih jaminan aplikasi; jika perlu DB guarantee, privilege/trigger beserta test penolakan UPDATE/DELETE |
+
+`data/fornas` di root **dipertahankan**. Excel/JSON publik adalah referensi yang perlu pemeriksaan sumber, lisensi, struktur, versi dan tanggal, bukan dump siap diimpor ke database lama. Tidak ada import atau perubahan katalog pada sesi ini. Katalog tidak memetakan penyakit ke obat; aplikasi tidak meresepkan.
+
+## 6. Constraint dan transaksi yang wajib dibuktikan
+
+### Janji/reservasi
+
+Index arsip `janji_slot_aktif_unique_idx` pada `slot_id WHERE status = 'aktif'` tidak melindungi janji yang berstatus `perubahan_diusulkan`; tidak pula dengan sendirinya melindungi `usulan_perubahan.slot_baru_id`. `dikunci_sampai`/`ttl_kunci_slot` tidak mengunci row secara otomatis. Jangan menyatakan index lama memenuhi seluruh kebutuhan baru.
+
+Target wajib melindungi dua klaim: slot lama tetap dimiliki saat pending, slot usulan tidak dapat dipesan pihak lain. Seluruh jalur booking, admin edit, jawaban, cancel, expiry menggunakan protokol transaksi/lock/constraint yang sama dengan urutan lock deterministik. Jangan memakai partial index berdasarkan jam `now()` untuk menganggap expiry otomatis menyelesaikan invariant.
+
+Setuju, tolak, alternatif, cancel dan expiry masing-masing menyelesaikan state dan melepas klaim terkait secara atomik. Alternatif langsung memindahkan janji; kegagalan mengambil alternatif tidak melepas janji lama. Race TTL/jawaban dan retry hanya menghasilkan satu hasil terminal. Angka TTL dan batas jawab belum disahkan; kebijakan waktu beserta test acceptance-nya tetap terhalang sampai keputusan L09.
+
+### Audit
+
+Perubahan admin dan tepat satu audit per perubahan memakai koneksi/transaksi yang sama. Kegagalan insert audit membatalkan perubahan dan efek domain terkait. Uji injeksi kegagalan wajib; audit asynchronous tidak memenuhi atomicity ini. Tidak ada route ubah/hapus audit. Batch menghasilkan satu audit per objek yang benar-benar berubah, bukan duplikasi dari observer dan Action. Pembacaan alergi minimal perlu jejak akses terpisah sesuai keputusan privasi; bukan dalih menyimpan seluruh profil di audit.
+
+### Antrean, kontrol dan catatan pasien
+
+- `tiket_antrian.janji_id` unik; arsip juga mendokumentasikan unique partial `(tanggal, nomor_antrian_final)` ketika nomor final tidak null. Target mempertahankan invariant dan alokasi nomor serentak; satu hari memakai WIB.
+- Nomor estimasi adalah turunan runtime, tidak perlu tabel nomor estimasi baru. Nomor final nullable sebelum check-in; estimasi tidak menjadi dasar panggilan.
+- Selesai kunjungan dan jadwal berikutnya idempoten, dengan satu generator L10 dipanggil L11. Tidak ada dua pemilik pembentukan jadwal.
+- FR-02 menyebut 7/14/30 hari tetapi contoh anchor bulanan. Pilih kebijakan sebelum migrasi/tes bergantung padanya dianggap final. Jika bulanan dipilih, 31 Jan -> 28/29 Feb -> 31 Mar, anchor tidak bergeser akibat clamp.
+- `catatan_minum_obat_unique_idx` arsip: pasien+obat+tanggal. Target memperbarui satu catatan harian; tidak mengklaim pencatatan per dosis. Denominator kepatuhan perlu keputusan L12.
+- Kebiasaan target unik pasien+tanggal; tidur 0/24/bukan angka ditolak menurut acceptance. Ringkasan/gap/ambang diuji, tetapi nilai ambang tidak dipilih oleh agen.
+- FK/on-delete arsip tidak otomatis menjadi kebijakan retensi target. Penghapusan profil bukan penghapusan `users`, resep, kunjungan atau audit. Review cascade terhadap aturan retensi/privasi sebelum adopsi.
+
+## 7. Rencana verifikasi aman
+
+1. **L02:** keputusan tertulis baseline/adopsi, inventaris nonrahasia, backup dan restore drill pada target terisolasi; database lama tetap dipertahankan.
+2. **L03:** migration plan per kelompok auth/sesi, klinik/reservasi/audit, pasien/obat laporan/katalog, dan fitur opsional; review urutan FK/enum serta strategi rollback non-destruktif. Seeds hanya data fiktif dan admin individual, idempoten.
+3. **L04/L06–L14:** PHPUnit feature/integration memakai PostgreSQL terisolasi, bukan SQLite/mock untuk membuktikan concurrency/enum/index. Test discovery dan guard lingkungan dibangun sejak L01.
+4. Bukti minimal: dua booking satu slot tepat satu sukses; slot lama dan usulan tak bisa direbut; expiry vs jawaban; rollback audit; check-in ganda/nomor unik; kunjungan selesai dua kali tanpa jadwal duplikat; obat harian upsert; round-trip profil/obat laporan; IDOR dan larangan admin kebiasaan.
+5. Hasil mencantumkan commit, waktu, perintah, identitas lingkungan **nonrahasia**, dan kasus nyata yang dijalankan. Tidak ada URL koneksi, hash, cookie, payload kesehatan nyata atau password di bukti.
+
+Belum ada database, schema Laravel, seed, PHPUnit, atau deployment yang diverifikasi pada sesi dokumentasi ini. Status implementasi hanya di [status-tugas.md](status-tugas.md), bukan diturunkan dari riwayat A10–A16 atau hasil uji Next lama.

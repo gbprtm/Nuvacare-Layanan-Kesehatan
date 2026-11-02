@@ -1,314 +1,138 @@
-# Tinjauan Sistem dan Use Case
+# Sistem dan use case target Laravel
 
-Tanggal tinjauan: 31 Oktober 2026  
-Sumber utama: `docs/rancangan/ringkasan-proyek.md`, `docs/peta-bagian.md`, `docs/status-tugas.md`, dan `docs/01-laporan-unit/TINJAUAN-2026-10-29.md`.
+Tanggal: 2 November 2026. **Rancangan migrasi dokumentasi, bukan laporan aplikasi Laravel telah berjalan.** Tidak ada scaffold, koneksi database, inspeksi env/secret atau pengujian aplikasi pada sesi ini.
 
-> Dokumen ini merupakan ringkasan kondisi sistem dan tinjauan ketertelusuran dokumentasi. Kesimpulan di dalamnya didasarkan pada laporan dan berkas yang tersedia di repo. Verifikasi ulang ke database live belum dilakukan karena kredensial `.env` atau akses database belum disediakan.
+## 1. Sumber, status dan batas klaim
 
-## 1. Ringkasan proyek
+- Kebutuhan produk: [PRD read-only](rancangan/prd-v0.3.md), khususnya §3.3–3.5, §4.1–4.4, §6 dan pertanyaan terbuka §9. `docs/rancangan/**` dan vault eksternal `brain-project` tetap read-only.
+- Target teknis: [arsitektur Laravel](panduan-arsitektur.md), [kontrak route HTML](api-contract.md), [rencana data](database-schema.md), [gerbang backend](tinjauan-backend-agen.md).
+- Dokumen dan bukti Next terdahulu disimpan di `_arsip/nextjs-2026-11-02/docs`. Angka tugas/test/migrasi/seeds lama bukan kemajuan Laravel.
+- **Satu-satunya ledger status implementasi baru adalah [status-tugas.md](status-tugas.md).** Dokumen ini tidak menyalin jumlah done/todo atau menandai Lxx selesai.
+- PHP dan Composer belum tersedia di PATH menurut inventaris migrasi; belum ada `artisan`/`composer.json`. Perintah dan path Laravel adalah rencana sampai L01 membuktikan bootstrap.
 
-Sistem ini adalah aplikasi web untuk membantu klinik mengelola kunjungan pasien. Fokusnya adalah menggantikan proses manual seperti buku jadwal, pemesanan slot, check-in, nomor antrean, perubahan jadwal, dan pencatatan kebiasaan pasien.
+Stack disetujui: Laravel, Blade HTML server-rendered, CSS biasa, JavaScript vanilla, Eloquent, Laravel Form Requests, PostgreSQL Neon, PHPUnit backend, Playwright Google Chrome. Rujukan resmi yang telah diperiksa koordinator: [installation](https://laravel.com/docs/13.x/installation), [database](https://laravel.com/docs/13.x/database). Versi tepat harus diuji kompatibilitas PHP/host dan dipatok L01, tidak diasumsikan sudah terpasang.
 
-Sistem bukan aplikasi diagnosis dan bukan rekam medis lengkap. Sistem tidak memberikan rekomendasi medis, tidak memilihkan obat, tidak mengirim WhatsApp/email/push notification, dan tidak terintegrasi dengan SATUSEHAT pada rilis ini.
+## 2. Produk, aktor dan privasi
 
-Aktor sistem hanya dua:
+Website browser untuk mengelola profil personal, jadwal kontrol, janji, kunjungan/antrean dan kebiasaan. Bukan aplikasi mobile native, diagnosis, rekomendasi medis, resep elektronik, farmasi, pembayaran, atau rekam medis lengkap. Tidak terintegrasi SATUSEHAT, WhatsApp, email atau push; pemberitahuan hanya di aplikasi.
 
-- **Pasien**, yang menggunakan aplikasi untuk mengelola profil, jadwal, janji, antrean, kebiasaan, obat, dan riwayat.
-- **Admin klinik**, yang mengelola dokter, slot praktik, janji, kedatangan, status antrean, perubahan jadwal, obat, serta audit log.
+| Aktor | Wewenang target | Batas |
+|---|---|---|
+| Tamu | Beranda publik, daftar pasien, masuk | Tidak membaca halaman inti/data kesehatan |
+| Pasien | Profil/obat laporan sendiri, janji, tanggapan usulan, check-in, kebiasaan, catatan obat harian dan timeline sendiri | Tidak mengakses pasien lain, status admin, atau membuat resep klinis |
+| Admin individual | Dokter/slot, janji, usulan/cancel, check-in/antrean, catatan anjuran kontrol, pencatatan resep dan audit | Tidak membuka kebiasaan atau ringkasan kepatuhan pasien; bukan pengambil keputusan medis |
+| Dokter | Data master nama/spesialisasi/slot | **Bukan akun/role aplikasi** |
 
-Dokter bukan pengguna aplikasi. Dokter hanya disimpan sebagai data nama, spesialisasi, dan slot praktik.
+Backend registrasi publik selalu menetapkan pasien; admin dibuat melalui seed aman per individu, bukan akun bersama. Login email/password; NIK dan KK tidak dikumpulkan atau diekspos meski kolom NIK lama mungkin masih ada. Data demo/uji fiktif.
 
-## 2. Use case pasien
+Admin hanya melihat proyeksi operasional minimal: nama, jadwal, status dan nomor antrean. PRD §4.4 mengusulkan ringkasan alergi hanya pada check-in dan setiap pembukaan tercatat; asumsi ini perlu konfirmasi sebelum akses diaktifkan. Tidak ada izin membuka seluruh profil, daftar kebiasaan atau kepatuhan melalui relasi/audit/timeline.
 
-Pasien dapat:
+## 3. Lima fitur wajib tidak boleh disederhanakan menjadi satu alur janji
 
-1. Membuat akun dan masuk.
-2. Mengisi atau memperbarui profil kesehatan, alergi, dan obat yang dikonsumsi.
-3. Melihat jadwal kontrol berulang yang terbentuk dari anjuran kontrol.
-4. Melihat pengingat jadwal di dalam aplikasi.
-5. Memilih spesialis/dokter dan slot praktik.
-6. Membuat janji dengan aturan satu slot hanya memiliki satu janji aktif.
-7. Melihat janji yang dimiliki.
-8. Melakukan check-in ketika tiba di klinik.
-9. Mendapat nomor antrean final setelah check-in.
-10. Melihat status antrean.
-11. Menyetujui, menolak, atau memilih slot lain ketika admin mengusulkan perubahan jadwal.
-12. Mencatat kebiasaan harian, seperti hidrasi, tidur, dan aktivitas.
-13. Melihat resep dan menandai kepatuhan minum obat.
-14. Melihat timeline riwayat janji, kunjungan, obat, dan jadwal berikutnya.
+Label P2 lama pada FR-05 bukan izin migrasi untuk membuang FB-5. Persetujuan saat ini mempertahankan **lima fitur wajib**. Resep dan timeline pendukung juga tetap dalam cakupan target; hanya konten/log aktivitas yang opsional L17.
 
-Alur utama pasien:
+| Fitur/kebutuhan | Cakupan target | Pemilik | Bukti penerimaan yang direncanakan |
+|---|---|---|---|
+| FB-1 / FR-01 | Isi/lihat/ubah/hapus profil dengan konfirmasi; kondisi, alergi dan obat laporan pasien | L07 | Round-trip lengkap, hapus aman, IDOR, profil kosong tidak menyebabkan galat |
+| FB-2 / FR-02 | Aturan kontrol admin, agenda default + toggle bulan, jadwal/pengganti terlewat dan pengingat tiga hari | L10 | Kalender WIB, anchor sesuai keputusan, idempotensi jadwal/pengingat |
+| FB-3 / FR-03 | Spesialis/dokter/slot dan pemesanan anti-bentrok | L08 | Dua pemesan tepat satu sukses, konfirmasi estimasi/jam berlabel perkiraan |
+| FB-4 / FR-04 | Check-in, nomor final, status, koreksi beralasan, penutupan hari, selesai -> kontrol berikutnya | L11 | Nomor harian unik, check-in ganda ditolak, state machine + audit + idempotensi |
+| FB-5 / FR-05 | CRUD kebiasaan hidrasi/tidur/aktivitas dan ringkasan/runtutan hari | L13 | Batas input/ambang, tanggal bolong, ringkasan terbaru, larangan admin |
+| FR-07 | Registrasi pasien, login dua role, sesi/idle/logout/limiter | L04 | Login HTTP/hosting, CSRF, replay/idle/rate limit, role escalation ditolak |
+| FR-08/09 | Usulan, reservasi sementara, setuju/tolak/alternatif, cancel dan notifikasi in-app | L09 | Kedua slot terlindungi, respons atomik, expiry race, tidak ada konfirmasi admin tambahan |
+| FR-10 | Audit per perubahan admin; pasien membaca perubahan janjinya | L06 | Tepat satu log, rollback bila audit gagal, tidak ada operasi edit/hapus |
+| FR-12 | Resep dokter dicatat admin, label/sumber, tanda sudah/belum harian dan kepatuhan | L12 | Resep vs laporan pasien terpisah, upsert harian, tanpa rekomendasi obat |
+| FR-11 + FR-13 | Satu timeline janji/check-in/kunjungan/obat/kontrol berikutnya | L14 | Urut terbaru, detail/empty state, isolasi pasien, tanpa alias daftar riwayat kedua |
+| FR-06 + FR-14 | Konten resmi dan log aktivitas akun | L17 opsional | Keputusan eksplisit; tanpa navigasi/claim implementasi bila dipotong |
 
-```text
-Masuk
-  -> Melihat atau memilih slot
-  -> Membuat janji
-  -> Datang ke klinik
-  -> Check-in
-  -> Mendapat nomor antrean final
-  -> Menunggu dipanggil
-  -> Melihat perubahan status kunjungan
-```
+## 4. Alur resmi pasien dan admin
 
-Nomor antrean perkiraan hanya untuk membantu memperkirakan waktu datang. Nomor tersebut bukan urutan panggilan resmi.
+### UC-1: rangkaian kunjungan dan kontrol
 
-## 3. Use case admin
+1. Pasien mendaftar/masuk dan mengisi kondisi, alergi serta obat laporan sendiri.
+2. Admin mencatat anjuran dokter untuk kontrol berulang, bukan menetapkan terapi.
+3. Sistem membentuk jadwal sesuai kebijakan kalender yang disahkan.
+4. Pengingat in-app muncul sekali tiga hari sebelum jatuh tempo.
+5. Pasien memilih dokter/slot dan membuat janji; konfirmasi menampilkan nomor estimasi dan perkiraan jam.
+6. Jika dokter berhalangan, admin mengusulkan slot baru dengan alasan; pasien dapat setuju, menolak atau memilih alternatif.
+7. Pasien datang dan check-in (atau diproses admin melalui route khusus); nomor final baru diterbitkan.
+8. Admin menjalankan menunggu -> diperiksa -> selesai; koreksi memerlukan alasan dan audit.
+9. Kunjungan selesai memicu tepat satu jadwal kontrol berikutnya melalui generator L10.
+10. Di antara kunjungan pasien mencatat kebiasaan, menandai obat harian dan melihat ringkasan/timeline miliknya.
 
-Admin dapat:
+Playwright Chrome harus menguji rangkaian HTML nyata dengan akun pasien dan admin terpisah. Test fungsi hash atau render layout saja tidak membuktikan use case ini.
 
-1. Mengelola data dokter dan slot praktik.
-2. Melihat janji pasien.
-3. Memproses check-in pasien.
-4. Mengubah status antrean dari menunggu, diperiksa, selesai, atau tidak hadir.
-5. Mengoreksi status dengan alasan yang wajib dicatat.
-6. Mengusulkan perubahan jadwal.
-7. Membatalkan janji dengan alasan.
-8. Mencatat aturan kontrol berulang.
-9. Mencatat obat berdasarkan resep dokter.
-10. Melihat audit log perubahan.
+### UC-2: dua pasien berebut slot
 
-Batas data admin adalah nama pasien, jadwal, status, dan ringkasan alergi. Admin tidak boleh membuka catatan kebiasaan harian pasien.
+Dua sesi pasien membaca slot kosong dan menyimpan hampir bersamaan. Transaksi PostgreSQL memastikan tepat satu janji berhasil. Pasien lain memperoleh flash konflik yang jelas melalui PRG, tanpa janji/reservasi setengah tersimpan. Uji constraint langsung saja belum membuktikan HTTP dan otorisasi, sedangkan mock saja belum membuktikan database.
 
-Setiap perubahan penting harus mencatat:
+### UC-3: usulan perubahan dan expiry
 
-- pelaku;
-- waktu;
-- objek yang diubah;
-- nilai sebelum;
-- nilai sesudah; dan
-- alasan perubahan jika diperlukan.
+| Kejadian | Hasil wajib |
+|---|---|
+| Admin membuat usulan | Janji lama tetap berlaku; slot lama **dan** slot usulan dilindungi; alasan, notifikasi dan audit tersimpan atomik |
+| Setuju | Pindah ke slot usulan, slot lama dilepas, usulan selesai |
+| Tolak | Janji lama tetap, slot usulan dilepas |
+| Pilih alternatif kosong | Langsung pindah atomik ke alternatif; slot lama/usulan dilepas; **tanpa** tahap konfirmasi admin lagi |
+| Alternatif direbut | Konflik, tidak ada perpindahan parsial atau kehilangan janji lama |
+| Batas/TTL lewat | Usulan ditutup, slot usulan dilepas, janji lama tetap dan admin diberi tahu |
+| Batal | Reservasi/usulan terkait diselesaikan atomik; pembatalan admin wajib alasan, audit dan pemberitahuan |
 
-Alur perubahan jadwal:
+Respons kedua/kedaluwarsa ditolak. Race antara expiry, jawaban, cancel dan pemesan lain diuji dengan koneksi PostgreSQL terpisah. Index lama hanya untuk `status='aktif'` dan timestamp TTL tidak cukup untuk invariant ini.
 
-```text
-Admin mengusulkan perubahan
-  -> Sistem menyimpan alasan dan membuat pemberitahuan
-  -> Pasien menerima pemberitahuan di aplikasi
-  -> Pasien menyetujui, menolak, atau memilih slot lain
-```
+### UC-4: antrean dan kondisi batas
 
-Janji lama tetap berlaku sampai pasien memberikan tanggapan.
+Nomor estimasi bukan nomor panggilan; nomor final unik per tanggal WIB hanya terbit setelah check-in. Check-in kedua ditolak tanpa nomor baru. Pasien tidak bisa menulis status admin. Menunggu langsung selesai ditolak. Koreksi mundur perlu alasan/audit, penutupan hari menandai tidak hadir sesuai jam tutup, dan replay tidak menggandakan efek/audit/jadwal. Profil kosong, slot kosong, resep kosong, timeline kosong dan tanggal kebiasaan bolong masing-masing punya state yang memberi langkah berikutnya, bukan data contoh.
 
-## 4. Status implementasi saat ini
+### UC-5: obat profil vs resep klinis
 
-Berdasarkan `docs/status-tugas.md`:
+Pasien dapat menyimpan obat yang ia laporkan di profil sebagai laporan personal. Admin memasukkan resep klinis berdasarkan resep dokter pada penyimpanan terpisah. Pasien membaca resep tanpa tombol tambah/edit klinis dan hanya menandai sudah/belum per hari. Label “Catatan resep, bukan saran medis”, nama pencatat, rujukan Fornas dan metadata sumber ditampilkan. Frekuensi resep tidak membuat data per dosis otomatis tersedia; ringkasan menjelaskan denominator harian. `data/fornas` dipertahankan, bukan diimpor otomatis dari Excel/JSON publik ke data klinis.
 
-- Total tugas: 44
-- Selesai: 12
-- Todo: 31
-- Blocked: 1
-- Doing: 0
+## 5. Invariant lintas fitur
 
-Fondasi proyek, struktur Next.js, konfigurasi pengujian, sebagian skema database, constraint, dan seed sudah tersedia. Namun, alur produk secara end-to-end belum selesai.
+- Semua mutasi divalidasi Form Request dan diotorisasi server-side. GET HTML 200; mutasi berhasil PRG 302; PATCH/DELETE memakai method spoof; CSRF mencakup login/daftar/logout. Logout hanya POST. Tidak ada kewajiban JSON envelope `/api`.
+- Tamu HTML redirect masuk; JSON opsional 401. Role salah 403; resource pasien lain 404 konsisten. Konflik HTML redirect flash/JSON opsional 409, tanpa mutasi parsial. Validation error HTML redirect dan old input aman tanpa password; JSON opsional 422.
+- Sesi server persisten dengan invalidasi logout/idle; cookie HttpOnly, Secure produksi, SameSite; rate limit store persisten/bersama, bukan Map/memori lokal.
+- Setiap perubahan admin menghasilkan tepat satu audit dalam transaksi yang sama. Audit gagal berarti rollback semua efek wajib terkait. Tidak ada endpoint ubah/hapus audit; proteksi append-only database memerlukan keputusan dan bukti tersendiri.
+- Semua tanggal bisnis memakai service WIB bersama; tanggal harian/anchor berbeda dari timestamp absolut. L10 satu-satunya pemilik generator kontrol, L11 memanggilnya.
+- UI berbahasa Indonesia, responsif sampai 360 px, input berlabel, keyboard/focus, target sentuh 44 px dan kontras sesuai PRD. Vanilla JS meningkatkan interaksi, bukan syarat tunggal penyimpanan.
 
-`A09` sudah berstatus `blocked` karena:
+## 6. Keputusan terbuka dan dampaknya
 
-- URL Vercel belum dilampirkan dan belum diverifikasi dari perangkat lain.
-- Handler login belum tersedia.
-- Keberhasilan login di lingkungan hosting belum terbukti.
+| Isu | Keputusan yang dibutuhkan | Dampak tanpa keputusan |
+|---|---|---|
+| FR-02 “30 hari” vs anchor bulan | Arti interval; cutoff terlewat dan jadwal pengganti | Acceptance tanggal L10 belum dapat ditutup; jangan memilih `+30 days`/`+1 month` sendiri |
+| TTL dan batas jawab | Durasi, relasi TTL/batas jawab, notifikasi admin dan cutoff cancel | Acceptance waktu/expiry L09 terhalang; 12/24 jam lama masih usulan |
+| Check-in/jam tutup | Jendela check-in, batas tidak hadir, koreksi yang sah | Acceptance waktu L11 terhalang |
+| Estimasi vs final | PRD mengatakan nomor final “berbeda”: beda konsep atau wajib beda angka | Jangan memalsukan nomor agar tampak berbeda |
+| Ambang kebiasaan | Sumber/angka/aturan denominator dan presisi input | Penilaian FB-5 L13 blocked, fiturnya tetap wajib |
+| Kepatuhan obat | Denominator hari aktif, perlakuan hari kosong/rentang | Persentase L12 belum boleh diklaim benar |
+| Privasi alergi | Konfirmasi akses minimal hanya saat check-in dan jejak pembukaan | Jangan membuka profil lengkap sebagai jalan pintas |
+| Auth | Idle timeout, persistent limiter/angka batas, cutover sesi | Keamanan sesi L04 belum dapat ditutup |
+| Database | Baseline baru terisolasi atau adopsi schema lama | L02 harus memutuskan sebelum L03; tidak ada migrasi scaffold ke live |
+| Hosting/versi | PHP/Laravel kompatibel yang dipatok, biaya/operasi/scheduler | L01 perlu bukti hosting awal, bukan mengasumsikan Vercel lama mendukung target |
+| Tenggat | Tanggal/jam baru yang benar | Pernyataan pemilik “10 hari” dan tanggal lama 2 November belum menjadi tanggal final baru |
 
-## 5. Bagian yang sudah sistematis dan sesuai
+Tidak ada angka medis, kebijakan bisnis, tenggat baru atau pemangkasan fitur yang dipilih diam-diam untuk membuat test hijau.
 
-### 5.1 Pemetaan rancangan ke kode
+## 7. Urutan pembuktian L01–L17
 
-`docs/peta-bagian.md` sudah memetakan kebutuhan fungsional ke layar, modul kode, dan tugas. Contohnya:
+| Tahap | ID dan hasil yang dituntut, bukan status |
+|---|---|
+| Fondasi | L01 bootstrap PHP/Composer + baseline PHPUnit/Pint/Vite vanilla + Playwright Chrome/CI/hosting awal; L02 inventaris/backup/strategi terisolasi; L03 migrations/models/seeds |
+| Akses dan shared UI | L04 auth; L05 layout Blade/CSS/vanilla; L06 fondasi audit sebelum mutasi admin |
+| Fitur | L07 profil/katalog; L08 dokter/slot/janji; L09 reschedule/notifikasi/cancel; L10 kontrol; L11 antrean; L12 resep/adherence; L13 kebiasaan wajib; L14 timeline FR-11+13 |
+| Penerimaan | L15 security/E2E; L16 performa/UAT/rilis |
+| Tambahan | L17 konten/log opsional setelah keputusan, bukan pengganti fitur wajib |
 
-- FR-03: janji anti-bentrok -> `src/modules/janji/` -> B03.
-- FR-04: antrean -> `src/modules/antrian/` -> B07.
-- FR-05: kebiasaan -> `src/modules/kebiasaan/` -> B11 dan C09.
-- FR-10: audit log -> `src/modules/audit/` -> B06.
+Shared routes, layout, konfigurasi, migrasi dan model lintas fitur dikerjakan serial dengan handoff. Pemilik konkret tiap method/path ada pada kontrak web, bukan ditentukan ulang di sini.
 
-Pemetaan ini sudah menjadi dasar traceability, meskipun belum sepenuhnya diteruskan sampai ke bukti test per use case.
+## 8. Kriteria bukti dan keselamatan data
 
-### 5.2 Status deployment sudah dikoreksi
+Setiap acceptance ditautkan ke tugas, berkas test aktual setelah tersedia, jenis test, perintah/commit/tanggal, lingkungan nonrahasia dan hasilnya. Tidak membuat tautan Markdown ke path kode yang masih rencana. PHPUnit membuktikan backend; concurrency/constraint/locks harus memakai PostgreSQL terisolasi; Playwright Google Chrome membuktikan alur browser; L16 menambah hasil UAT/SUS, beban dan smoke hosting aktual.
 
-Laporan tinjauan sudah membedakan antara CI lokal yang berhasil dan deployment/login hosting yang benar-benar terbukti. Karena URL dan handler login belum ada, A09 tidak lagi dinyatakan selesai.
+Riwayat hasil test Next tidak dipindahkan sebagai angka kelulusan target. Test belum ada/skip/blocked tidak dianggap lulus. UI/build lokal bukan bukti login hosting; query hash bukan bukti sesi; tidak adanya route edit audit bukan bukti privilege/trigger database.
 
-### 5.3 Constraint janji sudah diuji ke database
+L02 melindungi database lama: backup dan restore drill ke target terisolasi, lalu memilih baseline baru atau adopsi lama sebelum L03. Eloquent harus memetakan UUID, `password_hash`, enum/timestamps dan tabel lama secara eksplisit. `sessions.token_hash` lama tidak kompatibel langsung dengan session driver database Laravel; perlu adapter teruji atau tabel baru terisolasi. Jangan menjalankan scaffold migrations, `migrate:fresh`, `db:wipe`, reset/drop pada existing/produksi. Semua seed/test fiktif, tanpa NIK/KK.
 
-A12 sudah memiliki bukti database nyata bahwa:
-
-- janji aktif kedua pada slot yang sama ditolak;
-- PostgreSQL menghasilkan error `23505`;
-- constraint yang terpicu adalah `janji_slot_aktif_unique_idx`; dan
-- janji yang dibatalkan dapat menempati slot yang sama.
-
-Ini sesuai dengan aturan bisnis bahwa satu slot hanya boleh mempunyai satu janji aktif.
-
-### 5.4 Seed sudah diuji idempoten
-
-A13 sudah menunjukkan dua kali eksekusi seed dengan ID dan jumlah baris yang tetap. Hash password admin juga dapat diverifikasi dari data yang tersimpan.
-
-## 6. Ketidaksesuaian dan celah yang masih harus diperbaiki
-
-### 6.1 Login admin belum benar-benar terbukti
-
-Acceptance criteria A13 menyatakan admin dapat login setelah seed. Bukti yang tersedia baru memverifikasi kecocokan password dengan hash database melalui `verifyPassword`.
-
-Hal itu belum membuktikan alur login aplikasi yang sebenarnya, yaitu:
-
-1. form login mengirim request;
-2. server mencari akun;
-3. password diverifikasi;
-4. session dibuat;
-5. cookie dikirim;
-6. admin diarahkan ke area admin; dan
-7. halaman admin dapat diakses.
-
-Perbaikan yang diperlukan:
-
-- buat handler login server-side;
-- tambahkan uji login end-to-end atau integration;
-- verifikasi session dan cookie; dan
-- lampirkan hasil uji login lokal serta hosting.
-
-### 6.2 Append-only belum ditegakkan sepenuhnya
-
-Tidak adanya kolom `updated_at` bukan bukti bahwa baris tidak dapat diubah. Laporan A12 sendiri menyatakan `log_aktivitas` belum diuji dengan percobaan `UPDATE` yang ditolak dan belum memiliki trigger.
-
-Perbaikan yang diperlukan:
-
-- tambahkan trigger database yang menolak `UPDATE` dan `DELETE`, atau;
-- gunakan hak akses database yang hanya mengizinkan `INSERT`; dan
-- tambahkan uji yang membuktikan perubahan dan penghapusan ditolak.
-
-Jika keputusan desain memang hanya membutuhkan sifat append-only pada level aplikasi, batasan itu harus ditulis jelas pada ADR atau PRD agar tidak dianggap sebagai jaminan database.
-
-### 6.3 Folder laporan unit memuat bukti yang bukan unit test murni
-
-A10-A13 memuat bukti migrasi, pemeriksaan PostgreSQL, constraint database, dan seed. Secara substansi bukti tersebut valid sebagai verifikasi data/database, tetapi penempatannya di `docs/01-laporan-unit/` dapat membingungkan.
-
-Perbaikan yang diperlukan:
-
-- bedakan laporan unit dari laporan database integration;
-- beri label jenis test pada setiap laporan; dan
-- pastikan nama folder, isi, dan definisi bukti menggunakan istilah yang sama.
-
-### 6.4 Traceability belum lengkap sampai ke bukti test
-
-Saat ini sudah ada hubungan:
-
-```text
-PRD -> FR -> modul -> tugas
-```
-
-Namun hubungan berikut belum lengkap:
-
-```text
-FR -> acceptance criteria -> test file -> hasil test -> bukti
-```
-
-Perlu dibuat matriks yang mencatat minimal:
-
-| FR | Use case | Tugas | Modul | Berkas test | Jenis test | Status bukti |
-|---|---|---|---|---|---|---|
-| FR-03 | Membuat janji anti-bentrok | B03 | `src/modules/janji/` | integration/concurrency test | Integration | Belum lengkap |
-| FR-04 | Check-in dan transisi antrean | B07 | `src/modules/antrian/` | `transisi-antrian.test.ts` | Integration | Todo |
-| FR-07 | Login dan role | B01/A09 | `src/modules/auth/` | auth/security/e2e test | Security + E2E | Belum lengkap |
-| FR-10 | Audit append-only | B06/A12 | `src/modules/audit/` | append-only test | Database | Belum lengkap |
-
-### 6.5 Use case utama belum diuji end-to-end
-
-Use case penting berikut belum mempunyai bukti lengkap:
-
-```text
-Login pasien
-  -> Memilih slot
-  -> Membuat janji
-  -> Check-in
-  -> Mendapat nomor antrean
-  -> Admin memproses antrean
-```
-
-Constraint database sudah diuji, tetapi belum sama dengan membuktikan dua pengguna berebut slot melalui alur aplikasi/API dan hanya satu yang berhasil.
-
-Uji yang masih diperlukan:
-
-- `slot-rebutan` untuk concurrency;
-- `transisi-antrian` untuk validasi status;
-- skenario Playwright pasien; dan
-- skenario Playwright admin.
-
-### 6.6 Uji keamanan belum tersedia
-
-Folder keamanan belum memiliki bukti nyata. Uji yang perlu dibuat meliputi:
-
-- role bypass: pasien tidak boleh membuka area admin;
-- IDOR: pasien tidak boleh membaca data pasien lain;
-- validasi server-side pada setiap mutasi;
-- session kedaluwarsa;
-- pemeriksaan role di server, bukan hanya di UI.
-
-### 6.7 UAT, SUS, dan performa belum tersedia
-
-Uji sistem saat ini baru berupa kerangka/render check. Belum ada bukti:
-
-- alur pasien lengkap;
-- alur admin lengkap;
-- penerimaan pengguna;
-- skor SUS; dan
-- hasil pengujian beban atau p95.
-
-### 6.8 Angka hasil test perlu diberi konteks commit dan tanggal
-
-Sebagian laporan tugas mencantumkan hasil seperti `27/27 passed`, sedangkan tinjauan terbaru mencantumkan `33 passed | 4 todo`. Perbedaan ini dapat terjadi karena laporan dibuat pada waktu berbeda, tetapi setiap hasil perlu diberi:
-
-- commit yang diuji;
-- tanggal eksekusi;
-- perintah yang dijalankan; dan
-- status apakah hasil tersebut masih merupakan hasil terkini.
-
-## 7. Catatan akses database dan `.env`
-
-Verifikasi database live belum dilakukan dalam tinjauan ini karena akses database atau `.env` belum disediakan.
-
-Yang diperlukan untuk verifikasi lanjutan adalah salah satu cara berikut:
-
-- akses ke database Neon yang aman; atau
-- `.env` lokal yang sudah tersedia di workspace; atau
-- connection string sementara dengan hak akses terbatas.
-
-**Jangan menuliskan `DATABASE_URL`, `SESSION_SECRET`, atau kredensial lain ke dalam laporan, chat, commit, atau repository.** Jika akses diberikan, secret sebaiknya dikirim melalui mekanisme aman dan hanya dipakai untuk verifikasi. Nilai secret tidak perlu dicatat di bukti; cukup catat bahwa verifikasi dilakukan terhadap database test/staging.
-
-Tanpa akses tersebut, laporan ini hanya dapat memastikan:
-
-- struktur dan migrasi yang terlihat di repo;
-- isi laporan yang sudah ditulis;
-- test yang dapat dijalankan tanpa database live; dan
-- konsistensi antara status tugas dan dokumen.
-
-Laporan ini belum dapat memastikan kondisi aktual database Neon, isi tabel live, keberhasilan deployment, atau konfigurasi environment produksi.
-
-## 8. Prioritas perbaikan
-
-### P0 — Wajib sebelum menyatakan sistem siap
-
-1. Sediakan handler login dan buktikan login secara end-to-end.
-2. Deploy ke Vercel, lampirkan URL, dan uji dari perangkat lain.
-3. Pastikan konfigurasi database staging/production terverifikasi tanpa membocorkan secret.
-4. Perbarui status A09 hanya setelah dua bukti di atas tersedia.
-
-### P1 — Wajib untuk membuktikan use case inti
-
-1. Implementasikan uji integrasi pemesanan slot secara concurrent.
-2. Implementasikan uji transisi status antrean.
-3. Implementasikan uji keamanan role bypass dan IDOR.
-4. Implementasikan E2E pasien dan admin.
-5. Buat matriks traceability FR sampai bukti test.
-
-### P2 — Penguatan kualitas dan audit
-
-1. Tegakkan append-only dengan trigger atau hak akses database.
-2. Seragamkan metadata tanggal, commit, dan versi pada semua laporan.
-3. Pisahkan laporan unit, database integration, system/UAT, security, dan performance.
-4. Tambahkan bukti UAT, SUS, dan performa.
-
-## 9. Kesimpulan akhir
-
-Dokumentasi proyek sudah jauh lebih jujur dan terarah dibanding kondisi awal. Pemetaan rancangan ke tugas dan modul sudah tersedia, constraint slot sudah dibuktikan ke PostgreSQL, dan status deployment yang belum terbukti sudah dikoreksi menjadi `blocked`.
-
-Namun, sistem belum dapat dinyatakan selesai atau sepenuhnya sistematis karena login aplikasi, use case end-to-end, keamanan, UAT, performa, dan append-only database belum memiliki bukti lengkap. Selain itu, verifikasi database live belum dapat dilakukan karena akses `.env` atau database belum tersedia.
-
-Kesimpulan paling tepat saat ini adalah:
-
-> **Fondasi dan sebagian verifikasi database sudah berjalan, tetapi bukti perilaku aplikasi secara menyeluruh belum lengkap.**
+**Kesimpulan:** keputusan migrasi stack telah diberikan, tetapi dokumen target tidak membuktikan aplikasi, sesi, database atau hosting Laravel sudah berjalan. Kelayakan rilis menunggu bukti L01–L16 dan keputusan terbuka yang terkait, bukan penyelesaian arsip atau angka progres lama.

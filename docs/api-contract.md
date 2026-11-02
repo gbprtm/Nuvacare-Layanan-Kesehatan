@@ -1,987 +1,208 @@
-# Kontrak API v1
+# Kontrak route web target Laravel
 
-Status: draft untuk implementasi backend  
-Versi: `v1`  
-Tanggal: 31 Oktober 2026
+Tanggal: 2 November 2026. **Kontrak rencana, belum diimplementasikan, belum diuji HTTP/browser/database live.** Nama route di sini belum terdaftar di aplikasi. Tidak ada scaffold Laravel pada sesi dokumentasi ini.
 
-Pembaruan kebijakan identitas: 1 November 2026
+Kontrak lama JSON `/api` adalah arsip: `_arsip/nextjs-2026-11-02/docs/api-contract.md`. Kebutuhan produk: [PRD](rancangan/prd-v0.3.md) §3.4–3.5 dan §4.1–4.4. Implementasi mengikuti [arsitektur target](panduan-arsitektur.md) dan [pemetaan data](database-schema.md), bukan menyalin handler Next.
 
-Dokumen ini menjadi kesepakatan nama endpoint, field request, bentuk respons,
-role, dan galat sebelum backend serta frontend fitur dikerjakan. Endpoint di
-bawah adalah kontrak yang direncanakan. Kontrak ini bukan bukti bahwa seluruh
-Route Handler sudah tersedia.
+## 1. Aturan lintas route
 
-## 1. Prinsip umum
+### HTML sebagai kontrak utama
 
-- Base path: `/api`.
-- Format request mutasi: `application/json`.
-- ID resource: UUID sebagai string.
-- Tanggal bisnis: `YYYY-MM-DD`, dihitung dalam `Asia/Jakarta`.
-- Waktu bertimestamp: ISO 8601 dengan offset atau `Z`.
-- Waktu tampilan klinik memakai WIB, tetapi server tetap menyimpan timestamp
-  dengan zona waktu eksplisit.
-- Bahasa pesan respons: Bahasa Indonesia.
-- Sesi dibaca dari cookie `httpOnly`; token tidak dikirim melalui query string.
-- Semua endpoint inti memeriksa sesi di server.
-- Semua endpoint admin memeriksa sesi dan role `admin` di server.
-- Semua mutasi memvalidasi body dengan skema Zod di server.
-- Endpoint yang menerima ID resource wajib membatasi hasil berdasarkan role dan
-  kepemilikan resource.
-- Tidak ada endpoint login dokter karena dokter adalah data, bukan pengguna.
+- GET sukses: HTML **200**. GET tidak memutasi status dibaca, logout, check-in atau data domain.
+- Mutasi sukses: **302** ke GET tujuan pada tabel (POST/Redirect/GET), dengan flash Indonesia. Untuk PATCH/DELETE, form browser mengirim POST + `_method=PATCH`/`DELETE`. Tidak memerlukan fetch agar alur inti berjalan.
+- Semua mutasi berada di kelompok middleware web/session/CSRF, termasuk masuk, daftar, dan keluar. Form berisi `_token`; fetch same-origin memakai token CSRF yang benar. Token tidak valid: halaman **419**, bukan melanjutkan mutasi.
+- Laravel Form Requests memvalidasi di server, termasuk array bersarang, UUID, tanggal, enum, dan relasi. Reject field tak dikenal, bukan sekadar mengabaikannya dengan `validated()`. `_token` dan `_method` adalah field transport yang diizinkan, bukan atribut domain. Jangan mass-assign `$request->all()`.
+- Validasi gagal: **302** kembali ke form GET dengan error bag per field serta old input yang aman. Jangan flash `password`, `password_confirmation`, token, atau snapshot kesehatan yang tidak dibutuhkan form tersebut. Password tidak dicetak dalam HTML/log/bukti.
+- Konflik domain: **302** ke GET tujuan/kembali dengan flash konflik yang jelas dan **tanpa mutasi parsial**. Galat server/audit gagal: halaman **500** generik, rollback, tanpa detail SQL/secret.
 
-## 2. Bentuk respons baku
+### Negosiasi JSON opsional
 
-### 2.1 Sukses
+Untuk peningkatan yang benar-benar dibangun dan diuji, request `Accept: application/json` dapat memperoleh 200 (baca/update), 201 (create), 401 (tamu), 403/404, 409 (konflik), 422 (validasi; bentuk Laravel `message` + `errors`) atau 429. Penghapusan opsional JSON: 204 tanpa body. Dukungan JSON per route harus dicatat saat implementasi; tabel di bawah menjamin **HTML**, bukan janji semua route otomatis menjadi JSON API. Tidak ada kewajiban envelope global `{data,error}`, prefix `/api`, SPA, atau bearer token.
 
-Semua respons sukses menggunakan bentuk `{ data }`, sesuai helper A07.
+### Sesi, role dan kepemilikan
 
-```json
-{
-  "data": {
-    "id": "uuid",
-    "status": "aktif"
-  }
-}
-```
-
-Untuk daftar, `data` berisi hasil dan metadata pagination bila diperlukan:
-
-```json
-{
-  "data": {
-    "items": [],
-    "page": 1,
-    "pageSize": 20,
-    "total": 0
-  }
-}
-```
-
-Status yang digunakan:
-
-- `200 OK`: membaca atau memperbarui resource.
-- `201 Created`: membuat resource baru.
-- `204 No Content`: operasi berhasil tanpa payload, hanya bila memang tidak
-  ada data yang perlu dikembalikan.
-
-### 2.2 Galat
-
-Semua galat menggunakan bentuk `{ error: { code, message, fields? } }`.
-
-```json
-{
-  "error": {
-    "code": "VALIDATION_ERROR",
-    "message": "Data yang dikirimkan tidak valid.",
-    "fields": {
-      "alasan": ["Alasan wajib diisi."]
-    }
-  }
-}
-```
-
-`fields` hanya dikirim saat galat berkaitan dengan field tertentu.
-
-| HTTP | Code | Arti |
-|---:|---|---|
-| 400 | `BAD_REQUEST` | Request tidak dapat diproses secara umum |
-| 401 | `UNAUTHORIZED` | Sesi tidak ada atau tidak valid |
-| 403 | `FORBIDDEN` | Role atau kepemilikan tidak mengizinkan aksi |
-| 404 | `NOT_FOUND` | Resource tidak ditemukan atau tidak terlihat oleh pemanggil |
-| 409 | `CONFLICT` | Bentrok dengan keadaan data terkini |
-| 422 | `VALIDATION_ERROR` | Body atau query gagal validasi Zod |
-| 500 | `INTERNAL_ERROR` | Galat tak terduga di server |
-
-Code domain yang digunakan di samping code umum:
-
-- `INVALID_TRANSITION`
-- `SLOT_ALREADY_BOOKED`
-- `CHECK_IN_NOT_OPEN`
-- `ALREADY_CHECKED_IN`
-- `PROPOSAL_EXPIRED`
-- `DUPLICATE_RESPONSE`
-- `AUDIT_WRITE_FAILED`
-- `SESSION_EXPIRED`
-
-## 3. Konvensi query dan pagination
-
-Endpoint daftar menggunakan parameter berikut bila relevan:
-
-| Parameter | Tipe | Keterangan |
+| Kondisi | HTML | JSON bila didukung |
 |---|---|---|
-| `page` | integer positif | Nomor halaman, default `1` |
-| `pageSize` | integer 1-100 | Ukuran halaman, default `20` |
-| `from` | `YYYY-MM-DD` | Batas awal tanggal, inklusif |
-| `to` | `YYYY-MM-DD` | Batas akhir tanggal, inklusif |
-| `status` | enum | Filter status yang diizinkan endpoint |
-| `q` | string | Pencarian yang sudah dinormalisasi |
+| Tamu ke halaman/mutasi inti dengan CSRF valid | 302 ke `/masuk`; intended URL hanya same-origin yang diizinkan | 401 |
+| Role salah, termasuk admin membuka kebiasaan/kepatuhan pasien | 403, tanpa data | 403 |
+| Resource milik pasien lain/tidak ada | **404** konsisten pada baca maupun mutasi | 404 |
+| Input invalid/field terlarang | 302 + errors + old input aman | 422 |
+| Status/slot/expiry konflik | 302 + flash, data domain tidak berubah | 409 + kode konflik |
+| Rate limit | 429 dengan pesan coba lagi dan waktu tunggu | 429 |
 
-Server tidak boleh menerima query yang menggabungkan SQL secara langsung.
+Cookie sesi HttpOnly, Secure pada produksi, SameSite untuk same-origin. Login meregenerasi session ID; POST logout menginvalidasi sesi di server dan meregenerasi CSRF. Idle timeout harus menolak sesi lama di server, bukan hanya menyembunyikan halaman atau menghapus cookie. Limit login memakai store persisten/bersama; target idle 15 menit mengikuti rencana L04; angka batas percobaan/durasinya dibakukan L04.
 
-## 4. Endpoint per FR
+Identitas pemilik berasal dari sesi atau objek route yang diotorisasi. Pasien tidak pernah mengirim `user_id`, `patient_id`, `role`, `created_by`, timestamps, atau snapshot audit. Registrasi publik menetapkan role **pasien di server**. Tidak ada registrasi admin/dokter, NIK atau KK.
 
-### FR-01 Profil kesehatan pasien
+### Notasi input dan query
 
-Role: `pasien` untuk resource miliknya sendiri.
+`!` wajib, `?` opsional/nullable jika disebut; tanpa body ditulis `—`. Nama field request target berbahasa Inggris snake_case, dipetakan eksplisit ke kolom lama (bukan rename database otomatis). Field update PATCH yang diberi `?` boleh tidak dikirim, tetapi minimal satu field domain harus ada. Boolean harus divalidasi/dinormalisasi eksplisit dari form.
 
-Identitas akun mengikuti FR-07. NIK dan nomor Kartu Keluarga (KK) tidak
-menjadi field request/response profil, syarat pembuatan profil, atau syarat
-menggunakan fitur kesehatan. Payload mutasi profil harus menolak field di luar
-kontrak, termasuk `nik` dan `kk`, melalui validasi Zod strict di server.
-Kebijakan edit nama akun dibahas terpisah; penghapusan profil bukan penghapusan
-akun atau kredensial login.
+Query daftar hanya field pada tabel dan pagination `page`, `per_page` (rencana default 20, maksimum 100), urutan stabil dengan tie-break ID. `from`, `to`, `date` memakai `YYYY-MM-DD` WIB; `from <= to`; periode ringkasan tidak boleh tanpa batas. Timestamp jawaban memakai ISO-8601 berzona. Batas ukuran teks dan rentang periode harus dibakukan pada Form Request tugas pemilik sebelum dinyatakan selesai; jangan memakai panjang tak terbatas. GET tanpa query berarti tampilan default aman, bukan seluruh dataset.
 
-| Method | Path | Tujuan |
+Kode `V` = validasi di atas; `C(kode)` = konflik domain dengan pemetaan HTML 302/JSON 409; `N` = resource/relasi yang tidak boleh terlihat 404. Auth/role/CSRF berlaku pada **semua** baris sesuai role, meski tidak diulang di kolom galat. Nilai ID dari query/form tetap harus lolos policy; ID valid bukan izin akses.
+
+## 2. Auth dan navigasi bersama (FR-07)
+
+| Method + path | Nama route rencana | Role | Input diizinkan | Hasil HTML / galat | Pemilik |
+|---|---|---|---|---|---|
+| GET `/` | `home` | Publik | — | 200 beranda publik, tanpa data pasien | L05 |
+| GET `/masuk` | `login` | Tamu | — | 200 form | L04 |
+| POST `/masuk` | `login.store` | Tamu | `email!`, `password!` | 302 `/beranda` atau `/admin` sesuai role; kredensial salah: errors generik tidak mengungkap akun; V/429 | L04 |
+| GET `/daftar` | `register` | Tamu | — | 200 form pasien | L04 |
+| POST `/daftar` | `register.store` | Tamu | `name!`, `email!`, `password!`, `password_confirmation!` | Rencana 302 `/masuk`, tanpa auto-login; email duplikat/konfirmasi/password <8: V; role tambahan ditolak | L04 |
+| POST `/keluar` | `logout` | Pasien/admin | — | 302 `/masuk`, sesi server dicabut | L04 |
+| GET `/beranda` | `patient.dashboard` | Pasien | — | 200 ringkasan sendiri, nomor/status kunjungan hari ini | L05 |
+| GET `/admin` | `admin.dashboard` | Admin | `date?` | 200 ringkasan operasional minimal | L05 |
+
+Tidak ada GET logout atau endpoint registrasi alternatif yang menerima role. Akun admin individual dibuat lewat seed aman. Password disimpan hash. Perilaku daftar/masuk saat sudah login diarahkan ke dashboard rolenya dan harus diuji L04.
+
+## 3. Profil dan katalog (FR-01, L07)
+
+| Method + path | Nama route rencana | Role | Input diizinkan | Hasil HTML / galat | Pemilik |
+|---|---|---|---|---|---|
+| GET `/profil` | `profile.show` | Pasien | — | 200 profil dan obat laporan sendiri, atau ajakan melengkapi | L07 |
+| PATCH `/profil` | `profile.update` | Pasien | `phone_number?`, `birth_date?`, `gender?`, `blood_group?`, `height_cm?`, `weight_kg?`, `health_conditions?`, `allergies?`, `emergency_contact_name?`, `emergency_contact_phone?`, `reported_medications?` | 302 `/profil`; V | L07 |
+| DELETE `/profil` | `profile.destroy` | Pasien | `confirmation!` bernilai `HAPUS PROFIL` | 302 `/profil`; V; bukan penghapusan akun/resep klinis | L07 |
+| GET `/katalog-obat` | `medication-catalog.index` | Pasien/admin | `q?`, `page?`, `per_page?` | 200 hasil katalog referensi, bukan rekomendasi | L07 |
+
+`reported_medications` adalah daftar laporan pasien yang terpisah dari resep klinis. Setiap item hanya `catalog_id?`, `name!`, `international_name?`, `dose_note?`, `frequency_note?`, `started_on?`, `ended_on?`, `notes?`. PATCH yang mengirim daftar mengganti daftar laporan sendiri secara atomik; field tidak dikirim berarti tidak diubah, daftar kosong berarti dihapus. ID katalog opsional harus berasal dari katalog yang telah diverifikasi. Bukan impor resep. Tanggal akhir tidak mendahului awal. L07 harus menyediakan persistensi terpisah dan test round-trip kondisi, alergi, dan obat. Profil boleh dihapus dengan konfirmasi, lalu fitur lain menampilkan keadaan profil kosong. Data laporan terkait profil ikut dihapus; data klinis bukan target operasi ini. Edit nama akun tidak disediakan sebelum keputusan terpisah.
+
+NIK/KK, `role`, dan field resep ditolak. `data/fornas` dipertahankan sebagai sumber publik; Excel/JSON tidak otomatis dianggap katalog terimpor atau klinis terverifikasi.
+
+## 4. Dokter, slot dan pemesanan (FR-03, bagian FR-08)
+
+| Method + path | Nama route rencana | Role | Input diizinkan | Hasil HTML / galat | Pemilik |
+|---|---|---|---|---|---|
+| GET `/dokter` | `doctors.index` | Pasien | `specialty?` | 200 dokter aktif | L08 |
+| GET `/slot` | `slots.index` | Pasien | `doctor_id?`, `date?`, `from?`, `to?` | 200 slot tersedia; kosong memberi opsi waktu lain; V/N | L08 |
+| GET `/janji` | `appointments.index` | Pasien | `status?`, `from?`, `to?` | 200 janji sendiri | L08 |
+| POST `/janji` | `appointments.store` | Pasien | `slot_id!`, `complaint?` | 302 `/janji/{appointment}`; V/N/C(SLOT_UNAVAILABLE) | L08 |
+| GET `/janji/{appointment}` | `appointments.show` | Pasien | UUID route | 200 detail sendiri; N | L08 |
+| GET `/admin/dokter` | `admin.doctors.index` | Admin | `specialty?`, `active?` | 200 daftar/form pengelolaan | L08 |
+| POST `/admin/dokter` | `admin.doctors.store` | Admin | `name!`, `specialty!`, `license_number?` | 302 `/admin/dokter`; V | L08 |
+| PATCH `/admin/dokter/{doctor}` | `admin.doctors.update` | Admin | `name?`, `specialty?`, `license_number?`, `active?`, `reason!` | 302 `/admin/dokter`; V/N/C(ACTIVE_BOOKINGS) | L08 |
+| GET `/admin/slot` | `admin.slots.index` | Admin | `doctor_id?`, `date?`, `available?` | 200 daftar/form slot | L08 |
+| POST `/admin/slot` | `admin.slots.store` | Admin | `doctor_id!`, `date!`, `starts_at!`, `ends_at!`, `available?` | 302 `/admin/slot`; V/N/C(SLOT_OVERLAP) | L08 |
+| PATCH `/admin/slot/{slot}` | `admin.slots.update` | Admin | `starts_at?`, `ends_at?`, `available?`, `reason!` | 302 `/admin/slot`; V/N/C(ACTIVE_BOOKINGS) | L08 |
+| GET `/admin/janji` | `admin.appointments.index` | Admin | `date?`, `doctor_id?`, `status?` | 200 proyeksi minimal operasional | L08 |
+| GET `/admin/janji/{appointment}` | `admin.appointments.show` | Admin | UUID route | 200 detail operasional tanpa profil lengkap/kebiasaan; N | L08 |
+
+Satu slot = satu janji berjalan. `quota`, TTL, pemilik dan status final bukan input pasien. Jam WIB `HH:mm`, awal < akhir. Perubahan slot yang memengaruhi janji berjalan tidak boleh memindahkan pasien diam-diam; gunakan alur usulan L09. Aturan overlap dokter/slot dan estimasi durasi layanan perlu keputusan sebelum acceptance terkait dianggap selesai.
+
+Konfirmasi janji wajib memuat dokter, spesialisasi, tanggal/jam WIB, status, **nomor estimasi dan perkiraan jam berlabel “perkiraan”**, serta nomor final nullable sebelum check-in. Estimasi bukan urutan panggilan. Dua pemesan bersamaan: tepat satu berhasil; transaksi lain menerima konflik tanpa data parsial. L08 harus menghormati reservasi usulan L09 meski modul jawaban belum dibangun.
+
+## 5. Usulan, tanggapan, notifikasi dan pembatalan (FR-08/09)
+
+| Method + path | Nama route rencana | Role | Input diizinkan | Hasil HTML / galat | Pemilik |
+|---|---|---|---|---|---|
+| POST `/admin/janji/{appointment}/usulan` | `admin.proposals.store` | Admin | `proposed_slot_id!`, `reason!`, `response_deadline?` | 302 `/admin/janji/{appointment}`; V/N/C(SLOT_UNAVAILABLE,PROPOSAL_PENDING,INVALID_STATE) | L09 |
+| POST `/admin/janji/{appointment}/batal` | `admin.appointments.cancel` | Admin | `reason!` | 302 `/admin/janji/{appointment}`; V/N/C(INVALID_STATE) | L09 |
+| POST `/janji/{appointment}/batal` | `appointments.cancel` | Pasien, belum diaktifkan sebelum keputusan | `reason!` | Rencana 302 `/janji/{appointment}`; V/N/C(INVALID_STATE) | L09 |
+| GET `/usulan` | `proposals.index` | Pasien | `status?` | 200 usulan sendiri | L09 |
+| GET `/usulan/{proposal}` | `proposals.show` | Pasien | UUID route | 200 alasan, slot lama/baru, batas jawab, status/jawaban terdahulu; N | L09 |
+| POST `/usulan/{proposal}/setujui` | `proposals.accept` | Pasien | — | 302 `/usulan/{proposal}`; N/C(PROPOSAL_EXPIRED,DUPLICATE_RESPONSE,SLOT_UNAVAILABLE) | L09 |
+| POST `/usulan/{proposal}/tolak` | `proposals.reject` | Pasien | `reason?` | 302 `/usulan/{proposal}`; V/N/C(PROPOSAL_EXPIRED,DUPLICATE_RESPONSE) | L09 |
+| POST `/usulan/{proposal}/pilih-slot` | `proposals.alternative` | Pasien | `slot_id!` | 302 `/usulan/{proposal}`; V/N/C(PROPOSAL_EXPIRED,DUPLICATE_RESPONSE,SLOT_UNAVAILABLE) | L09 |
+| GET `/notifikasi` | `notifications.index` | Pasien | `read?`, `type?`, `from?`, `to?` | 200 notifikasi sendiri, referensi usulan/hasil jawaban | L09 |
+| PATCH `/notifikasi/{notification}/dibaca` | `notifications.read` | Pasien | — | 302 `/notifikasi`; idempoten; N | L09 |
+
+Saat usulan menunggu, slot lama **dan** slot usulan sama-sama dilindungi dari pemesanan lain dalam transaksi. Setuju memindah janji dan melepas slot lama. Tolak mempertahankan janji lama dan melepas slot usulan. Pilih alternatif tersedia **langsung** memindahkan janji secara atomik, melepas slot lama dan slot usulan, serta menyelesaikan usulan; tidak ada tahap konfirmasi admin tambahan. Penyimpanan status hasil alternatif harus ditetapkan L03/L09, bukan mengarang status yang dianggap sudah ada.
+
+Expiry melepas slot usulan, mempertahankan janji lama, dan memberitahu admin. Proses expiry dan respons pasien mengambil locks yang sama, memeriksa waktu/status ulang. Hanya satu hasil terminal boleh menang. Request konflik tidak menghasilkan perpindahan parsial. Pembatalan menutup usulan/reservasi terkait atomik dan memberi pemberitahuan; pembatalan admin juga satu audit per perubahan.
+
+TTL, relasinya dengan batas jawab, cutoff pembatalan dan bentuk pemberitahuan admin harus disepakati L09. Pembatalan mandiri pasien masih terbuka di DESIGN.md dan wireframe; baris route pasien di atas merupakan kandidat yang tidak boleh diaktifkan atau diberi tombol sebelum pemilik mengesahkannya. Pembatalan admin tetap wajib. `response_deadline` jika diizinkan harus dibatasi kebijakan server; client tidak menentukan TTL. Angka 12 jam/24 jam di arsip masih usulan, bukan default final. Tidak ada WhatsApp/email/push.
+
+## 6. Kontrol berulang dan pengingat (FR-02)
+
+| Method + path | Nama route rencana | Role | Input diizinkan | Hasil HTML / galat | Pemilik |
+|---|---|---|---|---|---|
+| GET `/jadwal-kontrol` | `controls.index` | Pasien | `from?`, `to?`, `status?`, `view?` (`agenda`/`bulan`) | 200 jadwal sendiri, agenda default | L10 |
+| GET `/admin/aturan-kontrol` | `admin.control-rules.index` | Admin | `patient_id?`, `active?` | 200 daftar/form aturan operasional | L10 |
+| POST `/admin/aturan-kontrol` | `admin.control-rules.store` | Admin | `patient_id!`, `doctor_id?`, `interval_days!`, `starts_on!`, `notes?` | 302 `/admin/aturan-kontrol`; V/N | L10 |
+| PATCH `/admin/aturan-kontrol/{controlRule}` | `admin.control-rules.update` | Admin | `active?`, `notes?`, `reason!` | 302 `/admin/aturan-kontrol`; V/N | L10 |
+
+`interval_days` hanya 7/14/30 pada rancangan sumber, tetapi “30 hari” dan contoh 31 Januari -> akhir Februari menunjukkan ambiguitas kebijakan. Keputusan pemilik tentang kalender harus ada sebelum implementasi/test tanggal dinyatakan memenuhi FR-02. Jika dipilih bulanan, clamp tidak boleh mengubah anchor asli (31 Jan -> 28/29 Feb -> 31 Mar). Jangan menyamakan otomatis dengan tambah 30 hari.
+
+Jadwal terlewat harus ditandai dan mempunyai jadwal pengganti sesuai keputusan yang disahkan, tidak mengirim pengingat baru untuk jadwal lewat. Pengingat tiga hari sebelum jatuh tempo tepat satu, termasuk generator dipanggil dua kali. Membaca/menandai pengingat menggunakan route notifikasi **L09** di atas; L10 hanya memiliki generatornya, tanpa alias `/pengingat` kedua. L11 memanggil generator jadwal berikutnya milik L10 saat selesai, secara idempoten. Cutoff terlewat/jam tutup masih perlu keputusan.
+
+## 7. Antrean dan check-in (FR-04)
+
+| Method + path | Nama route rencana | Role | Input diizinkan | Hasil HTML / galat | Pemilik |
+|---|---|---|---|---|---|
+| GET `/antrian` | `queue.show` | Pasien | `date?`, `appointment_id?` sendiri | 200 tiket sendiri, nomor/status/posisi; N | L11 |
+| POST `/janji/{appointment}/check-in` | `check-in.store` | Pasien | — | 302 `/antrian`; N/C(ALREADY_CHECKED_IN,CHECK_IN_NOT_OPEN,INVALID_STATE) | L11 |
+| GET `/admin/antrian` | `admin.queue.index` | Admin | `date?`, `status?` | 200 daftar operasional minimal | L11 |
+| POST `/admin/janji/{appointment}/check-in` | `admin.check-in.store` | Admin | — | 302 `/admin/antrian`; N/C(ALREADY_CHECKED_IN,CHECK_IN_NOT_OPEN,INVALID_STATE) | L11 |
+| PATCH `/admin/antrian/{ticket}/status` | `admin.queue.update` | Admin | `status!`, `correction_reason?` | 302 `/admin/antrian`; V/N/C(INVALID_TRANSITION) | L11 |
+| POST `/admin/antrian/tutup-hari` | `admin.queue.close-day` | Admin | `date!` | 302 `/admin/antrian`; V/C(DAY_NOT_CLOSABLE); idempoten | L11 |
+
+Status normal: `belum_check_in` -> `menunggu` -> `diperiksa` -> `selesai`; belum check-in/menunggu dapat menjadi `tidak_hadir` sesuai kebijakan. Menunggu langsung selesai ditolak. Koreksi mundur memerlukan alasan; transisi koreksi yang diperbolehkan harus eksplisit, bukan mengizinkan semua status jika ada teks alasan. Check-in pasien bukan izin mengubah status admin lewat field `status`.
+
+Nomor final unik per hari WIB, hanya setelah check-in, satu tiket per janji. Nomor estimasi dan final adalah dua konsep berbeda, bukan janji bahwa nilainya tak pernah kebetulan sama (kontradiksi redaksi PRD perlu dikonfirmasi). Check-in ganda ditolak, bukan membuat nomor baru. Penutupan hari menandai tidak hadir sesuai cutoff yang disetujui; belum diputuskan berarti acceptance waktu terhalang. Akses ringkasan alergi saat check-in harus minimal dan mencatat pembukaan sesuai keputusan privasi; tidak membuka profil lengkap.
+
+## 8. Resep dan kepatuhan obat (FR-12)
+
+| Method + path | Nama route rencana | Role | Input diizinkan | Hasil HTML / galat | Pemilik |
+|---|---|---|---|---|---|
+| GET `/obat` | `medications.index` | Pasien | `active?` | 200 resep/obat sendiri atau keadaan belum ada resep | L12 |
+| GET `/obat/kepatuhan` | `medication-adherence.index` | Pasien | `from?`, `to?` | 200 ringkasan catatan harian sendiri; V | L12 |
+| PATCH `/obat/{medication}/catatan/{date}` | `medication-days.update` | Pasien | `status!` (`sudah`/`belum`), `notes?` | 302 `/obat`; V/N/C(OUTSIDE_MEDICATION_PERIOD) | L12 |
+| GET `/admin/resep` | `admin.prescriptions.index` | Admin | `patient_id?`, `from?`, `to?` | 200 daftar/form pencatatan resep; tanpa kepatuhan pasien | L12 |
+| POST `/admin/resep` | `admin.prescriptions.store` | Admin | `patient_id!`, `appointment_id?`, `doctor_id?`, `prescription_number?`, `prescribed_on!`, `notes?`, `medications!` | 302 `/admin/resep`; V/N | L12 |
+
+Item `medications`: `name!`, `dose!`, `instructions!`, `frequency_per_day!`, `starts_on!`, `ends_on!`, `fornas_reference!`, `source_retrieved_on!`. Frekuensi bilangan positif; tanggal akhir >= awal; nama/dosis berasal dari resep, tidak dihitung dari kondisi pasien. Metadata sumber/tanggal adalah kebutuhan target, **bukan klaim kolom lama sudah ada**. ID pasien/janji/dokter harus konsisten; admin pencatat berasal dari sesi. Resep dan seluruh item serta audit tersimpan atomik.
+
+Pasien tidak mendapat route menambah/mengedit resep klinis. Daftar selalu memuat nama, dosis, aturan pakai, periode, nama pencatat, rujukan Fornas, dan label **“Catatan resep, bukan saran medis.”** Catatan pasien upsert unik pasien+obat+tanggal; `belum` lalu `sudah` memperbarui satu baris dan ringkasan. Satu catatan harian tidak membuktikan dosis individual. Denominator hari/periode aktif, perlakuan hari kosong dan rentang default disepakati L12; data belum cukup ditampilkan apa adanya. Admin tidak mengakses ringkasan kepatuhan.
+
+## 9. Kebiasaan wajib (FR-05/FB-5)
+
+| Method + path | Nama route rencana | Role | Input diizinkan | Hasil HTML / galat | Pemilik |
+|---|---|---|---|---|---|
+| GET `/kebiasaan` | `habits.index` | Pasien | `from?`, `to?` | 200 catatan/form milik sendiri | L13 |
+| PATCH `/kebiasaan/{date}` | `habits.update` | Pasien | `hydration_ml?`, `sleep_hours?`, `activity_minutes?`, `notes?` | 302 `/kebiasaan`, ringkasan hasil terbaru; V | L13 |
+| DELETE `/kebiasaan/{date}` | `habits.destroy` | Pasien | — | 302 `/kebiasaan`, ringkasan diperbarui; N bila tidak ada | L13 |
+| GET `/kebiasaan/ringkasan` | `habit-summary.show` | Pasien | `from?`, `to?` | 200 ringkasan sendiri; V | L13 |
+
+Satu catatan per pasien+tanggal WIB. Minimal satu nilai kebiasaan harus dikirim saat simpan; hanya field terkirim diperbarui. Tidur 0, 24 atau bukan angka ditolak sesuai acceptance sumber. Hidrasi/aktivitas angka nonnegatif; batas maksimum/pecahan tidur dan ambang penilaian memerlukan keputusan terdokumentasi, bukan rekomendasi medis baru. CRUD tidak dipotong menjadi tampilan saja.
+
+Ringkasan memuat hari tercatat, hari kosong, runtutan hari dan hasil terhadap ambang yang disahkan. Gap tanggal 1/2/4 diuji; nilai di bawah/tepat/di atas ambang diuji untuk ketiga kebiasaan. PRG sudah menampilkan ringkasan terbaru tanpa reload manual; fetch opsional tidak menggantikan alur HTML. Tanpa keputusan ambang, acceptance penilaian **blocked**, bukan dianggap lulus dengan angka contoh. FB-5 tetap fitur wajib, bukan opsi L17.
+
+## 10. Audit dan timeline
+
+| Method + path | Nama route rencana | Role | Input diizinkan | Hasil HTML / galat | Pemilik |
+|---|---|---|---|---|---|
+| GET `/admin/audit-log` | `admin.audit.index` | Admin | `action?`, `object_type?`, `object_id?`, `from?`, `to?` | 200 log operasional tersaring | L06 |
+| GET `/janji/{appointment}/perubahan` | `appointment-changes.index` | Pasien | UUID route | 200 perubahan janji sendiri, proyeksi aman; N | L06 |
+| GET `/timeline` | `timeline.index` | Pasien | `type?`, `from?`, `to?`, `status?` | 200 satu riwayat terbaru, FR-11 + FR-13 | L14 |
+| GET `/timeline/{type}/{entry}` | `timeline.show` | Pasien | `type` allowlist + UUID `entry` | 200 detail sendiri; N | L14 |
+
+Audit: satu perubahan admin -> tepat satu log dalam transaksi yang sama; audit gagal -> mutasi rollback. Isi minimal aktor, waktu, aksi, objek, before/after, alasan bila wajib. Tidak ada route POST/PATCH/DELETE audit. Batch penutupan hari mencatat setiap perubahan objek sekali; replay tanpa perubahan tidak menggandakan audit. Tidak menaruh kebiasaan, password atau seluruh profil dalam snapshot admin.
+
+Timeline jenis `appointment`, `check_in`, `visit`, `medication`, `control_schedule`, memakai identitas stabil `(type, entry UUID)`, waktu berzona, ringkasan dan tautan detail. Payload/HTML tiap jenis: janji (dokter, tanggal, status), check-in (waktu, nomor final), kunjungan (waktu/status selesai), obat (nama/periode/label resep), jadwal kontrol (tanggal/status/tautan janji jika ada). Semua query berscope pasien, urut terbaru dengan tie-break stabil, keadaan kosong mengarah ke janji pertama. Tidak ada alias `/riwayat/janji` kedua. Kontrol berikutnya muncul setelah kunjungan selesai tanpa entri duplikat.
+
+## 11. Opsional, tidak aktif tanpa keputusan (FR-06/14)
+
+| Method + path | Nama route rencana | Role | Input diizinkan | Hasil HTML / galat | Pemilik |
+|---|---|---|---|---|---|
+| GET `/konten` | `content.index` | Pasien | `category?` | 200 materi sesuai kondisi sendiri, URL/tanggal sumber | L17 |
+| GET `/admin/konten` | `admin.content.index` | Admin | `category?`, `active?` | 200 daftar/form bila disetujui | L17 |
+| POST `/admin/konten` | `admin.content.store` | Admin | `slug!`, `title!`, `summary!`, `body!`, `category!`, `related_condition?`, `source_url!`, `retrieved_on!` | 302 `/admin/konten`; V; audit wajib | L17 |
+| GET `/aktivitas` | `activity.index` | Pasien | `type?`, `from?`, `to?` | 200 log sendiri, append-only aplikasi | L17 |
+
+Konten hanya sumber resmi Kemenkes/WHO yang ditinjau; sanitasi/escaping isi dan sumber diuji. Log aktivitas dihasilkan server, tidak ada route tulis/ubah/hapus pengguna. Fitur yang dipotong tidak diberi link navigasi aktif. L17 tidak menggantikan audit wajib L06 atau kebiasaan wajib L13.
+
+## 12. Keputusan dan bukti sebelum implementasi dianggap selesai
+
+| Keputusan | Pemilik | Acceptance yang belum dapat ditutup tanpanya |
 |---|---|---|
-| `GET` | `/api/profil` | Membaca profil pasien yang sedang masuk |
-| `PUT` | `/api/profil` | Membuat atau memperbarui profil milik sendiri |
-| `DELETE` | `/api/profil` | Menghapus profil setelah konfirmasi |
-
-#### `GET /api/profil`
-
-Request body: tidak ada.
-
-Sukses `200` juga menangkap daftar obat yang dilaporkan pasien pada field
-`obat`. Pasien hanya dapat membaca daftar tersebut melalui profil; mutasi obat
-pasien tidak disediakan sebagai endpoint pasien. Dosis dan frekuensi adalah
-catatan pasien, bukan rekomendasi medis.
-
-Sukses `200`:
-
-```json
-{
-  "data": {
-    "id": "uuid",
-    "nama": "Budi Santoso",
-    "nomorTelepon": "081200000001",
-    "tanggalLahir": "1985-04-12",
-    "jenisKelamin": "laki_laki",
-    "golonganDarah": "O",
-    "tinggiBadan": 170,
-    "beratBadan": 72,
-    "kondisiKesehatan": "hipertensi",
-    "riwayatAlergi": "penisilin",
-    "kontakDaruratNama": "Siti Santoso",
-    "kontakDaruratTelepon": "081200000002",
-    "updatedAt": "2026-10-31T04:00:00.000Z",
-    "obat": [
-      {
-        "id": "uuid",
-        "katalogObatFornasId": "uuid",
-        "namaObat": "abakavir",
-        "namaInternasional": "abacavir",
-        "dosisCatatan": "Sesuai resep dokter",
-        "frekuensiCatatan": "1 kali sehari",
-        "mulaiPada": "2026-11-01",
-        "selesaiPada": null,
-        "catatan": null,
-        "sumber": "dilaporkan_pasien"
-      }
-    ]
-  }
-}
-```
-
-Jika profil belum dibuat, endpoint mengembalikan `200` dengan `data: null`.
-
-#### `PUT /api/profil`
-
-Request:
-
-```json
-{
-  "nomorTelepon": "081200000001",
-  "tanggalLahir": "1985-04-12",
-  "jenisKelamin": "laki_laki",
-  "golonganDarah": "O",
-  "tinggiBadan": 170,
-  "beratBadan": 72,
-  "kondisiKesehatan": "hipertensi",
-  "riwayatAlergi": "penisilin",
-  "kontakDaruratNama": "Siti Santoso",
-  "kontakDaruratTelepon": "081200000002"
-}
-```
-
-Sukses: `200` dengan bentuk profil yang tersimpan.
-
-Galat:
-
-- `401 UNAUTHORIZED` jika belum masuk.
-- `422 VALIDATION_ERROR` jika tanggal, enum, atau angka tidak valid.
-
-#### `DELETE /api/profil`
-
-Request:
-
-```json
-{
-  "konfirmasi": true
-}
-```
-
-Sukses: `204`.
-
-Galat:
-
-- `401 UNAUTHORIZED` jika belum masuk.
-- `422 VALIDATION_ERROR` jika `konfirmasi` bukan `true`.
-
-### FR-02 Jadwal kontrol berulang dan pengingat
-
-Role membaca: `pasien` untuk miliknya. Role menulis aturan: `admin`.
-
-| Method | Path | Role | Tujuan |
-|---|---|---|---|
-| `GET` | `/api/jadwal-kontrol` | pasien | Daftar jadwal kontrol pasien |
-| `POST` | `/api/admin/jadwal-kontrol` | admin | Membuat aturan kontrol dan jadwal awal |
-| `PATCH` | `/api/admin/jadwal-kontrol/:id` | admin | Mengubah atau menonaktifkan aturan |
-| `GET` | `/api/pengingat` | pasien | Membaca pengingat dalam aplikasi |
-| `PATCH` | `/api/pengingat/:id/dibaca` | pasien | Menandai pengingat telah dibaca |
-
-#### `GET /api/jadwal-kontrol`
-
-Query opsional: `from`, `to`, `status`, `page`, `pageSize`.
-
-Sukses: daftar agenda pasien dalam urutan tanggal menaik untuk agenda mendatang.
-Setiap item minimal memiliki:
-
-```json
-{
-  "id": "uuid",
-  "tanggalRencana": "2026-11-28",
-  "status": "terjadwal",
-  "intervalHari": 30,
-  "anchorHari": 31,
-  "dokter": {
-    "id": "uuid",
-    "nama": "dr. Contoh",
-    "spesialisasi": "Penyakit Dalam"
-  },
-  "janjiId": null
-}
-```
-
-#### `POST /api/admin/jadwal-kontrol`
-
-Request:
-
-```json
-{
-  "pasienId": "uuid",
-  "dokterId": "uuid",
-  "intervalHari": 30,
-  "tanggalMulai": "2026-01-31",
-  "catatan": "Kontrol sesuai anjuran dokter"
-}
-```
-
-`intervalHari` hanya menerima `7`, `14`, atau `30`. Tanggal berikutnya memakai
-anchor tanggal asli dan di-clamp saat bulan tujuan lebih pendek.
-
-Sukses: `201` dengan aturan dan jadwal pertama.
-
-Galat:
-
-- `403 FORBIDDEN` jika bukan admin.
-- `404 NOT_FOUND` jika pasien atau dokter tidak ditemukan.
-- `422 VALIDATION_ERROR` jika interval atau tanggal tidak valid.
-
-#### `PATCH /api/admin/jadwal-kontrol/:id`
-
-Request:
-
-```json
-{
-  "aktif": false,
-  "catatan": "Aturan dihentikan oleh klinik"
-}
-```
-
-Sukses: `200` dengan aturan terbaru dan satu catatan audit.
-
-#### `GET /api/pengingat`
-
-Query: `dibaca`, `from`, `to`, `page`, `pageSize`.
-
-Sukses: daftar notifikasi milik pasien yang masuk. Endpoint tidak mengirim
-notifikasi push, email, atau WhatsApp.
-
-#### `PATCH /api/pengingat/:id/dibaca`
-
-Request body: tidak ada.
-
-Sukses: `200` dengan:
-
-```json
-{
-  "data": {
-    "id": "uuid",
-    "dibaca": true
-  }
-}
-```
-
-Pengguna tidak boleh menandai notifikasi pengguna lain.
-
-### FR-03 Spesialis, slot, dan janji anti-bentrok
-
-Role membaca dan membuat janji: `pasien`. Role mengelola dokter dan slot:
-`admin`.
-
-| Method | Path | Role | Tujuan |
-|---|---|---|---|
-| `GET` | `/api/dokter` | pasien, admin | Daftar dokter aktif dan filter spesialisasi |
-| `GET` | `/api/slot` | pasien, admin | Daftar slot yang dapat dilihat |
-| `POST` | `/api/janji` | pasien | Membuat janji secara atomik |
-| `GET` | `/api/janji` | pasien, admin | Daftar janji sesuai batas akses |
-| `GET` | `/api/janji/:id` | pasien, admin | Detail janji yang boleh dilihat |
-| `PATCH` | `/api/janji/:id/batal` | pasien, admin | Membatalkan janji sesuai aturan |
-| `POST` | `/api/admin/dokter` | admin | Membuat data dokter |
-| `POST` | `/api/admin/slot` | admin | Membuat slot praktik |
-| `PATCH` | `/api/admin/slot/:id` | admin | Mengubah slot praktik |
-
-#### `GET /api/dokter`
-
-Query: `spesialisasi`, `q`, `aktif`, `page`, `pageSize`.
-
-Sukses: daftar dokter tanpa kredensial login dan tanpa data sensitif pasien.
-
-#### `GET /api/slot`
-
-Query wajib minimal: `tanggal`, opsional `dokterId`, `spesialisasi`, `tersedia`.
-
-Sukses: daftar slot dengan `statusKetersediaan` yang dapat berupa
-`tersedia`, `terisi`, atau `milik_sendiri`. Nomor estimasi, bila disediakan,
-harus diberi label perkiraan dan tidak dianggap nomor panggilan final.
-
-#### `POST /api/janji`
-
-Request:
-
-```json
-{
-  "slotId": "uuid",
-  "keluhan": "Kontrol tekanan darah"
-}
-```
-
-Sukses: `201` dengan janji, dokter, slot, dan nomor estimasi bila tersedia.
-
-Galat:
-
-- `401 UNAUTHORIZED` jika belum masuk.
-- `404 NOT_FOUND` jika slot tidak ditemukan.
-- `409 SLOT_ALREADY_BOOKED` jika janji aktif lain sudah mengambil slot.
-- `422 VALIDATION_ERROR` jika request tidak valid.
-
-Constraint database tetap menjadi pengaman terakhir untuk dua request serentak.
-
-#### `GET /api/janji`
-
-Query: `status`, `from`, `to`, `page`, `pageSize`.
-
-Pasien hanya menerima janji miliknya. Admin menerima field operasional yang
-diizinkan, bukan catatan kebiasaan atau ringkasan kepatuhan.
-
-#### `GET /api/janji/:id`
-
-Sukses: detail janji yang dapat dilihat pemanggil.
-Jika ID valid tetapi milik pasien lain, gunakan `404 NOT_FOUND` agar tidak
-membocorkan keberadaan resource.
-
-#### `PATCH /api/janji/:id/batal`
-
-Request pasien:
-
-```json
-{
-  "alasan": "Ada keperluan lain"
-}
-```
-
-Request admin wajib menyertakan alasan dan dapat menyertakan `dibatalkanOleh`
-berdasarkan sesi server, bukan nilai dari client.
-
-Sukses: `200` dengan janji berstatus `dibatalkan` dan notifikasi pasien jika
-aksi dilakukan admin.
-
-### FR-04 Antrean dan transisi status
-
-Role check-in: `pasien`. Role status dan tutup hari: `admin`.
-
-| Method | Path | Role | Tujuan |
-|---|---|---|---|
-| `GET` | `/api/antrian` | pasien, admin | Membaca antrean sesuai batas akses |
-| `POST` | `/api/antrian/:janjiId/check-in` | pasien | Menerbitkan nomor final |
-| `PATCH` | `/api/admin/antrian/:id/status` | admin | Mengubah status antrean |
-| `POST` | `/api/admin/antrian/tutup-hari` | admin | Menandai pasien yang tidak hadir |
-
-#### `GET /api/antrian`
-
-Query pasien: `tanggal`, `janjiId`. Query admin: `tanggal`, `status`, `page`,
-`pageSize`.
-
-Sukses memuat `nomorAntrianFinal` hanya bila sudah diterbitkan. Nomor estimasi
-adalah nilai turunan yang harus diberi label `perkiraan`.
-
-#### `POST /api/antrian/:janjiId/check-in`
-
-Request body: tidak ada.
-
-Sukses: `200` dengan tiket:
-
-```json
-{
-  "data": {
-    "id": "uuid",
-    "janjiId": "uuid",
-    "tanggal": "2026-10-31",
-    "nomorAntrianFinal": 14,
-    "status": "menunggu",
-    "waktuCheckIn": "2026-10-31T02:30:00.000Z"
-  }
-}
-```
-
-Galat:
-
-- `403 FORBIDDEN` jika janji bukan milik pasien.
-- `404 NOT_FOUND` jika janji tidak ditemukan.
-- `409 ALREADY_CHECKED_IN` jika sudah check-in.
-- `409 CHECK_IN_NOT_OPEN` jika di luar jendela check-in.
-- `409` jika janji batal, selesai, atau tidak hadir.
-
-#### `PATCH /api/admin/antrian/:id/status`
-
-Request:
-
-```json
-{
-  "status": "diperiksa",
-  "alasanKoreksi": null
-}
-```
-
-Status yang disimpan hanya:
-
-- `belum_check_in`
-- `menunggu`
-- `diperiksa`
-- `selesai`
-- `tidak_hadir`
-
-Transisi ilegal ditolak. Koreksi status yang mundur atau tidak normal wajib
-menyertakan `alasanKoreksi`. Setiap perubahan berhasil menghasilkan tepat satu
-audit log.
-
-Sukses: `200` dengan tiket terbaru.
-
-Galat:
-
-- `403 FORBIDDEN` jika bukan admin.
-- `404 NOT_FOUND` jika tiket tidak ditemukan.
-- `409 INVALID_TRANSITION` jika transisi tidak diizinkan.
-- `422 VALIDATION_ERROR` jika alasan wajib tetapi kosong.
-
-#### `POST /api/admin/antrian/tutup-hari`
-
-Request:
-
-```json
-{
-  "tanggal": "2026-10-31"
-}
-```
-
-Sukses: `200` dengan jumlah tiket yang ditandai `tidak_hadir`.
-Operasi idempoten untuk tanggal yang sama.
-
-### FR-05 Catatan kebiasaan dan ringkasan
-
-Role: `pasien` untuk data miliknya sendiri. Admin tidak dapat mengakses endpoint
-ini.
-
-| Method | Path | Tujuan |
-|---|---|---|
-| `GET` | `/api/kebiasaan` | Membaca catatan harian |
-| `PUT` | `/api/kebiasaan/:tanggal` | Membuat atau memperbarui catatan tanggal |
-| `GET` | `/api/kebiasaan/ringkasan` | Membaca ringkasan kepatuhan |
-
-#### `GET /api/kebiasaan`
-
-Query: `from`, `to`, `page`, `pageSize`.
-
-Sukses: catatan hidrasi, tidur, aktivitas, dan catatan tambahan milik pasien.
-
-#### `PUT /api/kebiasaan/:tanggal`
-
-Request:
-
-```json
-{
-  "hidrasiMl": 1200,
-  "jamTidur": 7,
-  "aktivitasMenit": 30,
-  "catatan": "Jalan pagi"
-}
-```
-
-Sukses: `200` dengan catatan terbaru.
-
-Validasi menolak jam tidur di luar rentang domain dan tanggal yang bukan format
-`YYYY-MM-DD`.
-
-#### `GET /api/kebiasaan/ringkasan`
-
-Query wajib: `from`, `to`.
-
-Sukses memuat jumlah hari tercatat, runtutan hari, dan penilaian terhadap
-ambang yang sudah diputuskan. Endpoint tidak memberikan diagnosis atau saran
-medis.
-
-### FR-06 Panel konten statis terverifikasi
-
-Status: fitur pelengkap, endpoint tetap dicatat untuk konsistensi kontrak.
-
-| Method | Path | Role | Tujuan |
-|---|---|---|---|
-| `GET` | `/api/konten` | pasien | Membaca konten yang relevan dengan profil |
-| `GET` | `/api/admin/konten` | admin | Meninjau metadata konten bila fitur dibangun |
-| `POST` | `/api/admin/konten` | admin | Menambah konten bersumber resmi bila fitur dibangun |
-
-#### `GET /api/konten`
-
-Query: `kategori`, `kondisi`, `page`, `pageSize`.
-
-Hanya konten dengan kondisi terkait yang tercatat pada profil pasien yang boleh
-ditampilkan. Setiap item wajib memuat `urlSumber` dan `tanggalPengambilan`.
-
-#### `POST /api/admin/konten`
-
-Request:
-
-```json
-{
-  "slug": "hipertensi-dasar",
-  "judul": "Mengenal hipertensi",
-  "isi": "Konten yang telah ditinjau.",
-  "kategori": "hipertensi",
-  "kondisiTerkait": "hipertensi",
-  "urlSumber": "https://www.who.int/",
-  "tanggalPengambilan": "2026-10-31"
-}
-```
-
-Sumber yang diizinkan dan proses peninjauan harus diputuskan sebelum endpoint
-ini diaktifkan.
-
-### FR-07 Auth, sesi, dan dua role
-
-Keputusan pemilik, 1 November 2026: login memakai email dan kata sandi saja.
-NIK dan nomor Kartu Keluarga (KK) tidak dikumpulkan untuk autentikasi maupun
-profil kesehatan. UUID tetap digunakan secara internal untuk kepemilikan data,
-bukan nomor identitas kependudukan. Endpoint login hanya menerima `email` dan
-`password`; field tambahan ditolak melalui validasi Zod strict.
-
-Keputusan ini tidak menambahkan endpoint registrasi. Pemilik tugas registrasi,
-field selain kredensial, dan perilaku setelah registrasi masih perlu ditetapkan.
-
-| Method | Path | Role | Tujuan |
-|---|---|---|---|
-| `POST` | `/api/auth/masuk` | publik | Membuat sesi pasien/admin |
-| `POST` | `/api/auth/keluar` | pengguna masuk | Menghapus sesi saat ini |
-| `GET` | `/api/auth/saya` | pengguna masuk | Membaca identitas dan role sesi |
-
-#### `POST /api/auth/masuk`
-
-Request:
-
-```json
-{
-  "email": "pasien@example.test",
-  "password": "password-rahasia"
-}
-```
-
-Sukses: `200` dengan identitas minimum. Token tidak dikembalikan dalam JSON;
-session disimpan di cookie `httpOnly`.
-
-```json
-{
-  "data": {
-    "user": {
-      "id": "uuid",
-      "nama": "Budi Santoso",
-      "email": "pasien@example.test",
-      "role": "pasien"
-    }
-  }
-}
-```
-
-Galat login tidak membedakan email tidak ditemukan dan password salah:
-
-```json
-{
-  "error": {
-    "code": "UNAUTHORIZED",
-    "message": "Email atau kata sandi tidak benar."
-  }
-}
-```
-
-#### `POST /api/auth/keluar`
-
-Request body: tidak ada.
-
-Sukses: `204`, cookie sesi dihapus atau dibuat kedaluwarsa.
-
-#### `GET /api/auth/saya`
-
-Sukses: identitas sesi aktif tanpa password atau token mentah.
-
-Galat: `401 SESSION_EXPIRED` jika sesi tidak valid.
-
-### FR-08 Pengelolaan admin dan usulan perubahan
-
-Role: `admin` untuk membuat perubahan; `pasien` untuk merespons usulan.
-
-| Method | Path | Role | Tujuan |
-|---|---|---|---|
-| `POST` | `/api/admin/janji/:id/usulan-perubahan` | admin | Mengusulkan slot baru dengan alasan |
-| `POST` | `/api/admin/janji/:id/batal` | admin | Membatalkan janji dengan alasan |
-| `GET` | `/api/usulan-perubahan` | pasien | Membaca usulan milik sendiri |
-| `GET` | `/api/usulan-perubahan/:id` | pasien | Membaca detail usulan sendiri |
-
-#### `POST /api/admin/janji/:id/usulan-perubahan`
-
-Request:
-
-```json
-{
-  "slotBaruId": "uuid",
-  "alasan": "Dokter berhalangan pada jadwal semula",
-  "batasWaktuJawab": "2026-11-02T10:00:00+07:00"
-}
-```
-
-Server menghitung dan memvalidasi TTL kunci slot. Client tidak boleh
-memperpanjang TTL melewati batas kebijakan.
-
-Sukses: `201` dengan usulan, janji lama tetap aktif, dan slot baru terkunci
-sesuai TTL. Satu aksi berhasil menghasilkan satu audit log dan satu notifikasi.
-
-Galat:
-
-- `403 FORBIDDEN` jika bukan admin.
-- `404 NOT_FOUND` jika janji atau slot tidak ditemukan.
-- `409 SLOT_ALREADY_BOOKED` jika slot tidak dapat dikunci.
-- `422 VALIDATION_ERROR` jika alasan kosong.
-
-#### `POST /api/admin/janji/:id/batal`
-
-Request:
-
-```json
-{
-  "alasan": "Dokter berhalangan dan tidak ada slot pengganti"
-}
-```
-
-Sukses: `200` dengan janji dibatalkan, notifikasi pasien, dan audit log.
-
-#### `GET /api/usulan-perubahan`
-
-Query: `status`, `page`, `pageSize`.
-
-Pasien hanya melihat usulan untuk janji miliknya.
-
-#### `GET /api/usulan-perubahan/:id`
-
-ID milik pasien lain dikembalikan sebagai `404 NOT_FOUND`.
-
-### FR-09 Notifikasi dan tanggapan pasien
-
-| Method | Path | Role | Tujuan |
-|---|---|---|---|
-| `POST` | `/api/usulan-perubahan/:id/setujui` | pasien | Menyetujui slot usulan |
-| `POST` | `/api/usulan-perubahan/:id/tolak` | pasien | Menolak usulan |
-| `POST` | `/api/usulan-perubahan/:id/pilih-slot` | pasien | Memilih slot alternatif |
-| `GET` | `/api/notifikasi` | pasien | Membaca pusat notifikasi |
-| `PATCH` | `/api/notifikasi/:id/dibaca` | pasien | Menandai notifikasi dibaca |
-
-#### `POST /api/usulan-perubahan/:id/setujui`
-
-Request body: tidak ada.
-
-Sukses: `200` dengan usulan berstatus `disetujui` dan janji pada slot baru.
-Operasi kedua kali ditolak dengan `409 DUPLICATE_RESPONSE`.
-
-#### `POST /api/usulan-perubahan/:id/tolak`
-
-Request opsional:
-
-```json
-{
-  "alasan": "Tidak dapat hadir pada waktu tersebut"
-}
-```
-
-Sukses: `200` dengan usulan `ditolak`, janji lama tetap aktif, dan slot usulan
-dilepas.
-
-#### `POST /api/usulan-perubahan/:id/pilih-slot`
-
-Request:
-
-```json
-{
-  "slotId": "uuid"
-}
-```
-
-Sukses: `200` dengan usulan berstatus menunggu konfirmasi admin dan slot yang
-dipilih. Slot tetap tunduk pada pencegahan bentrok.
-
-Semua aksi respons memeriksa batas waktu. Usulan kedaluwarsa menghasilkan
-`409 PROPOSAL_EXPIRED`.
-
-### FR-10 Audit log tindakan admin
-
-| Method | Path | Role | Tujuan |
-|---|---|---|---|
-| `GET` | `/api/admin/audit-log` | admin | Membaca audit log operasional |
-| `GET` | `/api/audit-log/janji/:id` | pasien | Membaca perubahan janji miliknya |
-
-Audit log dibuat oleh server dari konteks sesi dan nilai sebelum/sesudah.
-Client tidak boleh mengirim `userId`, `createdAt`, atau nilai audit final sebagai
-sumber kebenaran.
-
-#### `GET /api/admin/audit-log`
-
-Query: `aksi`, `objek`, `objekId`, `from`, `to`, `page`, `pageSize`.
-
-Sukses: daftar log sesuai hak admin. Endpoint ini tidak menyediakan `POST`,
-`PATCH`, atau `DELETE` untuk mengubah log.
-
-#### `GET /api/audit-log/janji/:id`
-
-Pasien hanya menerima perubahan pada janji miliknya. Nilai yang mengandung data
-pasien lain harus disaring atau tidak dikembalikan.
-
-### FR-11 Riwayat janji
-
-FR-11 digabungkan ke timeline FR-13, tetapi endpoint alias ini dicatat agar
-nama kebutuhan tetap dapat ditelusuri.
-
-| Method | Path | Role | Tujuan |
-|---|---|---|---|
-| `GET` | `/api/riwayat/janji` | pasien | Membaca riwayat janji milik sendiri |
-
-Query: `from`, `to`, `status`, `page`, `pageSize`.
-
-Sukses: item janji yang sudah selesai, dibatalkan, atau tidak hadir. Data pasien
-lain tidak pernah dikembalikan.
-
-### FR-12 Resep dan kepatuhan minum obat
-
-Role pencatatan resep: `admin`. Role membaca resep dan mencatat minum:
-`pasien` untuk miliknya sendiri.
-
-| Method | Path | Role | Tujuan |
-|---|---|---|---|
-| `GET` | `/api/obat` | pasien | Membaca resep dan obat sendiri |
-| `POST` | `/api/admin/resep` | admin | Mencatat resep dokter |
-| `GET` | `/api/admin/resep` | admin | Membaca resep untuk pekerjaan admin |
-| `PUT` | `/api/obat/:obatId/catatan-harian/:tanggal` | pasien | Menyimpan status minum |
-| `GET` | `/api/obat/kepatuhan` | pasien | Membaca ringkasan kepatuhan |
-
-#### `GET /api/obat`
-
-Sukses memuat nama obat, dosis, aturan pakai, periode, nama pencatat, dan
-rujukan Fornas. Respons wajib menyertakan label:
-
-```text
-Catatan resep, bukan saran medis.
-```
-
-Pasien tidak mendapat endpoint untuk menambah atau mengubah resep.
-
-#### `POST /api/admin/resep`
-
-Request:
-
-```json
-{
-  "pasienId": "uuid",
-  "janjiId": "uuid",
-  "dokterId": "uuid",
-  "nomorResep": "RSP-2026-001",
-  "tanggalResep": "2026-10-31",
-  "catatan": "Sesuai resep dokter",
-  "obat": [
-    {
-      "namaObat": "Contoh obat",
-      "dosis": "500 mg",
-      "aturanPakai": "1x sehari sesudah makan",
-      "frekuensiPerHari": 1,
-      "tanggalMulai": "2026-10-31",
-      "tanggalSelesai": "2026-11-30",
-      "rujukanFornas": "https://e-fornas.kemkes.go.id/"
-    }
-  ]
-}
-```
-
-Sukses: `201` dengan resep dan obat yang tercatat. `dibuatOleh` berasal dari
-sesi admin.
-
-#### `PUT /api/obat/:obatId/catatan-harian/:tanggal`
-
-Request:
-
-```json
-{
-  "status": "sudah",
-  "catatan": null
-}
-```
-
-`status` menerima `sudah` atau `belum`. Operasi bersifat upsert untuk kombinasi
-pasien, obat, dan tanggal. Sukses: `200` dengan catatan terbaru.
-
-#### `GET /api/obat/kepatuhan`
-
-Query wajib: `from`, `to`.
-
-Sukses memuat jumlah dosis tercatat, jumlah `sudah`, jumlah `belum`, dan
-persentase yang dihitung dari data nyata. Jika data belum cukup, respons harus
-menyatakan data belum cukup, bukan membuat angka contoh.
-
-### FR-13 Timeline kunjungan
-
-| Method | Path | Role | Tujuan |
-|---|---|---|---|
-| `GET` | `/api/timeline` | pasien | Membaca timeline milik sendiri |
-| `GET` | `/api/timeline/:id` | pasien | Membaca detail item milik sendiri |
-
-#### `GET /api/timeline`
-
-Query: `jenis`, `from`, `to`, `page`, `pageSize`.
-
-Jenis item dapat berupa `janji`, `check_in`, `kunjungan`, `obat`, atau
-`jadwal_kontrol`. Respons diurutkan terbaru dan tidak mencampur resource pasien
-lain.
-
-#### `GET /api/timeline/:id`
-
-Sukses: detail item sesuai tipe dan kepemilikan pasien. ID milik pasien lain
-menghasilkan `404 NOT_FOUND`.
-
-### FR-14 Log aktivitas akun
-
-Status: opsional dan kandidat pemotongan pertama sesuai status tugas.
-
-| Method | Path | Role | Tujuan |
-|---|---|---|---|
-| `GET` | `/api/aktivitas` | pasien | Membaca aktivitas akun sendiri |
-
-Query: `jenis`, `from`, `to`, `page`, `pageSize`.
-
-Aktivitas minimal: masuk, keluar, membuat atau mengubah janji, check-in, dan
-menandai obat. Tidak ada endpoint publik untuk mengubah atau menghapus log.
-
-Jika FR-14 dipotong dari rilis, endpoint tidak boleh dimasukkan ke navigasi atau
-kontrak implementasi aktif tanpa keputusan baru.
-
-## 5. Aturan akses lintas role
-
-| Kondisi | Hasil |
-|---|---|
-| Tamu mengakses endpoint inti | `401 UNAUTHORIZED` |
-| Pasien mengakses endpoint admin | `403 FORBIDDEN` |
-| Pasien meminta resource pasien lain | `404 NOT_FOUND` tanpa membocorkan keberadaan |
-| Admin membuka catatan kebiasaan pasien | `403 FORBIDDEN` |
-| Dokter mencoba login | Tidak ada endpoint dokter |
-| Client mengirim role atau user ID berbeda dari sesi | Nilai diabaikan atau ditolak |
-| Mutasi tanpa validasi Zod | Tidak boleh diimplementasikan |
-
-## 6. Aturan audit
-
-Operasi berikut wajib membuat tepat satu audit log jika berhasil:
-
-- perubahan janji oleh admin;
-- pembatalan janji oleh admin;
-- pembuatan atau perubahan slot oleh admin;
-- perubahan status antrean oleh admin;
-- koreksi status dengan alasan;
-- pembuatan atau perubahan aturan kontrol;
-- pembuatan resep oleh admin;
-- keputusan admin lain yang mengubah data domain.
-
-Audit log minimal berisi:
-
-```json
-{
-  "userId": "uuid-admin",
-  "aksi": "ubah_status_antrian",
-  "objek": "tiket_antrian",
-  "objekId": "uuid",
-  "nilaiSebelum": {
-    "status": "menunggu"
-  },
-  "nilaiSesudah": {
-    "status": "diperiksa"
-  },
-  "alasan": null,
-  "createdAt": "2026-10-31T02:30:00.000Z"
-}
-```
-
-Tidak ada endpoint aplikasi untuk mengubah atau menghapus audit log.
-
-## 7. Ketentuan yang belum menjadi keputusan final
-
-Hal berikut masih harus dikonfirmasi sebelum implementasi endpoint terkait:
-
-- TTL kunci slot pada usulan perubahan: usulan saat ini 12 jam atau sampai 24
-  jam sebelum jadwal lama, mana yang lebih dulu.
-- Batas waktu pasien menjawab usulan perubahan.
-- Apakah FR-06 benar-benar dibangun pada rilis ini.
-- Apakah FR-14 dibangun atau dipotong.
-- Nilai ambang ringkasan kebiasaan.
-- Detail jendela check-in.
-
-Endpoint yang bergantung pada keputusan terbuka harus memakai konfigurasi atau
-status `draft`, bukan mengunci angka baru diam-diam di handler.
-
-## 8. Traceability FR ke endpoint
-
-| FR | Endpoint utama |
-|---|---|
-| FR-01 | `/api/profil` |
-| FR-02 | `/api/jadwal-kontrol`, `/api/pengingat` |
-| FR-03 | `/api/dokter`, `/api/slot`, `/api/janji` |
-| FR-04 | `/api/antrian` |
-| FR-05 | `/api/kebiasaan` |
-| FR-06 | `/api/konten` |
-| FR-07 | `/api/auth/masuk`, `/api/auth/keluar`, `/api/auth/saya` |
-| FR-08 | `/api/admin/janji/:id/usulan-perubahan` |
-| FR-09 | `/api/usulan-perubahan/:id/*`, `/api/notifikasi` |
-| FR-10 | `/api/admin/audit-log`, `/api/audit-log/janji/:id` |
-| FR-11 | `/api/riwayat/janji` |
-| FR-12 | `/api/obat`, `/api/admin/resep` |
-| FR-13 | `/api/timeline` |
-| FR-14 | `/api/aktivitas` |
-
-## 9. Kriteria penerimaan A15
-
-- Setiap FR-01 sampai FR-14 memiliki minimal satu endpoint tertulis.
-- Setiap endpoint mencantumkan method, path, role, request, respons, dan galat
-  yang relevan.
-- Respons sukses menggunakan `{ data }`.
-- Respons galat menggunakan `{ error: { code, message, fields? } }`.
-- Nama field menggunakan camelCase dan konsisten dengan domain TypeScript.
-- Batas pasien, admin, dan resource milik sendiri tertulis.
-- Endpoint dokter sebagai pengguna tidak dibuat.
+| Versi Laravel/PHP/host kompatibel, runner/config Chrome | L01 | Bootstrap, CI, hosting nyata |
+| Baseline terisolasi vs adopsi skema, sessions mapping | L02 sebelum L03 | Migrasi aman, auth persistence |
+| Idle 15 menit, rate limit persisten, kebijakan email/password | L04 | Replay sesi sesudah logout/idle, brute-force |
+| TTL, batas jawab, expiry dan cutoff batal | L09 | Race expiry/jawaban dan pembatalan |
+| Interval 30 hari vs bulanan, cutoff terlewat/pengganti | L10 | Tanggal jatuh tempo dan pengganti |
+| Jendela check-in/jam tutup, privasi alergi | L11 | Check-in batas waktu/tutup hari/alergi |
+| Denominator harian obat | L12 | Persentase kepatuhan yang dapat dijelaskan |
+| Ambang kebiasaan dan aturan ringkasan | L13 | Penilaian FB-5 |
+
+Setiap route punya satu pemilik pada tabel. Shared `routes/web.php` dan berkas lintas fitur dikerjakan serial. Verifikasi nanti mencakup PHPUnit HTTP + PostgreSQL terisolasi dan Playwright Chrome untuk HTML/CSRF/PRG. Kontrak ini bukan output `route:list`, hasil test, atau bukti skema Neon. Status tugas hanya di [status-tugas.md](status-tugas.md).
