@@ -29,8 +29,7 @@ Sistem memisahkan lapisan antarmuka statis dan layanan backend secara tegas (**D
 ### A. Frontend (`public/`)
 - **Teknologi:** HTML5 semantik, CSS3 murni ([`public/css/style.css`](public/css/style.css)), dan Vanilla JavaScript (ES6+) menggunakan `fetch()`.
 - **Tanpa Langkah Build:** Tidak menggunakan Blade, tidak menggunakan framework UI (React/Vue/Tailwind), dan **tidak memerlukan `npm run build` atau Vite**. Seluruh aset statis disajikan langsung dari direktori `public/`.
-- **Desain & Aksesibilitas:** Mengikuti token visual [`DESIGN.md`](DESIGN.md) dengan tipografi **Inter**, kartu datar tanpa bayangan, kontras warna terverifikasi WCAG AA (≥ 4.5:1), sasaran sentuh minimal 44–48 px, dukungan navigasi papan ketik (`:focus-visible`, `.skip-link`), serta format tanggal lokal Indonesia (`Intl.DateTimeFormat('id-ID')`).
-
+- **Desain & Aksesibilitas:** Mengikuti token visual [`DESIGN.md`](DESIGN.md)
 ### B. Backend (`app/`, `routes/api.php`)
 - **Teknologi:** PHP 8.4, **Laravel 12** sebagai **JSON API murni** ([`routes/api.php`](routes/api.php)), dan Eloquent ORM.
 - **Autentikasi & Otorisasi:**
