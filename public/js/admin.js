@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (logoutBtn) {
     logoutBtn.addEventListener('click', (e) => {
       e.preventDefault();
-      if (confirm('Apakah Anda yakin ingin keluar dari panel admin?')) {
+      if (confirm('Keluar dari panel admin sekarang?')) {
         api.logout();
       }
     });
@@ -33,21 +33,31 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 let adminMasterPoli = [];
+let adminAppointmentsCache = [];
 
 async function initAppointmentManagement() {
   const filterDate = document.getElementById('filterDate');
   const filterStatus = document.getElementById('filterStatus');
   const filterType = document.getElementById('filterType');
 
-  if (filterDate) {
-    filterDate.addEventListener('change', () => loadAppointments());
-  }
-  if (filterStatus) {
-    filterStatus.addEventListener('change', () => loadAppointments());
-  }
-  if (filterType) {
-    filterType.addEventListener('change', () => loadAppointments());
-  }
+  const urlParams = new URLSearchParams(window.location.search);
+  if (filterDate && urlParams.get('date')) filterDate.value = urlParams.get('date');
+  if (filterStatus && urlParams.get('status')) filterStatus.value = urlParams.get('status');
+  if (filterType && urlParams.get('type')) filterType.value = urlParams.get('type');
+
+  const onFilterChange = () => {
+    const nextParams = new URLSearchParams();
+    if (filterDate?.value) nextParams.set('date', filterDate.value);
+    if (filterType?.value) nextParams.set('type', filterType.value);
+    if (filterStatus?.value) nextParams.set('status', filterStatus.value);
+    const qs = nextParams.toString();
+    window.history.replaceState(null, '', qs ? `${window.location.pathname}?${qs}` : window.location.pathname);
+    loadAppointments();
+  };
+
+  if (filterDate) filterDate.addEventListener('change', onFilterChange);
+  if (filterStatus) filterStatus.addEventListener('change', onFilterChange);
+  if (filterType) filterType.addEventListener('change', onFilterChange);
 
   await loadAppointments();
 
@@ -64,7 +74,7 @@ async function initAppointmentManagement() {
 
       try {
         submitBtn.disabled = true;
-        submitBtn.textContent = 'Menyimpan...';
+        submitBtn.textContent = 'Menyimpan…';
 
         await api.request(`/admin/janji-temu/${id}`, {
           method: 'PATCH',
@@ -74,10 +84,10 @@ async function initAppointmentManagement() {
         closeUpdateModal();
         await loadAppointments();
       } catch (err) {
-        api.showAlert('modalAlert', 'Gagal memperbarui janji: ' + (err.message || 'Terjadi kesalahan sistem'), 'danger');
+        api.showAlert('modalAlert', 'Gagal menyimpan perubahan: ' + (err.message || 'Coba ulangi kembali.'), 'danger');
       } finally {
         submitBtn.disabled = false;
-        submitBtn.textContent = 'Simpan Perubahan';
+        submitBtn.textContent = 'Simpan';
       }
     });
   }
@@ -103,47 +113,57 @@ async function loadAppointments() {
 
   try {
     const res = await api.request(`/admin/janji-temu?${params.toString()}`);
-    const items = res.data || [];
+    adminAppointmentsCache = res.data || [];
 
-    if (items.length === 0) {
-      tableBody.innerHTML = '<tr><td colspan="7" class="text-muted" style="text-align:center; padding: 2rem;">Tidak ada data janji temu yang sesuai filter.</td></tr>';
+    if (adminAppointmentsCache.length === 0) {
+      tableBody.innerHTML = '<tr><td colspan="7" class="text-muted text-center" style="padding: var(--space-6);">Belum ada janji pada filter ini.</td></tr>';
       return;
     }
 
-    tableBody.innerHTML = items.map(a => `
+    tableBody.innerHTML = adminAppointmentsCache.map(a => `
       <tr>
-        <td>#${a.id}</td>
-        <td><strong>${escapeHtml(a.appointment_date)}</strong><br><small class="text-muted">${a.type === 'kontrol_rutin' ? 'Kontrol Rutin' : 'Janji Baru'}</small></td>
-        <td><strong>${escapeHtml(a.user?.name || '-')}</strong><br><small class="text-muted">${escapeHtml(a.user?.phone_number || a.user?.email || '-')}</small></td>
-        <td>${escapeHtml(a.polyclinic?.name || '-')}<br><small class="text-muted">${escapeHtml(a.doctor?.name || '-')}</small></td>
         <td>
-          <div style="max-width: 220px; font-size: 0.85rem; line-height: 1.4;">
-            ${a.complaint ? `<div><strong>Keluhan:</strong> ${escapeHtml(a.complaint)}</div>` : ''}
-            ${a.doctor_notes ? `<div style="color:var(--color-primary); margin-top: 0.2rem;"><strong>Catatan:</strong> ${escapeHtml(a.doctor_notes)}</div>` : ''}
-          </div>
+          <strong>${escapeHtml(a.user?.name || '-')}</strong>
+          <div class="text-muted text-sm">${escapeHtml(a.user?.phone_number || a.user?.email || '-')}</div>
         </td>
+        <td>
+          <strong>${escapeHtml(a.polyclinic?.name || '-')}</strong>
+          <div class="text-muted text-sm">${escapeHtml(a.doctor?.name || '-')}</div>
+        </td>
+        <td><strong>${escapeHtml(api.formatDate(a.appointment_date))}</strong></td>
+        <td><span class="badge badge-${a.type}">${a.type === 'kontrol_rutin' ? 'Kontrol rutin' : 'Janji baru'}</span></td>
         <td><span class="badge badge-${a.status}">${getStatusLabel(a.status)}</span></td>
         <td>
-          <button type="button" class="btn btn-secondary btn-sm" onclick="openUpdateModal(${a.id}, '${a.status}', '${escapeHtmlAttr(a.doctor_notes || '')}')">Kelola</button>
+          ${a.complaint ? `<div><strong>Keluhan:</strong> ${escapeHtml(a.complaint)}</div>` : ''}
+          ${a.doctor_notes ? `<div class="mt-2"><strong>Catatan:</strong> ${escapeHtml(a.doctor_notes)}</div>` : ''}
+          ${!a.complaint && !a.doctor_notes ? '<span class="text-muted">-</span>' : ''}
+        </td>
+        <td>
+          <div style="display: flex; flex-wrap: wrap; gap: var(--space-2);">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="openUpdateModal(${a.id}, 'selesai')">Selesaikan</button>
+            <button type="button" class="btn btn-danger btn-sm" onclick="openUpdateModal(${a.id}, 'dibatalkan')">Batalkan</button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="prefillControlForAppointment(${a.id})">Buat jadwal kontrol</button>
+          </div>
         </td>
       </tr>
     `).join('');
-  } catch (err) {
-    tableBody.innerHTML = `<tr><td colspan="7" style="color:var(--color-danger); text-align:center; padding: 1.5rem;">Gagal memuat: ${escapeHtml(err.message)}</td></tr>`;
+  } catch {
+    tableBody.innerHTML = '<tr><td colspan="7" class="text-center" style="color: var(--color-danger-ink); padding: var(--space-6);">Gagal memuat data. Coba muat ulang halaman.</td></tr>';
   }
 }
 
-function openUpdateModal(id, status, notes) {
+function openUpdateModal(id, presetStatus = null) {
   const modal = document.getElementById('updateModal');
   if (!modal) return;
+  const item = adminAppointmentsCache.find(x => x.id === id);
   api.hideAlert('modalAlert');
   document.getElementById('modalAppointmentId').value = id;
-  document.getElementById('modalStatus').value = status;
-  document.getElementById('modalNotes').value = notes;
+  document.getElementById('modalStatus').value = presetStatus || item?.status || 'terjadwal';
+  document.getElementById('modalNotes').value = item?.doctor_notes || '';
   modal.style.display = 'flex';
 
   setTimeout(() => {
-    document.getElementById('modalStatus').focus();
+    document.getElementById('modalNotes').focus();
   }, 50);
 }
 
@@ -154,15 +174,45 @@ function closeUpdateModal() {
   }
 }
 
+function prefillControlForAppointment(id) {
+  const item = adminAppointmentsCache.find(x => x.id === id);
+  if (!item) return;
+
+  const patientSelect = document.getElementById('controlPatientId');
+  const poliSelect = document.getElementById('controlPoliId');
+  const doctorSelect = document.getElementById('controlDoctorId');
+  const dateInput = document.getElementById('controlDate');
+
+  if (patientSelect && item.user_id) {
+    patientSelect.value = String(item.user_id);
+  }
+  if (poliSelect && item.polyclinic_id) {
+    poliSelect.value = String(item.polyclinic_id);
+    poliSelect.dispatchEvent(new Event('change'));
+  }
+  if (doctorSelect && item.doctor_id) {
+    doctorSelect.value = String(item.doctor_id);
+  }
+
+  const section = document.getElementById('controlFormSection');
+  if (section) {
+    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  if (dateInput) {
+    setTimeout(() => dateInput.focus(), 150);
+  }
+}
+
 window.openUpdateModal = openUpdateModal;
 window.closeUpdateModal = closeUpdateModal;
+window.prefillControlForAppointment = prefillControlForAppointment;
 
 async function initScheduleControlForm() {
   try {
     const patientRes = await api.request('/admin/pasien');
     const patientSelect = document.getElementById('controlPatientId');
     if (patientSelect) {
-      patientSelect.innerHTML = '<option value="">-- Pilih Pasien --</option>' +
+      patientSelect.innerHTML = '<option value="">Pilih pasien…</option>' +
         (patientRes.data || []).map(p => `<option value="${p.id}">${escapeHtml(p.name)} (${escapeHtml(p.email)})</option>`).join('');
     }
 
@@ -173,12 +223,12 @@ async function initScheduleControlForm() {
     const doctorSelect = document.getElementById('controlDoctorId');
 
     if (poliSelect && doctorSelect) {
-      poliSelect.innerHTML = '<option value="">-- Pilih Poliklinik --</option>' +
+      poliSelect.innerHTML = '<option value="">Pilih poliklinik…</option>' +
         adminMasterPoli.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
 
       poliSelect.addEventListener('change', () => {
         const pId = parseInt(poliSelect.value, 10);
-        doctorSelect.innerHTML = '<option value="">-- Pilih Dokter --</option>';
+        doctorSelect.innerHTML = '<option value="">Pilih dokter…</option>';
         if (!pId) {
           doctorSelect.disabled = true;
           return;
@@ -209,9 +259,14 @@ async function initScheduleControlForm() {
       const appointment_date = dateInput.value;
       const doctor_notes = document.getElementById('controlNotes').value.trim();
 
+      if (!user_id || !polyclinic_id || !doctor_id || !appointment_date) {
+        api.showAlert('controlAlert', 'Pilih pasien, poliklinik, dokter, dan tanggal kontrol terlebih dahulu.', 'danger');
+        return;
+      }
+
       try {
         submitBtn.disabled = true;
-        submitBtn.textContent = 'Menetapkan Jadwal...';
+        submitBtn.textContent = 'Menyimpan…';
 
         await api.request('/admin/jadwal-kontrol', {
           method: 'POST',
@@ -224,20 +279,21 @@ async function initScheduleControlForm() {
           })
         });
 
-        api.showAlert('controlAlert', 'Jadwal kontrol rutin berhasil ditetapkan.', 'success');
+        api.showAlert('controlAlert', 'Jadwal kontrol rutin berhasil dibuat.', 'success');
         form.reset();
+        doctorSelect.innerHTML = '<option value="">Pilih poliklinik terlebih dahulu…</option>';
         doctorSelect.disabled = true;
         await loadAppointments();
       } catch (err) {
         api.showAlert('controlAlert', 'Gagal membuat jadwal kontrol: ' + err.message, 'danger');
       } finally {
         submitBtn.disabled = false;
-        submitBtn.textContent = 'Tetapkan Jadwal Kontrol';
+        submitBtn.textContent = 'Buat jadwal kontrol';
       }
     });
 
-  } catch (err) {
-    console.error('Error init control form:', err);
+  } catch {
+    api.showAlert('controlAlert', 'Gagal memuat data formulir kontrol. Coba muat ulang halaman.', 'danger');
   }
 }
 
@@ -249,26 +305,33 @@ async function initMasterData() {
     poliForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       api.hideAlert('poliAlert');
-      const name = document.getElementById('poliName').value.trim();
+      const nameInput = document.getElementById('poliName');
+      const name = nameInput.value.trim();
       const description = document.getElementById('poliDesc').value.trim();
       const btn = poliForm.querySelector('button[type="submit"]');
 
+      if (!name) {
+        api.showAlert('poliAlert', 'Nama poliklinik wajib diisi.', 'danger');
+        nameInput.focus();
+        return;
+      }
+
       try {
         btn.disabled = true;
-        btn.textContent = 'Menyimpan...';
+        btn.textContent = 'Menyimpan…';
 
         await api.request('/admin/poli', {
           method: 'POST',
           body: JSON.stringify({ name, description })
         });
-        api.showAlert('poliAlert', 'Poliklinik berhasil ditambahkan!', 'success');
+        api.showAlert('poliAlert', 'Poliklinik berhasil ditambahkan.', 'success');
         poliForm.reset();
         await loadMasterDataList();
       } catch (err) {
         api.showAlert('poliAlert', err.message || 'Gagal menambah poliklinik.', 'danger');
       } finally {
         btn.disabled = false;
-        btn.textContent = 'Tambah Poli';
+        btn.textContent = 'Tambah poli';
       }
     });
   }
@@ -279,25 +342,31 @@ async function initMasterData() {
       e.preventDefault();
       api.hideAlert('doctorAlert');
       const polyclinic_id = document.getElementById('docPoliId').value;
-      const name = document.getElementById('docName').value.trim();
+      const nameInput = document.getElementById('docName');
+      const name = nameInput.value.trim();
       const btn = doctorForm.querySelector('button[type="submit"]');
+
+      if (!polyclinic_id || !name) {
+        api.showAlert('doctorAlert', 'Pilih poliklinik dan isi nama lengkap dokter terlebih dahulu.', 'danger');
+        return;
+      }
 
       try {
         btn.disabled = true;
-        btn.textContent = 'Menyimpan...';
+        btn.textContent = 'Menyimpan…';
 
         await api.request('/admin/dokter', {
           method: 'POST',
           body: JSON.stringify({ polyclinic_id: parseInt(polyclinic_id, 10), name, is_active: true })
         });
-        api.showAlert('doctorAlert', 'Dokter berhasil ditambahkan!', 'success');
+        api.showAlert('doctorAlert', 'Dokter berhasil ditambahkan.', 'success');
         doctorForm.reset();
         await loadMasterDataList();
       } catch (err) {
         api.showAlert('doctorAlert', err.message || 'Gagal menambah dokter.', 'danger');
       } finally {
         btn.disabled = false;
-        btn.textContent = 'Tambah Dokter';
+        btn.textContent = 'Tambah dokter';
       }
     });
   }
@@ -312,13 +381,13 @@ async function loadMasterDataList() {
     const polis = res.data || [];
 
     if (docPoliSelect) {
-      docPoliSelect.innerHTML = '<option value="">-- Pilih Poliklinik --</option>' +
+      docPoliSelect.innerHTML = '<option value="">Pilih poliklinik…</option>' +
         polis.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
     }
 
     if (poliListEl) {
       if (polis.length === 0) {
-        poliListEl.innerHTML = '<tr><td colspan="3" class="text-muted" style="text-align:center; padding: 1.5rem;">Belum ada poliklinik terdaftar.</td></tr>';
+        poliListEl.innerHTML = '<tr><td colspan="3" class="text-muted text-center" style="padding: var(--space-6);">Belum ada poli/dokter.</td></tr>';
         return;
       }
 
@@ -327,13 +396,13 @@ async function loadMasterDataList() {
           <td><strong>${escapeHtml(p.name)}</strong></td>
           <td>${escapeHtml(p.description || '-')}</td>
           <td>
-            <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.5rem;">
+            <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--space-2);">
               ${(p.doctors || []).length > 0
                 ? p.doctors.map(d => `
-                  <li style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;">
+                  <li style="display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap;">
                     <span>
                       ${escapeHtml(d.name)}
-                      <span class="badge ${d.is_active ? 'badge-selesai' : 'badge-dibatalkan'}" style="margin-left: 0.35rem;">
+                      <span class="badge ${d.is_active ? 'badge-selesai' : 'badge-dibatalkan'}" style="margin-left: var(--space-2);">
                         ${d.is_active ? 'Aktif' : 'Nonaktif'}
                       </span>
                     </span>
@@ -342,15 +411,17 @@ async function loadMasterDataList() {
                     </button>
                   </li>
                 `).join('')
-                : '<li class="text-muted">Belum ada dokter</li>'
+                : '<li class="text-muted">Belum ada poli/dokter.</li>'
               }
             </ul>
           </td>
         </tr>
       `).join('');
     }
-  } catch (err) {
-    if (poliListEl) poliListEl.innerHTML = `<tr><td colspan="3" style="color:var(--color-danger); text-align:center;">Gagal: ${escapeHtml(err.message)}</td></tr>`;
+  } catch {
+    if (poliListEl) {
+      poliListEl.innerHTML = '<tr><td colspan="3" class="text-center" style="color: var(--color-danger-ink); padding: var(--space-6);">Gagal memuat data. Coba muat ulang halaman.</td></tr>';
+    }
   }
 }
 
@@ -384,9 +455,4 @@ function escapeHtml(str) {
   const div = document.createElement('div');
   div.textContent = str;
   return div.innerHTML;
-}
-
-function escapeHtmlAttr(str) {
-  if (!str) return '';
-  return str.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }

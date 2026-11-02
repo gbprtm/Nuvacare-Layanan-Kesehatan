@@ -1,28 +1,38 @@
 document.addEventListener('DOMContentLoaded', async () => {
   const token = api.getToken();
-  const isAuthPage = window.location.pathname.endsWith('login.html') ||
-                     window.location.pathname.endsWith('daftar.html') ||
-                     window.location.pathname.endsWith('lupa-password.html') ||
-                     window.location.pathname.endsWith('reset-password.html');
+  const user = api.getUser();
+  const path = window.location.pathname;
+  const params = new URLSearchParams(window.location.search);
 
-  if (token && isAuthPage) {
-    try {
-      // Verify token against the server first to avoid redirect loops when a stored token is revoked.
-      const verified = await api.request('/user');
-      if (verified && verified.data) {
-        api.setUser(verified.data);
-        window.location.href = verified.data.role === 'admin'
-          ? '/admin/kelola-janji.html'
-          : '/pasien/janji-temu.html';
-        return;
-      }
-    } catch {
-      api.clearAuth();
+  if (path.endsWith('/login.html')) {
+    const reason = params.get('reason');
+    if (reason === 'expired') {
+      api.showAlert('loginAlert', 'Sesi berakhir. Silakan masuk lagi.', 'danger');
+    } else if (reason === 'forbidden') {
+      api.showAlert('loginAlert', 'Halaman ini bukan untuk akunmu.', 'danger');
     }
   }
 
-  if (document.getElementById('publicPoliList')) {
-    initHomePage();
+  const isAuthPage =
+    path.endsWith('/login.html') ||
+    path.endsWith('/daftar.html') ||
+    path.endsWith('/lupa-password.html');
+
+  if (token && user && isAuthPage) {
+    try {
+      const verify = await api.request('/user', { skipAuthRedirect: true });
+      const verifiedUser = verify.data || user;
+      api.setUser(verifiedUser);
+      window.location.href =
+        verifiedUser.role === 'admin' ? '/admin/kelola-janji.html' : '/pasien/janji-temu.html';
+      return;
+    } catch {
+      api.clearSession();
+    }
+  }
+
+  if (path === '/' || path.endsWith('/index.html')) {
+    loadPublicHomepage();
   }
 
   const loginForm = document.getElementById('loginForm');
@@ -31,18 +41,21 @@ document.addEventListener('DOMContentLoaded', async () => {
       e.preventDefault();
       api.hideAlert('loginAlert');
 
-      const email = document.getElementById('email').value.trim();
-      const password = document.getElementById('password').value;
+      const emailInput = document.getElementById('email');
+      const passwordInput = document.getElementById('password');
+      const email = emailInput.value.trim();
+      const password = passwordInput.value;
       const submitBtn = document.getElementById('submitBtn');
 
       if (!email || !password) {
-        api.showAlert('loginAlert', 'Harap isi email dan kata sandi.');
+        api.showAlert('loginAlert', 'Masukkan alamat email dan kata sandi terlebih dahulu.');
+        (!email ? emailInput : passwordInput).focus();
         return;
       }
 
       try {
         submitBtn.disabled = true;
-        submitBtn.textContent = 'Memproses...';
+        submitBtn.textContent = 'Memproses…';
 
         const res = await api.request('/login', {
           method: 'POST',
@@ -52,12 +65,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         api.setToken(res.token);
         api.setUser(res.user);
 
-        window.location.href = res.user.role === 'admin'
-          ? '/admin/kelola-janji.html'
-          : '/pasien/janji-temu.html';
+        if (res.user.role === 'admin') {
+          window.location.href = '/admin/kelola-janji.html';
+        } else {
+          window.location.href = '/pasien/janji-temu.html';
+        }
       } catch (err) {
-        const msg = err.errors?.email?.[0] || err.message || 'Gagal masuk. Periksa email dan kata sandi.';
+        const msg = err.errors?.email?.[0] || err.message || 'Gagal masuk. Periksa kembali email dan kata sandimu.';
         api.showAlert('loginAlert', msg, 'danger');
+        emailInput.focus();
       } finally {
         submitBtn.disabled = false;
         submitBtn.textContent = 'Masuk';
@@ -67,6 +83,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const registerForm = document.getElementById('registerForm');
   if (registerForm) {
+    const birthDateInput = document.getElementById('regBirthDate');
+    if (birthDateInput) {
+      birthDateInput.max = new Date().toISOString().split('T')[0];
+    }
+
     registerForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       api.hideAlert('registerAlert');
@@ -80,41 +101,49 @@ document.addEventListener('DOMContentLoaded', async () => {
       const password_confirmation = document.getElementById('regPasswordConfirm').value;
       const submitBtn = document.getElementById('regSubmitBtn');
 
+      if (!name || !email || !password) {
+        api.showAlert('registerAlert', 'Lengkapi nama lengkap, email, dan kata sandi.', 'danger');
+        return;
+      }
+
       if (password !== password_confirmation) {
-        api.showAlert('registerAlert', 'Konfirmasi kata sandi tidak cocok.');
+        api.showAlert('registerAlert', 'Konfirmasi kata sandi tidak cocok. Ketik ulang kata sandimu.', 'danger');
+        document.getElementById('regPasswordConfirm').focus();
         return;
       }
 
       try {
         submitBtn.disabled = true;
-        submitBtn.textContent = 'Mendaftarkan Akun...';
+        submitBtn.textContent = 'Menyimpan…';
 
         const res = await api.request('/register', {
           method: 'POST',
           body: JSON.stringify({
             name,
             email,
-            password,
-            password_confirmation,
             phone_number: phone_number || null,
             birth_date: birth_date || null,
-            address: address || null
+            address: address || null,
+            password,
+            password_confirmation
           })
         });
 
         api.setToken(res.token);
         api.setUser(res.user);
-
-        api.showAlert('registerAlert', 'Pendaftaran berhasil! Mengalihkan ke halaman pasien...', 'success');
-        setTimeout(() => {
-          window.location.href = '/pasien/janji-temu.html';
-        }, 1000);
+        window.location.href = '/pasien/janji-temu.html';
       } catch (err) {
-        const firstError = Object.values(err.errors || {})[0]?.[0];
-        api.showAlert('registerAlert', firstError || err.message || 'Pendaftaran gagal.', 'danger');
+        const msg =
+          err.errors?.email?.[0] ||
+          err.errors?.password?.[0] ||
+          err.errors?.birth_date?.[0] ||
+          err.errors?.name?.[0] ||
+          err.message ||
+          'Gagal mendaftarkan akun. Periksa kembali isian formulirmu.';
+        api.showAlert('registerAlert', msg, 'danger');
       } finally {
         submitBtn.disabled = false;
-        submitBtn.textContent = 'Daftar Sekarang';
+        submitBtn.textContent = 'Buat Akun Pasien';
       }
     });
   }
@@ -128,19 +157,25 @@ document.addEventListener('DOMContentLoaded', async () => {
       const email = document.getElementById('forgotEmail').value.trim();
       const submitBtn = document.getElementById('forgotSubmitBtn');
 
+      if (!email) {
+        api.showAlert('forgotAlert', 'Masukkan alamat email terdaftar terlebih dahulu.', 'danger');
+        document.getElementById('forgotEmail').focus();
+        return;
+      }
+
       try {
         submitBtn.disabled = true;
-        submitBtn.textContent = 'Mengirim Tautan...';
+        submitBtn.textContent = 'Mengirim…';
 
         const res = await api.request('/forgot-password', {
           method: 'POST',
           body: JSON.stringify({ email })
         });
 
-        api.showAlert('forgotAlert', res.message, 'success');
+        api.showAlert('forgotAlert', res.message || 'Tautan reset kata sandi telah dikirim ke emailmu.', 'success');
         forgotForm.reset();
       } catch (err) {
-        const msg = err.errors?.email?.[0] || err.message || 'Gagal mengirim email reset kata sandi.';
+        const msg = err.errors?.email?.[0] || err.message || 'Gagal mengirim tautan reset. Coba beberapa saat lagi.';
         api.showAlert('forgotAlert', msg, 'danger');
       } finally {
         submitBtn.disabled = false;
@@ -151,7 +186,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const resetForm = document.getElementById('resetForm');
   if (resetForm) {
-    const params = new URLSearchParams(window.location.search);
     const tokenParam = params.get('token') || '';
     const emailParam = params.get('email') || '';
 
@@ -160,13 +194,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     const submitBtn = document.getElementById('resetSubmitBtn');
 
     if (tokenInput) tokenInput.value = tokenParam;
-    if (emailInput) emailInput.value = emailParam;
+    if (emailInput && emailParam) emailInput.value = emailParam;
 
     if (!tokenParam) {
       api.showAlert(
         'resetAlert',
-        'Tautan reset kata sandi tidak lengkap atau tidak sah. Silakan ajukan tautan baru di halaman Lupa Kata Sandi.',
-        'warning'
+        'Tautan pengaturan ulang kata sandi tidak lengkap atau kedaluwarsa. Minta tautan baru melalui halaman Lupa Kata Sandi.',
+        'danger'
       );
       if (submitBtn) submitBtn.disabled = true;
     }
@@ -175,38 +209,48 @@ document.addEventListener('DOMContentLoaded', async () => {
       e.preventDefault();
       api.hideAlert('resetAlert');
 
-      const tokenVal = tokenInput ? tokenInput.value.trim() : '';
-      const email = emailInput ? emailInput.value.trim() : '';
+      const resetToken = document.getElementById('resetToken').value.trim();
+      const email = document.getElementById('resetEmail').value.trim();
       const password = document.getElementById('newPassword').value;
       const password_confirmation = document.getElementById('newPasswordConfirm').value;
 
-      if (!tokenVal) {
-        api.showAlert('resetAlert', 'Token reset kata sandi tidak ditemukan.', 'danger');
+      if (!resetToken) {
+        api.showAlert('resetAlert', 'Token reset tidak ditemukan. Kirim ulang tautan reset dari halaman Lupa Kata Sandi.', 'danger');
         return;
       }
 
       if (password !== password_confirmation) {
-        api.showAlert('resetAlert', 'Konfirmasi kata sandi tidak cocok.');
+        api.showAlert('resetAlert', 'Konfirmasi kata sandi baru tidak cocok. Ketik ulang kata sandimu.', 'danger');
+        document.getElementById('newPasswordConfirm').focus();
         return;
       }
 
       try {
         submitBtn.disabled = true;
-        submitBtn.textContent = 'Menyimpan Kata Sandi...';
+        submitBtn.textContent = 'Menyimpan…';
 
         const res = await api.request('/reset-password', {
           method: 'POST',
-          body: JSON.stringify({ token: tokenVal, email, password, password_confirmation })
+          body: JSON.stringify({
+            token: resetToken,
+            email,
+            password,
+            password_confirmation
+          })
         });
 
-        api.showAlert('resetAlert', res.message, 'success');
+        api.clearSession();
+        api.showAlert('resetAlert', (res.message || 'Kata sandi berhasil diperbarui.') + ' Mengalihkan ke halaman Masuk…', 'success');
         setTimeout(() => {
           window.location.href = '/login.html';
-        }, 1500);
+        }, 1800);
       } catch (err) {
-        const msg = err.errors?.password?.[0] || err.errors?.email?.[0] || err.message || 'Gagal mengatur ulang kata sandi.';
+        const msg =
+          err.errors?.email?.[0] ||
+          err.errors?.password?.[0] ||
+          err.message ||
+          'Gagal mengatur ulang kata sandi. Minta tautan reset baru.';
         api.showAlert('resetAlert', msg, 'danger');
-      } finally {
         submitBtn.disabled = false;
         submitBtn.textContent = 'Simpan Kata Sandi Baru';
       }
@@ -214,64 +258,71 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 });
 
-async function initHomePage() {
-  const container = document.getElementById('publicPoliList');
-  if (!container) return;
-
+async function loadPublicHomepage() {
+  const token = api.getToken();
   const user = api.getUser();
-  const navAuthAction = document.getElementById('navAuthAction');
-  if (navAuthAction) {
-    if (user && api.getToken()) {
-      const targetUrl = user.role === 'admin' ? '/admin/kelola-janji.html' : '/pasien/janji-temu.html';
-      navAuthAction.innerHTML = `<a href="${targetUrl}" class="btn btn-primary btn-sm">Buka Dashboard (${escapeHtml(user.name)})</a>`;
-    } else {
-      navAuthAction.innerHTML = `
-        <a href="/login.html" class="btn btn-secondary btn-sm" style="margin-right: 0.5rem;">Masuk</a>
-        <a href="/daftar.html" class="btn btn-primary btn-sm">Daftar Akun</a>
-      `;
-    }
+  const navAction = document.getElementById('navAuthAction');
+
+  if (token && user && navAction) {
+    const dashboardUrl = user.role === 'admin' ? '/admin/kelola-janji.html' : '/pasien/janji-temu.html';
+    navAction.innerHTML = `
+      <span class="nav-user-name">${escapeHtml(user.name)}</span>
+      <a href="${dashboardUrl}" class="btn btn-secondary btn-sm">Buka Dashboard</a>
+    `;
   }
 
   try {
     const res = await api.request('/public-info');
-    const data = res.data;
+    const info = res.data || {};
 
-    if (document.getElementById('clinicName')) {
-      document.getElementById('clinicName').textContent = data.clinic_name;
+    if (info.clinic_name) {
+      const nameEl = document.getElementById('clinicName');
+      const navNameEl = document.getElementById('navClinicName');
+      if (nameEl) nameEl.textContent = info.clinic_name;
+      if (navNameEl) navNameEl.textContent = info.clinic_name;
     }
-    if (document.getElementById('clinicDesc')) {
-      document.getElementById('clinicDesc').textContent = data.description;
+    if (info.description) {
+      const descEl = document.getElementById('clinicDesc');
+      if (descEl) descEl.textContent = info.description;
     }
-    if (document.getElementById('clinicAddress')) {
-      document.getElementById('clinicAddress').textContent = data.address;
+    if (info.address) {
+      const addrEl = document.getElementById('clinicAddress');
+      if (addrEl) addrEl.textContent = info.address;
     }
-    if (document.getElementById('clinicContact')) {
-      document.getElementById('clinicContact').textContent = data.contact;
+    if (info.contact) {
+      const contactEl = document.getElementById('clinicContact');
+      if (contactEl) contactEl.textContent = info.contact;
     }
 
-    const polyclinics = data.polyclinics || [];
-    if (polyclinics.length === 0) {
-      container.innerHTML = '<p class="text-muted">Layanan poli sedang diperbarui.</p>';
-      return;
-    }
+    const poliContainer = document.getElementById('publicPoliList');
+    if (poliContainer) {
+      const polis = info.polyclinics || [];
+      if (polis.length === 0) {
+        poliContainer.innerHTML = '<div class="card"><p class="text-muted">Belum ada poliklinik yang terdaftar saat ini.</p></div>';
+        return;
+      }
 
-    container.innerHTML = polyclinics.map(p => `
-      <div class="card" style="margin-bottom: 1rem;">
-        <h3 style="color:var(--color-primary); font-size: 1.1rem; margin-bottom: 0.25rem;">${escapeHtml(p.name)}</h3>
-        <p class="text-sm text-muted mb-2">${escapeHtml(p.description || 'Layanan konsultasi dan pemeriksaan komprehensif.')}</p>
-        <div style="font-size: 0.85rem;">
-          <strong style="color:var(--color-text);">Dokter Aktif Bertugas:</strong>
-          <ul style="margin: 0.25rem 0 0 1.25rem;">
-            ${(p.doctors || []).length > 0
-              ? p.doctors.map(d => `<li>${escapeHtml(d.name)}</li>`).join('')
-              : '<li class="text-muted">Tidak ada dokter aktif saat ini</li>'
-            }
-          </ul>
-        </div>
-      </div>
-    `).join('');
-  } catch (err) {
-    container.innerHTML = `<p style="color:var(--color-danger);">Gagal memuat informasi layanan: ${escapeHtml(err.message)}</p>`;
+      poliContainer.innerHTML = polis.map(p => `
+        <article class="card">
+          <h3>${escapeHtml(p.name)}</h3>
+          <p class="text-sm text-muted mb-2">${escapeHtml(p.description || 'Layanan konsultasi dan pemeriksaan rawat jalan.')}</p>
+          <div style="border-top: 1px solid var(--color-line); padding-top: var(--space-2); margin-top: var(--space-2);">
+            <span class="text-sm" style="font-weight: 600;">Dokter Praktik:</span>
+            <ul style="margin: var(--space-1) 0 0 var(--space-6); font-size: 14px; line-height: 22px;">
+              ${(p.doctors || []).length > 0
+                ? p.doctors.map(d => `<li>${escapeHtml(d.name)}</li>`).join('')
+                : '<li class="text-muted">Jadwal dokter sedang diperbarui</li>'
+              }
+            </ul>
+          </div>
+        </article>
+      `).join('');
+    }
+  } catch {
+    const poliContainer = document.getElementById('publicPoliList');
+    if (poliContainer) {
+      poliContainer.innerHTML = '<div class="card"><p class="text-muted">Gagal memuat daftar layanan. Coba muat ulang halaman.</p></div>';
+    }
   }
 }
 

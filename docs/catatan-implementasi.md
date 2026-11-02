@@ -21,14 +21,20 @@ berlaku.
 ## 2. Aturan validasi minimum
 | Endpoint | Aturan |
 |---|---|
-| `POST /api/login` | `email` wajib email, `password` wajib |
-| `POST /api/janji-temu` | `polyclinic_id` ada; `doctor_id` ada, aktif, dan milik poli itu; `appointment_date` tanggal ≥ hari ini; `complaint` opsional ≤ 500 karakter |
-| `PATCH /api/profil` | `name` ≤ 255; `phone_number` ≤ 30; `birth_date` tanggal sebelum hari ini; `address` teks; `password` min 8 + `password_confirmation` |
-| `PATCH /api/admin/janji-temu/{id}` | `status` salah satu `terjadwal/selesai/dibatalkan`; `doctor_notes` opsional |
-| `POST /api/admin/jadwal-kontrol` | `user_id` pasien; `polyclinic_id`; `doctor_id`; `appointment_date` ≥ hari ini |
-| `POST /api/admin/poli` | `name` wajib; `description` opsional |
-| `POST /api/admin/dokter` | `polyclinic_id` ada; `name` wajib |
+| `GET /api/public-info` | Publik (tanpa token); mengembalikan info klinik dan daftar poliklinik beserta dokter aktif |
+| `POST /api/register` | `name` wajib ≤ 255; `email` unik; `password` min 8 + `confirmed`; `birth_date` opsional sebelum hari ini (`before:today`) |
+| `POST /api/login` | `email` wajib email, `password` wajib (dibatasi `throttle:15,1`) |
+| `POST /api/forgot-password` | `email` wajib email terdaftar; mengirim tautan reset via SMTP (mengembalikan 503 JSON bila SMTP gagal) |
+| `POST /api/reset-password` | `token` wajib; `email` wajib; `password` min 8 + `confirmed`; mencabut seluruh token Sanctum lama milik pengguna |
+| `POST /api/janji-temu` | `polyclinic_id` ada; `doctor_id` ada, aktif (`is_active = true`), dan milik poli itu; `appointment_date` tanggal ≥ hari ini; `complaint` opsional ≤ 500 karakter |
+| `PATCH /api/profil` | `name` ≤ 255; `phone_number` ≤ 30; `birth_date` tanggal sebelum hari ini; `address` teks; `password` opsional min 8 + `password_confirmation` |
+| `GET /api/admin/janji-temu` | Mendukung filter query opsional `?date=YYYY-MM-DD`, `?status=`, `?type=`, dan `?doctor_id=` |
+| `PATCH /api/admin/janji-temu/{id}` | `status` salah satu `terjadwal/selesai/dibatalkan`; `doctor_notes` opsional ≤ 2000 karakter |
+| `POST /api/admin/jadwal-kontrol` | `user_id` wajib pengguna ber-role `pasien`; `polyclinic_id` ada; `doctor_id` aktif dan milik poli itu; `appointment_date` ≥ hari ini |
+| `POST /api/admin/poli` | `name` wajib unik; `description` opsional |
+| `POST /api/admin/dokter` | `polyclinic_id` ada; `name` wajib; `is_active` boolean opsional (default `true`) |
 | `PATCH /api/admin/dokter/{id}` | `is_active` boolean wajib |
+| `GET /api/admin/pasien` | Mengembalikan daftar pengguna dengan `role = 'pasien'` untuk pilihan jadwal kontrol |
 
 Galat validasi memakai respons standar Laravel (422 + `errors`). JavaScript
 menampilkan pesan di bawah kolom terkait.
@@ -55,9 +61,9 @@ Fornas, profil kesehatan) tidak sesuai rancangan. Pada Tahap 1:
 
 ```powershell
 php artisan migrate --seed   # hanya pada database terisolasi
-php artisan serve            # buka http://127.0.0.1:8000/login.html
-php artisan test
-vendor/bin/pint --test
+php artisan serve            # buka http://127.0.0.1:8000 (beranda) atau /login.html
+php artisan test             # menjalankan 30 feature test API & database
+vendor/bin/pint --test       # memeriksa standar gaya kode PHP
 node scripts/check-docs.mjs  # validasi tautan dokumen dan papan status
 ```
 
