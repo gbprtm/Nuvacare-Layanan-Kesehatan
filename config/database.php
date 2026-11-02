@@ -95,7 +95,8 @@ return [
             'charset' => env('DB_CHARSET', 'utf8'),
             'prefix' => '',
             'prefix_indexes' => true,
-            'search_path' => 'public',
+            'schema' => 'klinik',
+            'search_path' => 'klinik,public',
             'sslmode' => env('DB_SSLMODE', 'prefer'),
             'options' => [
                 PDO::ATTR_EMULATE_PREPARES => true,
@@ -113,7 +114,8 @@ return [
             'charset' => env('DB_CHARSET', 'utf8'),
             'prefix' => '',
             'prefix_indexes' => true,
-            'search_path' => 'public',
+            'schema' => 'klinik',
+            'search_path' => 'klinik,public',
             'sslmode' => env('DB_SSLMODE', 'prefer'),
             'options' => [
                 PDO::ATTR_EMULATE_PREPARES => true,

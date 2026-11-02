@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jadwal Kontrol - Sistem Janji Temu Klinik</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="brand">
+      <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:var(--color-accent);"></span>
+      Klinik Sehat
+    </div>
+    <ul class="nav-links">
+      <li><a href="/pasien/janji-temu.html">Janji Temu</a></li>
+      <li><a href="/pasien/riwayat.html">Riwayat</a></li>
+      <li><a href="/pasien/jadwal-kontrol.html" class="active">Jadwal Kontrol</a></li>
+      <li><a href="/pasien/profil.html">Profil</a></li>
+      <li><a href="#" id="logoutBtn" style="color:var(--color-danger);">Keluar</a></li>
+    </ul>
+  </nav>
+
+  <main class="container">
+    <div class="card">
+      <div class="flex-between mb-4">
+        <div>
+          <h1 class="card-title" style="margin-bottom: 0.25rem;">Jadwal Kontrol Rutin</h1>
+          <p class="text-sm text-muted">Jadwal konsultasi ulang yang ditetapkan oleh dokter untuk memantau perkembangan kesehatan Anda.</p>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>Tanggal Kontrol</th>
+              <th>Poliklinik</th>
+              <th>Dokter</th>
+              <th>Arahan / Catatan Kontrol</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="controlTableBody">
+            <tr>
+              <td colspan="5" class="text-muted" style="text-align: center; padding: 2rem;">
+                Memuat jadwal kontrol...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/pasien.js"></script>
+</body>
+</html>
+

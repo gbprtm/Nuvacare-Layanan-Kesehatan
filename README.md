@@ -1,61 +1,43 @@
-# Web pengelola kunjungan klinik
+# Web janji temu klinik
 
-Website untuk pasien dan admin klinik: profil kesehatan, jadwal kontrol,
-pemesanan janji, antrean, kebiasaan, catatan resep, dan riwayat kunjungan.
-Dokter adalah data yang dikelola admin, bukan pengguna aplikasi. Aplikasi
-bukan pemberi diagnosis, rekomendasi obat, atau rekam medis terintegrasi.
+Aplikasi web untuk membuat janji temu pemeriksaan. **Pasien** membuat janji,
+melihat riwayat pemeriksaan, jadwal kontrol, dan profil. **Admin** mengelola
+poli dan dokter, menyelesaikan janji dengan catatan dokter, serta membuat
+jadwal kontrol berikutnya.
 
-## Keputusan stack baru
+Acuan utama: [RANCANGAN FINAL](docs/RANCANGANFINAL.md).
 
-**Laravel + Blade (HTML) + CSS biasa + JavaScript vanilla**, dengan
-**PostgreSQL di Neon**. Eloquent untuk akses database, validasi Laravel
-untuk server, PHPUnit untuk pengujian backend, dan Playwright Google Chrome
-untuk alur browser. Vite membangun aset CSS/JS, bukan framework antarmuka.
+## Stack
 
-Keputusan dan penggantian alat lama ada di
-[ADR migrasi](docs/keputusan/0002-migrasi-laravel.md).
+- Laravel sebagai JSON API (`routes/api.php`) + Eloquent + PostgreSQL Neon.
+- Frontend HTML, CSS, JavaScript murni di `public/` memakai `fetch()`.
+- Uji: PHPUnit dan Pint.
 
 ## Keadaan saat ini
 
-Repo sudah ditata untuk **memulai migrasi**, belum berisi aplikasi Laravel.
-Kode, pengujian, manifest npm, CI dan konfigurasi Next.js sebelumnya sudah
-masuk [arsip](docs/migrasi/arsip.md), termasuk pekerjaan lokal yang belum
-sempat di-commit. Jangan memakai hasil uji lama sebagai hasil Laravel.
+Kode di repo masih berisi implementasi Blade sebelumnya yang **belum**
+sesuai RANCANGAN FINAL. Penyesuaian dilakukan bertahap T1–T5; lihat
+[status tugas](docs/status-tugas.md).
 
-Pada pemeriksaan awal, `php` dan `composer` tidak ditemukan di PATH terminal;
-Node.js 22 dan npm 10 tersedia. Belum ada `artisan`/`composer.json`.
-**`npm run dev` lama tidak berlaku di root ini.** Tidak ada klaim build,
-login, koneksi Neon, atau hosting Laravel telah berhasil.
+## Menjalankan lokal
 
-## Mulai dari sini
+Prasyarat: PHP 8.4 (`pdo_pgsql`), Composer, akses database Neon terisolasi.
 
-1. Baca [panduan bootstrap](docs/migrasi/bootstrap.md), lalu kerjakan **L01**.
-2. Ikuti [rencana relatif 10 hari](docs/to-do.md) dan
-   [spesifikasi tugas L01–L17](docs/rencana-agen.md).
-3. Perbarui hanya [papan status aktif](docs/status-tugas.md).
-4. Sebelum menyentuh database lama, kerjakan inventaris/backup **L02**.
-   Migrasi dan uji memakai target PostgreSQL terisolasi, bukan produksi.
+```powershell
+composer install
+php artisan migrate --seed   # hanya pada database terisolasi
+php artisan serve
+```
 
-Perintah Laravel/build/uji ditetapkan dan dibuktikan saat L01. Jangan
-menjalankan perintah scaffold di root yang tidak kosong atau menimpa `.env`.
-Hosting PHP harus dipilih dan dicoba sejak awal; Vercel lama bukan solusi
-yang otomatis berlaku. Tenggat kalender baru belum dikonfirmasi: rencana
-memakai hari relatif 1–10 sesuai sisa waktu yang disebut pemilik.
+Buka `http://127.0.0.1:8000/login.html` (tersedia setelah Tahap 2).
+Uji: `php artisan test` dan `vendor/bin/pint --test`.
 
 ## Dokumentasi
 
 | Butuh | Buka |
 |---|---|
-| Indeks dan urutan bacaan | [docs/README.md](docs/README.md) |
-| Aturan coding agent | [AGENTS.md](AGENTS.md) |
-| Arsitektur target | [Panduan arsitektur](docs/panduan-arsitektur.md) |
-| Kontrak form/halaman web | [Kontrak route](docs/api-contract.md) |
-| Strategi database | [Rencana database](docs/database-schema.md) |
-| FR, layar, tugas dan modul | [Peta bagian](docs/peta-bagian.md) |
-| Arah visual yang dipertahankan | [DESIGN.md](DESIGN.md) |
-| Bukti penataan sesi ini | [Bukti dokumentasi](docs/migrasi/00-penataan.md) |
-
-`docs/rancangan/` tetap salinan read-only dari vault eksternal. Kebutuhan
-produk di sana tetap berlaku; ketentuan stack dan rencana Next.js lama
-mendapat pengecualian teknis lewat ADR baru. Pemilik perlu menyelaraskan
-vault sebelum sinkron berikutnya; agen tidak menyuntingnya dari repo ini.
+| Kebutuhan, skema, endpoint, tahapan | [RANCANGAN FINAL](docs/RANCANGANFINAL.md) |
+| Keputusan teknis kecil | [Catatan implementasi](docs/catatan-implementasi.md) |
+| Tampilan | [DESIGN.md](DESIGN.md) |
+| Status | [Status tugas](docs/status-tugas.md) |
+| Aturan agen | [AGENTS.md](AGENTS.md) |

@@ -2,113 +2,134 @@
 
 namespace Database\Seeders;
 
+use App\Models\Appointment;
 use App\Models\Doctor;
-use App\Models\Slot;
+use App\Models\Polyclinic;
 use App\Models\User;
-use App\Support\WibClock;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 
 class DatabaseSeeder extends Seeder
 {
-    use WithoutModelEvents;
-
-    /**
-     * Jalankan database seeder dengan data fiktif yang aman.
-     */
     public function run(): void
     {
-        // 1. Akun Admin Klinik Individual
-        $adminPassword = config('app.admin_initial_password') ?: 'AdminKlinik2026!';
         User::firstOrCreate(
             ['email' => 'admin@klinik.local'],
             [
-                'id' => (string) Str::uuid(),
-                'name' => 'Staf Administrasi Klinik',
-                'password_hash' => Hash::make($adminPassword),
+                'name' => 'Admin Klinik',
+                'password' => Hash::make('AdminKlinik2026!'),
                 'role' => 'admin',
+                'phone_number' => '081122334455',
+                'birth_date' => '1985-01-01',
+                'address' => 'Klinik Sehat',
             ]
         );
 
-        // 2. Akun Pasien Demo Fiktif
-        $pasien = User::firstOrCreate(
-            ['email' => 'pasien@klinik.local'],
+        $pasien1 = User::firstOrCreate(
+            ['email' => 'pasien1@klinik.local'],
             [
-                'id' => (string) Str::uuid(),
-                'name' => 'Budi Santoso (Demo Pasien)',
-                'password_hash' => Hash::make('Pasien123!'),
+                'name' => 'Budi Santoso',
+                'password' => Hash::make('PasienKlinik2026!'),
                 'role' => 'pasien',
+                'phone_number' => '081234567890',
+                'birth_date' => '1985-05-15',
+                'address' => 'Jl. Mawar No. 12, Jakarta',
             ]
         );
 
-        // 3. Profil Pasien Fiktif (Tanpa NIK/KK nyata)
-        $pasien->profile()->firstOrCreate(
-            ['user_id' => $pasien->id],
+        User::firstOrCreate(
+            ['email' => 'pasien2@klinik.local'],
             [
-                'id' => (string) Str::uuid(),
-                'nik' => null, // Tidak menggunakan NIK nyata
-                'nomor_telepon' => '081200000001',
-                'tanggal_lahir' => '1990-05-15',
-                'jenis_kelamin' => 'laki_laki',
-                'golongan_darah' => 'O',
-                'tinggi_badan' => 170,
-                'berat_badan' => 65,
-                'kondisi_kesehatan' => 'Riwayat hipertensi ringan terkontrol',
-                'riwayat_alergi' => 'Alergi penisilin',
-                'kontak_darurat_nama' => 'Siti (Keluarga)',
-                'kontak_darurat_telepon' => '081200000002',
+                'name' => 'Siti Rahma',
+                'password' => Hash::make('PasienKlinik2026!'),
+                'role' => 'pasien',
+                'phone_number' => '081398765432',
+                'birth_date' => '1990-11-20',
+                'address' => 'Jl. Melati No. 45, Jakarta',
             ]
         );
 
-        // 4. Dokter Klinik Fiktif (Tanpa akun login)
+        $poliUmum = Polyclinic::firstOrCreate(
+            ['name' => 'Poli Umum'],
+            ['description' => 'Layanan pemeriksaan kesehatan umum dan keluhan harian.']
+        );
+
+        $poliGigi = Polyclinic::firstOrCreate(
+            ['name' => 'Poli Gigi'],
+            ['description' => 'Layanan perawatan kesehatan gigi dan mulut profesional.']
+        );
+
+        $poliPenyakitDalam = Polyclinic::firstOrCreate(
+            ['name' => 'Poli Penyakit Dalam'],
+            ['description' => 'Layanan konsultasi spesialis dan pengobatan organ dalam.']
+        );
+
         $dokter1 = Doctor::firstOrCreate(
-            ['nomor_izin' => 'SIP.001/DU/2026'],
+            ['name' => 'dr. Andi Pratama', 'polyclinic_id' => $poliUmum->id],
+            ['is_active' => true]
+        );
+
+        Doctor::firstOrCreate(
+            ['name' => 'dr. Maya Indah', 'polyclinic_id' => $poliUmum->id],
+            ['is_active' => true]
+        );
+
+        Doctor::firstOrCreate(
+            ['name' => 'drg. Ahmad Fauzi', 'polyclinic_id' => $poliGigi->id],
+            ['is_active' => true]
+        );
+
+        $dokter4 = Doctor::firstOrCreate(
+            ['name' => 'dr. Hendra Wijaya, Sp.PD', 'polyclinic_id' => $poliPenyakitDalam->id],
+            ['is_active' => true]
+        );
+
+        Doctor::firstOrCreate(
+            ['name' => 'dr. Ratna Dewi, Sp.PD', 'polyclinic_id' => $poliPenyakitDalam->id],
+            ['is_active' => true]
+        );
+
+        Appointment::firstOrCreate(
             [
-                'id' => (string) Str::uuid(),
-                'nama' => 'dr. Andika Pratama',
-                'spesialisasi' => 'Dokter Umum',
-                'aktif' => true,
+                'user_id' => $pasien1->id,
+                'polyclinic_id' => $poliUmum->id,
+                'doctor_id' => $dokter1->id,
+                'appointment_date' => now()->addDays(2)->format('Y-m-d'),
+                'type' => 'janji_baru',
+            ],
+            [
+                'status' => 'terjadwal',
+                'complaint' => 'Pusing dan demam sejak kemarin malam.',
             ]
         );
 
-        $dokter2 = Doctor::firstOrCreate(
-            ['nomor_izin' => 'SIP.002/SP/2026'],
+        Appointment::firstOrCreate(
             [
-                'id' => (string) Str::uuid(),
-                'nama' => 'dr. Citra Lestari, Sp.PD',
-                'spesialisasi' => 'Spesialis Penyakit Dalam',
-                'aktif' => true,
+                'user_id' => $pasien1->id,
+                'polyclinic_id' => $poliPenyakitDalam->id,
+                'doctor_id' => $dokter4->id,
+                'appointment_date' => now()->subDays(7)->format('Y-m-d'),
+                'type' => 'janji_baru',
+            ],
+            [
+                'status' => 'selesai',
+                'complaint' => 'Nyeri lambung berkepanjangan.',
+                'doctor_notes' => 'Pasien didiagnosis dispepsia fungsional. Disarankan menjaga pola makan teratur dan menghindari makanan pedas/asam.',
             ]
         );
 
-        // 5. Slot Waktu Fiktif
-        $today = WibClock::todayString();
-        $tomorrow = WibClock::today()->addDay()->format('Y-m-d');
-
-        $slots = [
-            ['dokter' => $dokter1, 'tanggal' => $today, 'mulai' => '08:00', 'selesai' => '08:30'],
-            ['dokter' => $dokter1, 'tanggal' => $today, 'mulai' => '08:30', 'selesai' => '09:00'],
-            ['dokter' => $dokter1, 'tanggal' => $tomorrow, 'mulai' => '09:00', 'selesai' => '09:30'],
-            ['dokter' => $dokter2, 'tanggal' => $today, 'mulai' => '10:00', 'selesai' => '10:30'],
-            ['dokter' => $dokter2, 'tanggal' => $tomorrow, 'mulai' => '10:00', 'selesai' => '10:30'],
-        ];
-
-        foreach ($slots as $slotData) {
-            Slot::firstOrCreate(
-                [
-                    'dokter_id' => $slotData['dokter']->id,
-                    'tanggal' => $slotData['tanggal'],
-                    'jam_mulai' => $slotData['mulai'],
-                ],
-                [
-                    'id' => (string) Str::uuid(),
-                    'jam_selesai' => $slotData['selesai'],
-                    'kuota' => 1,
-                    'tersedia' => true,
-                ]
-            );
-        }
+        Appointment::firstOrCreate(
+            [
+                'user_id' => $pasien1->id,
+                'polyclinic_id' => $poliPenyakitDalam->id,
+                'doctor_id' => $dokter4->id,
+                'appointment_date' => now()->addDays(14)->format('Y-m-d'),
+                'type' => 'kontrol_rutin',
+            ],
+            [
+                'status' => 'terjadwal',
+                'complaint' => 'Kontrol evaluasi pengobatan lambung.',
+            ]
+        );
     }
 }

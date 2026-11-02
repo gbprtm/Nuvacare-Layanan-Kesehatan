@@ -1,2 +1,0 @@
-CREATE UNIQUE INDEX "janji_slot_aktif_unique_idx" ON "janji" USING btree ("slot_id") WHERE "janji"."status" = 'aktif';--> statement-breakpoint
-CREATE UNIQUE INDEX "tiket_antrian_tanggal_nomor_final_unique_idx" ON "tiket_antrian" USING btree ("tanggal","nomor_antrian_final") WHERE "tiket_antrian"."nomor_antrian_final" IS NOT NULL;

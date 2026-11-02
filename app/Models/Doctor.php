@@ -2,55 +2,37 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Doctor extends Model
 {
-    use HasFactory, HasUuids;
+    use HasFactory;
 
-    protected $table = 'dokter';
-
-    protected $keyType = 'string';
-
-    public $incrementing = false;
+    protected $table = 'doctors';
 
     protected $fillable = [
-        'id',
-        'nama',
-        'spesialisasi',
-        'nomor_izin',
-        'aktif',
+        'polyclinic_id',
+        'name',
+        'is_active',
     ];
 
     protected function casts(): array
     {
         return [
-            'aktif' => 'boolean',
-            'created_at' => 'immutable_datetime',
-            'updated_at' => 'immutable_datetime',
+            'is_active' => 'boolean',
         ];
     }
 
-    public function slots(): HasMany
+    public function polyclinic(): BelongsTo
     {
-        return $this->hasMany(Slot::class, 'dokter_id');
+        return $this->belongsTo(Polyclinic::class, 'polyclinic_id');
     }
 
     public function appointments(): HasMany
     {
-        return $this->hasMany(Appointment::class, 'dokter_id');
-    }
-
-    public function scopeActive($query)
-    {
-        return $query->where('aktif', true);
-    }
-
-    public function scopeBySpecialty($query, ?string $specialty)
-    {
-        return $query->when($specialty, fn ($q) => $q->where('spesialisasi', $specialty));
+        return $this->hasMany(Appointment::class, 'doctor_id');
     }
 }

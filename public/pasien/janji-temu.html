@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Janji Temu - Sistem Janji Temu Klinik Sehat</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="brand">
+      <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:var(--color-accent);"></span>
+      Klinik Sehat
+    </div>
+    <ul class="nav-links">
+      <li><a href="/pasien/janji-temu.html" class="active">Janji Temu</a></li>
+      <li><a href="/pasien/riwayat.html">Riwayat</a></li>
+      <li><a href="/pasien/jadwal-kontrol.html">Jadwal Kontrol</a></li>
+      <li><a href="/pasien/profil.html">Profil</a></li>
+      <li><a href="#" id="logoutBtn" style="color:var(--color-danger);">Keluar</a></li>
+    </ul>
+  </nav>
+
+  <main class="container">
+    <div class="mb-4">
+      <h1 class="page-title" style="margin-bottom: 0.25rem;">Janji Temu Pasien</h1>
+      <p class="text-sm text-muted">Ajukan jadwal konsultasi dengan dokter dan pantau janji temu aktif Anda.</p>
+    </div>
+
+    <div class="grid-2">
+      <!-- Form Buat Janji -->
+      <div>
+        <div class="card">
+          <h2 class="card-title">Buat Janji Temu Baru</h2>
+          <div id="bookingAlert" class="alert"></div>
+
+          <form id="bookingForm">
+            <div class="form-group">
+              <label class="form-label" for="polyclinic_id">Pilih Poliklinik</label>
+              <select id="polyclinic_id" class="form-select" required>
+                <option value="">Memuat data poliklinik...</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="doctor_id">Pilih Dokter</label>
+              <select id="doctor_id" class="form-select" required disabled>
+                <option value="">-- Pilih Poli Terlebih Dahulu --</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="appointment_date">Tanggal Kunjungan</label>
+              <input type="date" id="appointment_date" class="form-input" required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="complaint">Keluhan / Alasan Kunjungan (Maks. 500 karakter)</label>
+              <textarea id="complaint" class="form-textarea" required maxlength="500" placeholder="Jelaskan secara singkat gejala atau keluhan yang Anda rasakan"></textarea>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block">Ajukan Janji Temu</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Riwayat Janji Temu Diajukan -->
+      <div>
+        <div class="card">
+          <h2 class="card-title">Janji Temu Saya</h2>
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr>
+                  <th>Tanggal</th>
+                  <th>Poliklinik</th>
+                  <th>Dokter</th>
+                  <th>Keluhan</th>
+                  <th>Status</th>
+                  <th>Catatan Klinik</th>
+                </tr>
+              </thead>
+              <tbody id="appointmentTableBody">
+                <tr>
+                  <td colspan="6" class="text-muted" style="text-align: center; padding: 1.5rem;">
+                    Memuat daftar janji temu...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/pasien.js"></script>
+</body>
+</html>

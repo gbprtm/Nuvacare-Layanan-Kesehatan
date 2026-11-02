@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Master Data - Admin Klinik Sehat</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="brand">
+      <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:var(--color-accent);"></span>
+      Admin Panel Klinik
+    </div>
+    <ul class="nav-links">
+      <li><a href="/admin/kelola-janji.html">Kelola Janji</a></li>
+      <li><a href="/admin/master-data.html" class="active">Master Data</a></li>
+      <li><span id="navAdminName" style="font-weight:600; font-size:0.875rem; color:var(--color-primary);"></span></li>
+      <li><a href="#" id="logoutBtn" style="color:var(--color-danger);">Keluar</a></li>
+    </ul>
+  </nav>
+
+  <main class="container">
+    <div class="mb-4">
+      <h1 class="page-title" style="margin-bottom: 0.25rem;">Master Data Klinik</h1>
+      <p class="text-sm text-muted">Kelola data poliklinik dan tenaga medis dokter yang bertugas melayani pasien.</p>
+    </div>
+
+    <div class="grid-2">
+      <!-- Form Tambah Poli -->
+      <div class="card">
+        <h2 class="card-title">Tambah Poliklinik</h2>
+        <div id="poliAlert" class="alert"></div>
+        <form id="poliForm">
+          <div class="form-group">
+            <label class="form-label" for="poliName">Nama Poliklinik</label>
+            <input type="text" id="poliName" class="form-input" required placeholder="Contoh: Poli Mata">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="poliDesc">Deskripsi Layanan</label>
+            <textarea id="poliDesc" class="form-textarea" placeholder="Deskripsi layanan konsultasi dan tindakan"></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary">Tambah Poli</button>
+        </form>
+      </div>
+
+      <!-- Form Tambah Dokter -->
+      <div class="card">
+        <h2 class="card-title">Tambah Dokter</h2>
+        <div id="doctorAlert" class="alert"></div>
+        <form id="doctorForm">
+          <div class="form-group">
+            <label class="form-label" for="docPoliId">Pilih Poliklinik</label>
+            <select id="docPoliId" class="form-select" required>
+              <option value="">Memuat data poliklinik...</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="docName">Nama Lengkap & Gelar Dokter</label>
+            <input type="text" id="docName" class="form-input" required placeholder="Contoh: dr. Ahmad Fauzi, Sp.M">
+          </div>
+          <button type="submit" class="btn btn-primary">Tambah Dokter</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Tabel Daftar Poliklinik & Dokter -->
+    <div class="card">
+      <h2 class="card-title">Daftar Poliklinik & Ketersediaan Dokter</h2>
+      <div id="masterListAlert" class="alert"></div>
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>Poliklinik</th>
+              <th>Deskripsi Layanan</th>
+              <th>Dokter Terdaftar</th>
+            </tr>
+          </thead>
+          <tbody id="poliTableBody">
+            <tr>
+              <td colspan="3" class="text-muted" style="text-align: center; padding: 1.5rem;">Memuat daftar poliklinik...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/admin.js"></script>
+</body>
+</html>

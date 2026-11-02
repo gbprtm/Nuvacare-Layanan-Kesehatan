@@ -2,12 +2,9 @@
 
 namespace App\Providers;
 
-use App\Models\Appointment;
-use App\Models\AuditLog;
-use App\Policies\AppointmentPolicy;
-use App\Policies\AuditLogPolicy;
-use Illuminate\Support\Facades\Gate;
+use App\Models\PersonalAccessToken;
 use Illuminate\Support\ServiceProvider;
+use Laravel\Sanctum\Sanctum;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -24,7 +21,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        Gate::policy(Appointment::class, AppointmentPolicy::class);
-        Gate::policy(AuditLog::class, AuditLogPolicy::class);
+        Sanctum::usePersonalAccessTokenModel(PersonalAccessToken::class);
     }
 }
