@@ -14,6 +14,9 @@
             <a href="{{ route('patient.dashboard') }}" class="text-small" style="font-weight: 500; color: {{ request()->routeIs('patient.dashboard') ? 'var(--color-ink)' : 'var(--color-muted)' }}; text-decoration: none;">
                 Beranda
             </a>
+            <a href="{{ route('appointments.index') }}" class="text-small" style="font-weight: 500; color: {{ request()->routeIs('appointments.*') ? 'var(--color-ink)' : 'var(--color-muted)' }}; text-decoration: none;">
+                Janji Temu
+            </a>
             <a href="{{ route('profile.show') }}" class="text-small" style="font-weight: 500; color: {{ request()->routeIs('profile.*') ? 'var(--color-ink)' : 'var(--color-muted)' }}; text-decoration: none;">
                 Profil Saya
             </a>

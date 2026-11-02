@@ -50,4 +50,19 @@ class Slot extends Model
     {
         return $this->hasMany(Appointment::class, 'slot_id');
     }
+
+    public function scopeAvailable($query)
+    {
+        return $query->where('tersedia', true);
+    }
+
+    public function scopeForDoctor($query, ?string $doctorId)
+    {
+        return $query->when($doctorId, fn ($q) => $q->where('dokter_id', $doctorId));
+    }
+
+    public function scopeOnDate($query, ?string $date)
+    {
+        return $query->when($date, fn ($q) => $q->where('tanggal', $date));
+    }
 }

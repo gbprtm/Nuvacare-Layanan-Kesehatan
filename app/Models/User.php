@@ -82,6 +82,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Alias bahasa Inggris untuk peran pasien.
+     */
+    public function isPatient(): bool
+    {
+        return $this->isPasien();
+    }
+
+    /**
      * Periksa apakah pengguna memiliki peran admin klinik.
      */
     public function isAdmin(): bool

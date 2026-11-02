@@ -43,4 +43,14 @@ class Doctor extends Model
     {
         return $this->hasMany(Appointment::class, 'dokter_id');
     }
+
+    public function scopeActive($query)
+    {
+        return $query->where('aktif', true);
+    }
+
+    public function scopeBySpecialty($query, ?string $specialty)
+    {
+        return $query->when($specialty, fn ($q) => $q->where('spesialisasi', $specialty));
+    }
 }

@@ -68,4 +68,45 @@ class Appointment extends Model
     {
         return $this->hasOne(Prescription::class, 'janji_id');
     }
+
+    public function getNomorEstimasiAttribute(): int
+    {
+        if (! $this->slot_id || ! $this->slot) {
+            return 1;
+        }
+
+        return (int) Appointment::query()
+            ->where('dokter_id', $this->dokter_id)
+            ->whereHas('slot', function ($q) {
+                $q->where('tanggal', $this->slot->tanggal);
+            })
+            ->where('created_at', '<=', $this->created_at ?? now())
+            ->count();
+    }
+
+    public function getPerkiraanJamAttribute(): string
+    {
+        if (! $this->slot) {
+            return '-';
+        }
+
+        return "{$this->slot->jam_mulai} - {$this->slot->jam_selesai} WIB";
+    }
+
+    public function getStatusLabelAttribute(): string
+    {
+        return match ($this->status) {
+            'aktif' => 'Aktif',
+            'perubahan_diusulkan' => 'Perubahan Diusulkan',
+            'selesai' => 'Selesai',
+            'dibatalkan' => 'Dibatalkan',
+            'tidak_hadir' => 'Tidak Hadir',
+            default => ucfirst(str_replace('_', ' ', $this->status ?? 'Aktif')),
+        };
+    }
+
+    public function getCanCancelAttribute(): bool
+    {
+        return $this->status === 'aktif';
+    }
 }

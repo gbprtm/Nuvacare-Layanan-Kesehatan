@@ -16,6 +16,15 @@
             <a href="{{ route('admin.dashboard') }}" class="text-small" style="font-weight: 500; color: {{ request()->routeIs('admin.dashboard') ? 'var(--color-ink)' : 'var(--color-muted)' }}; text-decoration: none;">
                 Dasbor
             </a>
+            <a href="{{ route('admin.appointments.index') }}" class="text-small" style="font-weight: 500; color: {{ request()->routeIs('admin.appointments.*') ? 'var(--color-ink)' : 'var(--color-muted)' }}; text-decoration: none;">
+                Janji Temu
+            </a>
+            <a href="{{ route('admin.doctors.index') }}" class="text-small hide-on-mobile" style="font-weight: 500; color: {{ request()->routeIs('admin.doctors.*') ? 'var(--color-ink)' : 'var(--color-muted)' }}; text-decoration: none;">
+                Dokter
+            </a>
+            <a href="{{ route('admin.slots.index') }}" class="text-small hide-on-mobile" style="font-weight: 500; color: {{ request()->routeIs('admin.slots.*') ? 'var(--color-ink)' : 'var(--color-muted)' }}; text-decoration: none;">
+                Slot Praktik
+            </a>
             <a href="{{ route('admin.audit.index') }}" class="text-small" style="font-weight: 500; color: {{ request()->routeIs('admin.audit.*') ? 'var(--color-ink)' : 'var(--color-muted)' }}; text-decoration: none;">
                 Audit Log
             </a>

@@ -21,6 +21,14 @@
                 title="Tidak Ada Jadwal Hari Ini" 
                 description="Anda tidak memiliki janji temu dokter atau jadwal kontrol yang terdaftar untuk hari ini."
             />
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem; justify-content: center;">
+                <a href="{{ route('appointments.create') }}" class="btn btn-primary text-sm" style="text-decoration: none;">
+                    Buat Janji Temu
+                </a>
+                <a href="{{ route('appointments.index') }}" class="btn btn-secondary text-sm" style="text-decoration: none;">
+                    Janji Temu Saya
+                </a>
+            </div>
         </x-card>
 
         <!-- Kolom 2: Catatan Kebiasaan & Obat -->
