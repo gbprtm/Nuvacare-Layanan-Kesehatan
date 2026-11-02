@@ -31,10 +31,10 @@ bukan antrean implementasi aktif.
 
 | ID | Tugas | Status | Commit | Bukti target (belum hasil uji) | Catatan |
 |---|---|---|---|---|---|
-| L01 | Prasyarat, scaffold Laravel bersih, runner/CI dan hosting awal | done | - | `docs/bukti/L01.md` | Selesai: PHP 8.4, Composer 2.11, Laravel 13, Vite, PHPUnit, Pint, Playwright Chrome lulus. |
-| L02 | Inventaris DB, backup/restore dan keputusan pemetaan | done | - | `docs/bukti/L02.md` | Selesai: Inventaris 21 tabel, guard isolasi produksi, drill backup/restore, DatabaseSafetyTest lulus. |
-| L03 | Migrasi, model, factory dan seed PostgreSQL terisolasi | done | - | `docs/bukti/L03.md` | Selesai: 18 Model Eloquent, WibClock, migrasi DDL, partial unique indexes, seed fiktif aman, SchemaMappingTest lulus. |
-| L04 | Auth, role, idle 15 menit dan formulir Blade | done | - | `docs/bukti/L04.md` | Selesai: Registrasi pasien, login/logout, rotasi session ID, idle 15 menit, rate limit, Blade DESIGN.md, 13 test PHPUnit + 3 E2E Chrome lulus. |
+| L01 | Prasyarat, scaffold Laravel bersih, runner/CI dan hosting awal | done | d696ddc | `docs/bukti/L01.md` | Selesai: PHP 8.4, Composer 2.11, Laravel 13, Vite, PHPUnit, Pint, Playwright Chrome lulus. |
+| L02 | Inventaris DB, backup/restore dan keputusan pemetaan | done | d696ddc | `docs/bukti/L02.md` | Selesai: Inventaris 21 tabel, guard isolasi produksi, drill backup/restore, DatabaseSafetyTest lulus. |
+| L03 | Migrasi, model, factory dan seed PostgreSQL terisolasi | done | d696ddc | `docs/bukti/L03.md` | Selesai: 18 Model Eloquent, WibClock, migrasi DDL, partial unique indexes, seed fiktif aman, SchemaMappingTest lulus. |
+| L04 | Auth, role, idle 15 menit dan formulir Blade | done | d696ddc | `docs/bukti/L04.md` | Selesai: Registrasi pasien, login/logout, rotasi session ID, idle 15 menit, rate limit, Blade DESIGN.md, 13 test PHPUnit + 3 E2E Chrome lulus. |
 | L05 | Layout bersama, CSS/JS dan aksesibilitas | todo | - | `docs/bukti/L05.md` | Setelah auth. |
 | L06 | Audit atomik dan log hanya baca | todo | - | `docs/bukti/L06.md` | Sebelum mutasi admin fitur. |
 | L07 | Profil, katalog dan obat laporan pasien | todo | - | `docs/bukti/L07.md` | Data legacy/pemilik harus terjaga. |
