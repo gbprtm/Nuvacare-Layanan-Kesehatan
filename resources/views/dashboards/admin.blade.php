@@ -28,6 +28,15 @@
                 description="Atur kuota slot kunjungan harian per dokter untuk memastikan kelancaran alur pelayanan pasien."
             />
         </x-card>
+
+        <x-card title="Audit & Akuntabilitas Transaksi">
+            <p class="text-small text-muted" style="margin-bottom: 1rem;">
+                Setiap mutasi operasional staf tercatat otomatis secara permanen (append-only) demi kepatuhan SOP klinik.
+            </p>
+            <a href="{{ route('admin.audit.index') }}" class="btn btn-secondary text-sm">
+                Buka Riwayat Audit Log
+            </a>
+        </x-card>
     </div>
 </div>
 @endsection

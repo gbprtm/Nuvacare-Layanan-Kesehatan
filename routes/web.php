@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Audit\AuditLogController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\DashboardController;
@@ -34,8 +35,12 @@ Route::middleware('auth')->group(function () {
         Route::get('/beranda', [DashboardController::class, 'patient'])->name('patient.dashboard');
     });
 
-    // Dasbor Admin Klinik
+    // Dasbor & Operasional Admin Klinik
     Route::middleware('role:admin')->group(function () {
         Route::get('/admin', [DashboardController::class, 'admin'])->name('admin.dashboard');
+
+        // Audit Log (Hanya Baca, Kontrak L06)
+        Route::get('/admin/audit-log', [AuditLogController::class, 'index'])->name('admin.audit.index');
+        Route::get('/admin/audit-log/{auditLog}', [AuditLogController::class, 'show'])->name('admin.audit.show');
     });
 });

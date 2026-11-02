@@ -36,7 +36,7 @@ bukan antrean implementasi aktif.
 | L03 | Migrasi, model, factory dan seed PostgreSQL terisolasi | done | d696ddc | `docs/bukti/L03.md` | Selesai: 18 Model Eloquent, WibClock, migrasi DDL, partial unique indexes, seed fiktif aman, SchemaMappingTest lulus. |
 | L04 | Auth, role, idle 15 menit dan formulir Blade | done | d696ddc | `docs/bukti/L04.md` | Selesai: Registrasi pasien, login/logout, rotasi session ID, idle 15 menit, rate limit, Blade DESIGN.md, 13 test PHPUnit + 3 E2E Chrome lulus. |
 | L05 | Layout bersama, CSS/JS dan aksesibilitas | done | e1a6512 | `docs/bukti/L05.md` | Selesai: Layout pasien/admin Blade, komponen alert/card/empty-state, token CSS DESIGN.md, antislop, aksesibilitas 360px no-overflow, skip-link, no-JS fallback, 4 Feature Test + 3 E2E Playwright Chrome lulus. |
-| L06 | Audit atomik dan log hanya baca | todo | - | `docs/bukti/L06.md` | Sebelum mutasi admin fitur. |
+| L06 | Audit atomik dan log hanya baca | done | 58a28a8 | `docs/bukti/L06.md` | Selesai: AuditService transaksional atomik, model append-only AuditLog, sanitasi data rahasia, AuditLogPolicy, controller/view admin audit sesuai DESIGN.md, 11 Feature Test + 2 E2E Chrome lulus. |
 | L07 | Profil, katalog dan obat laporan pasien | todo | - | `docs/bukti/L07.md` | Data legacy/pemilik harus terjaga. |
 | L08 | Dokter, slot dan janji anti-race beserta UI | todo | - | `docs/bukti/L08.md` | Race harus memakai PostgreSQL. |
 | L09 | Usulan, tanggapan, expiry, notifikasi dan pembatalan | todo | - | `docs/bukti/L09.md` | Keputusan TTL/cutoff diperlukan. |
