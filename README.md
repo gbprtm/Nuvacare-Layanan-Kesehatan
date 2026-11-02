@@ -20,12 +20,6 @@ Sebuah rancangan aplikasi web untuk membuat janji temu dan pemeriksaan.
    - Menyelesaikan pemeriksaan dengan mengisi catatan dokter (`doctor_notes`) atau membatalkan janji bila jadwal bentrok disertai rekomendasi dokter pengganti.
    - Menetapkan jadwal kontrol rutin berikutnya untuk pasien.
    - Mengelola master data poliklinik, menambah dokter baru, serta mengaktifkan/menonaktifkan status praktik dokter (`is_active`) (`/admin/master-data.html`).
-
-## Stack
-- Laravel sebagai JSON API (`routes/api.php`) + Eloquent + PostgreSQL Neon.
-- Frontend HTML, CSS, JavaScript murni di `public/` memakai `fetch()`.
-- Uji: PHPUnit dan Pint.
-
 ---
 
 ## 2. Arsitektur & Stack Teknologi
