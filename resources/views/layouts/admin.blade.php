@@ -19,6 +19,9 @@
             <a href="{{ route('admin.audit.index') }}" class="text-small" style="font-weight: 500; color: {{ request()->routeIs('admin.audit.*') ? 'var(--color-ink)' : 'var(--color-muted)' }}; text-decoration: none;">
                 Audit Log
             </a>
+            <a href="{{ route('medication-catalog.index') }}" class="text-small hide-on-mobile" style="font-weight: 500; color: {{ request()->routeIs('medication-catalog.*') ? 'var(--color-ink)' : 'var(--color-muted)' }}; text-decoration: none;">
+                Katalog Obat
+            </a>
             <span class="text-small text-muted hide-on-mobile" style="font-weight: 500;">
                 {{ auth()->user()->nama_lengkap ?? auth()->user()->name }}
             </span>

@@ -11,8 +11,17 @@
         </div>
 
         <nav aria-label="Navigasi Pengguna Pasien" style="display: flex; align-items: center; gap: 1rem;">
+            <a href="{{ route('patient.dashboard') }}" class="text-small" style="font-weight: 500; color: {{ request()->routeIs('patient.dashboard') ? 'var(--color-ink)' : 'var(--color-muted)' }}; text-decoration: none;">
+                Beranda
+            </a>
+            <a href="{{ route('profile.show') }}" class="text-small" style="font-weight: 500; color: {{ request()->routeIs('profile.*') ? 'var(--color-ink)' : 'var(--color-muted)' }}; text-decoration: none;">
+                Profil Saya
+            </a>
+            <a href="{{ route('medication-catalog.index') }}" class="text-small hide-on-mobile" style="font-weight: 500; color: {{ request()->routeIs('medication-catalog.*') ? 'var(--color-ink)' : 'var(--color-muted)' }}; text-decoration: none;">
+                Katalog Obat
+            </a>
             <span class="text-small text-muted hide-on-mobile" style="font-weight: 500;">
-                {{ auth()->user()->name }}
+                {{ auth()->user()->nama_lengkap ?? auth()->user()->name }}
             </span>
             <form method="POST" action="{{ route('logout') }}" style="display: inline;">
                 @csrf

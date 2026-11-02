@@ -30,6 +30,16 @@
                 description="Catatan hidrasi, aktivitas, dan waktu tidur harian akan tampil di sini untuk membantu pemantauan kesehatan Anda."
             />
         </x-card>
+
+        <!-- Kolom 3: Profil Kesehatan & Obat Mandiri -->
+        <x-card title="Profil Kesehatan & Catatan Obat">
+            <p class="text-small text-muted" style="margin-bottom: 1rem;">
+                Kelola data kondisi kesehatan fisik, riwayat alergi, serta pantau rekaman obat konsumsi Anda.
+            </p>
+            <a href="{{ route('profile.show') }}" class="btn btn-secondary text-sm">
+                Lihat & Lengkapi Profil
+            </a>
+        </x-card>
     </div>
 </div>
 @endsection

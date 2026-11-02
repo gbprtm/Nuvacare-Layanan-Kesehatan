@@ -4,6 +4,8 @@ use App\Http\Controllers\Audit\AuditLogController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\Profile\MedicineCatalogController;
+use App\Http\Controllers\Profile\ProfileController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -26,13 +28,22 @@ Route::middleware('guest')->group(function () {
     Route::post('/daftar', [RegisterController::class, 'store'])->name('register.store');
 });
 
+// Katalog Referensi Obat (Publik, Pasien & Admin, Kontrak L07)
+Route::get('/katalog-obat', [MedicineCatalogController::class, 'index'])->name('medication-catalog.index');
+
 // Rute Terautentikasi (Pasien & Admin)
 Route::middleware('auth')->group(function () {
     Route::post('/keluar', [LoginController::class, 'destroy'])->name('logout');
 
-    // Dasbor Pasien
+    // Dasbor Pasien & Profil Mandiri
     Route::middleware('role:pasien')->group(function () {
         Route::get('/beranda', [DashboardController::class, 'patient'])->name('patient.dashboard');
+
+        // Profil Kesehatan Pasien (Kontrak L07)
+        Route::get('/profil', [ProfileController::class, 'show'])->name('profile.show');
+        Route::get('/profil/ubah', [ProfileController::class, 'edit'])->name('profile.edit');
+        Route::patch('/profil', [ProfileController::class, 'update'])->name('profile.update');
+        Route::delete('/profil', [ProfileController::class, 'destroy'])->name('profile.destroy');
     });
 
     // Dasbor & Operasional Admin Klinik
