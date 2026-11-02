@@ -1,14 +1,10 @@
 # Web janji temu klinik
 
-Aplikasi web untuk membuat janji temu pemeriksaan. **Pasien** membuat janji,
-melihat riwayat pemeriksaan, jadwal kontrol, dan profil. **Admin** mengelola
-poli dan dokter, menyelesaikan janji dengan catatan dokter, serta membuat
-jadwal kontrol berikutnya.
+Sebuah rancangan aplikasi web untuk membuat janji temu dan pemeriksaan.
 
 Acuan utama: [RANCANGAN FINAL](docs/RANCANGANFINAL.md).
 
 ## Stack
-
 - Laravel sebagai JSON API (`routes/api.php`) + Eloquent + PostgreSQL Neon.
 - Frontend HTML, CSS, JavaScript murni di `public/` memakai `fetch()`.
 - Uji: PHPUnit dan Pint.
