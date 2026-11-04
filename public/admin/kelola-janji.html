@@ -5,10 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#EEF1F6">
   <title>Kelola Janji - Admin Klinik Sehat</title>
+  <link rel="stylesheet" href="/css/style.css" fetchpriority="high">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
-  <link rel="stylesheet" href="/css/style.css">
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"></noscript>
+  <script src="/js/api.js" defer fetchpriority="high"></script>
+  <script src="/js/admin.js" defer></script>
+  <script type="speculationrules">
+  {
+    "prefetch": [{
+      "where": { "href_matches": "/admin/*.html" },
+      "eagerness": "conservative"
+    }]
+  }
+  </script>
 </head>
 <body>
   <a href="#main-content" class="skip-link">Langsung ke isi utama</a>
@@ -52,13 +63,15 @@
         </div>
       </div>
 
+      <div id="adminListAlert" class="alert" role="status" aria-live="polite"></div>
+
       <div class="table-responsive">
         <table>
           <thead>
             <tr>
               <th>Pasien</th>
               <th>Poli &amp; Dokter</th>
-              <th>Tanggal</th>
+              <th>Tanggal &amp; Jam</th>
               <th>Tipe</th>
               <th>Status</th>
               <th>Keluhan &amp; Catatan</th>
@@ -102,7 +115,20 @@
           <label class="form-label" for="controlDate">Tanggal Kontrol</label>
           <input type="date" id="controlDate" name="appointment_date" class="form-input" required autocomplete="off">
         </div>
-        <div class="form-group" style="grid-column: 1 / -1;">
+        <div class="form-group">
+          <label class="form-label" for="controlTime">Jam Kontrol</label>
+          <select id="controlTime" name="appointment_time" class="form-select" required autocomplete="off">
+            <option value="08:00">08:00 WIB</option>
+            <option value="09:00" selected>09:00 WIB</option>
+            <option value="10:00">10:00 WIB</option>
+            <option value="11:00">11:00 WIB</option>
+            <option value="13:00">13:00 WIB</option>
+            <option value="14:00">14:00 WIB</option>
+            <option value="15:00">15:00 WIB</option>
+            <option value="16:00">16:00 WIB</option>
+          </select>
+        </div>
+        <div class="form-group">
           <label class="form-label" for="controlNotes">Arahan / Catatan Kontrol</label>
           <input type="text" id="controlNotes" name="doctor_notes" class="form-input" autocomplete="off" placeholder="Contoh: Evaluasi tekanan darah dan hasil laboratorium…">
         </div>
@@ -134,8 +160,29 @@
           </select>
         </div>
 
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label" for="modalDate">Tanggal Kunjungan</label>
+            <input type="date" id="modalDate" name="appointment_date" class="form-input" autocomplete="off">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="modalTime">Jam Kunjungan</label>
+            <select id="modalTime" name="appointment_time" class="form-select" autocomplete="off">
+              <option value="08:00">08:00 WIB</option>
+              <option value="09:00">09:00 WIB</option>
+              <option value="10:00">10:00 WIB</option>
+              <option value="11:00">11:00 WIB</option>
+              <option value="13:00">13:00 WIB</option>
+              <option value="14:00">14:00 WIB</option>
+              <option value="15:00">15:00 WIB</option>
+              <option value="16:00">16:00 WIB</option>
+            </select>
+          </div>
+        </div>
+
         <div class="form-group">
-          <label class="form-label" for="modalNotes">Catatan Dokter / Alasan Pembatalan</label>
+          <label class="form-label" for="modalNotes">Catatan Dokter / Alasan Perubahan Jadwal</label>
           <textarea id="modalNotes" name="doctor_notes" class="form-textarea" placeholder="Isi ringkasan hasil pemeriksaan, atau saran dokter pengganti bila jadwal bentrok…"></textarea>
         </div>
 
@@ -146,8 +193,5 @@
       </form>
     </div>
   </div>
-
-  <script src="/js/api.js"></script>
-  <script src="/js/admin.js"></script>
 </body>
 </html>

@@ -69,6 +69,8 @@ async function initAppointmentManagement() {
 
       const id = document.getElementById('modalAppointmentId').value;
       const status = document.getElementById('modalStatus').value;
+      const appointment_date = document.getElementById('modalDate')?.value || undefined;
+      const appointment_time = document.getElementById('modalTime')?.value || undefined;
       const doctor_notes = document.getElementById('modalNotes').value.trim();
       const submitBtn = document.getElementById('modalSubmitBtn');
 
@@ -76,15 +78,17 @@ async function initAppointmentManagement() {
         submitBtn.disabled = true;
         submitBtn.textContent = 'Menyimpan…';
 
-        await api.request(`/admin/janji-temu/${id}`, {
+        const res = await api.request(`/admin/janji-temu/${id}`, {
           method: 'PATCH',
-          body: JSON.stringify({ status, doctor_notes })
+          body: JSON.stringify({ status, appointment_date, appointment_time, doctor_notes })
         });
 
         closeUpdateModal();
+        showAdminWhatsAppFeedback(res);
         await loadAppointments();
       } catch (err) {
-        api.showAlert('modalAlert', 'Gagal menyimpan perubahan: ' + (err.message || 'Coba ulangi kembali.'), 'danger');
+        const msg = err.errors?.appointment_time?.[0] || err.message || 'Coba ulangi kembali.';
+        api.showAlert('modalAlert', 'Gagal menyimpan perubahan: ' + msg, 'danger');
       } finally {
         submitBtn.disabled = false;
         submitBtn.textContent = 'Simpan';
@@ -112,7 +116,7 @@ async function loadAppointments() {
   if (type) params.append('type', type);
 
   try {
-    const res = await api.request(`/admin/janji-temu?${params.toString()}`);
+    const res = await api.request(`/admin/janji-temu?${params.toString()}`, { priority: 'high' });
     adminAppointmentsCache = res.data || [];
 
     if (adminAppointmentsCache.length === 0) {
@@ -130,7 +134,10 @@ async function loadAppointments() {
           <strong>${escapeHtml(a.polyclinic?.name || '-')}</strong>
           <div class="text-muted text-sm">${escapeHtml(a.doctor?.name || '-')}</div>
         </td>
-        <td><strong>${escapeHtml(api.formatDate(a.appointment_date))}</strong></td>
+        <td>
+          <strong>${escapeHtml(api.formatDate(a.appointment_date))}</strong>
+          <div class="text-muted text-sm">Pukul ${escapeHtml(a.appointment_time || '09:00')} WIB</div>
+        </td>
         <td><span class="badge badge-${a.type}">${a.type === 'kontrol_rutin' ? 'Kontrol rutin' : 'Janji baru'}</span></td>
         <td><span class="badge badge-${a.status}">${getStatusLabel(a.status)}</span></td>
         <td>
@@ -159,12 +166,45 @@ function openUpdateModal(id, presetStatus = null) {
   api.hideAlert('modalAlert');
   document.getElementById('modalAppointmentId').value = id;
   document.getElementById('modalStatus').value = presetStatus || item?.status || 'terjadwal';
+  const modalDate = document.getElementById('modalDate');
+  const modalTime = document.getElementById('modalTime');
+  if (modalDate) modalDate.value = item?.appointment_date || '';
+  if (modalTime) modalTime.value = item?.appointment_time || '09:00';
   document.getElementById('modalNotes').value = item?.doctor_notes || '';
   modal.style.display = 'flex';
 
   setTimeout(() => {
     document.getElementById('modalNotes').focus();
   }, 50);
+}
+
+function showAdminWhatsAppFeedback(res) {
+  const alertEl = document.getElementById('adminListAlert');
+  if (!alertEl) return;
+  const wa = res?.whatsapp;
+  const baseMsg = res?.message || 'Data janji temu berhasil diperbarui.';
+
+  alertEl.className = 'alert alert-success';
+  alertEl.setAttribute('role', 'status');
+  alertEl.setAttribute('aria-live', 'polite');
+
+  if (wa && wa.whatsapp_url) {
+    const gatewayStatus = wa.sent
+      ? 'Notifikasi WhatsApp otomatis telah dikirim ke pasien.'
+      : 'Kirim pemberitahuan perubahan jadwal ke WhatsApp pasien:';
+    alertEl.innerHTML = `
+      <div class="flex-between" style="flex-wrap: wrap;">
+        <span>${escapeHtml(baseMsg)}. ${escapeHtml(gatewayStatus)}</span>
+        <a href="${escapeHtml(wa.whatsapp_url)}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm">
+          Kirim via WhatsApp
+        </a>
+      </div>
+    `;
+  } else {
+    alertEl.textContent = baseMsg;
+  }
+
+  alertEl.style.display = 'block';
 }
 
 function closeUpdateModal() {
@@ -209,14 +249,16 @@ window.prefillControlForAppointment = prefillControlForAppointment;
 
 async function initScheduleControlForm() {
   try {
-    const patientRes = await api.request('/admin/pasien');
+    const [patientRes, poliRes] = await Promise.all([
+      api.request('/admin/pasien', { priority: 'low' }),
+      api.request('/master-poli', { priority: 'low' })
+    ]);
     const patientSelect = document.getElementById('controlPatientId');
     if (patientSelect) {
       patientSelect.innerHTML = '<option value="">Pilih pasien…</option>' +
         (patientRes.data || []).map(p => `<option value="${p.id}">${escapeHtml(p.name)} (${escapeHtml(p.email)})</option>`).join('');
     }
 
-    const poliRes = await api.request('/master-poli');
     adminMasterPoli = poliRes.data || [];
 
     const poliSelect = document.getElementById('controlPoliId');
@@ -257,6 +299,7 @@ async function initScheduleControlForm() {
       const polyclinic_id = poliSelect.value;
       const doctor_id = doctorSelect.value;
       const appointment_date = dateInput.value;
+      const appointment_time = document.getElementById('controlTime')?.value || '09:00';
       const doctor_notes = document.getElementById('controlNotes').value.trim();
 
       if (!user_id || !polyclinic_id || !doctor_id || !appointment_date) {
@@ -275,6 +318,7 @@ async function initScheduleControlForm() {
             polyclinic_id: parseInt(polyclinic_id, 10),
             doctor_id: parseInt(doctor_id, 10),
             appointment_date,
+            appointment_time,
             doctor_notes
           })
         });
@@ -377,7 +421,7 @@ async function loadMasterDataList() {
   const docPoliSelect = document.getElementById('docPoliId');
 
   try {
-    const res = await api.request('/master-poli');
+    const res = await api.request('/master-poli', { priority: 'high' });
     const polis = res.data || [];
 
     if (docPoliSelect) {

@@ -5,10 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#EEF1F6">
   <title>Janji Temu - Klinik Sehat</title>
+  <link rel="stylesheet" href="/css/style.css" fetchpriority="high">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
-  <link rel="stylesheet" href="/css/style.css">
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"></noscript>
+  <script src="/js/api.js" defer fetchpriority="high"></script>
+  <script src="/js/pasien.js" defer></script>
+  <script type="speculationrules">
+  {
+    "prefetch": [{
+      "where": { "href_matches": "/pasien/*.html" },
+      "eagerness": "conservative"
+    }]
+  }
+  </script>
 </head>
 <body>
   <a href="#main-content" class="skip-link">Langsung ke isi utama</a>
@@ -56,9 +67,18 @@
           </div>
         </div>
 
-        <div class="form-group">
-          <label class="form-label" for="appointment_date">Tanggal Kunjungan</label>
-          <input type="date" id="appointment_date" name="appointment_date" class="form-input" required autocomplete="off">
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label" for="appointment_date">Tanggal Kunjungan</label>
+            <input type="date" id="appointment_date" name="appointment_date" class="form-input" required autocomplete="off">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="appointment_time">Jam Kunjungan (Slot Tersedia)</label>
+            <select id="appointment_time" name="appointment_time" class="form-select" required disabled autocomplete="off">
+              <option value="">Pilih dokter dan tanggal terlebih dahulu…</option>
+            </select>
+          </div>
         </div>
 
         <div class="form-group">
@@ -76,7 +96,7 @@
         <table>
           <thead>
             <tr>
-              <th>Tanggal</th>
+              <th>Tanggal &amp; Jam</th>
               <th>Poliklinik</th>
               <th>Dokter</th>
               <th>Keluhan</th>
@@ -95,8 +115,5 @@
       </div>
     </section>
   </main>
-
-  <script src="/js/api.js"></script>
-  <script src="/js/pasien.js"></script>
 </body>
 </html>

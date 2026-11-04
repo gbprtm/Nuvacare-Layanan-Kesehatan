@@ -5,10 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#EEF1F6">
   <title>Daftar Pasien Baru - Klinik Sehat</title>
+  <link rel="stylesheet" href="/css/style.css" fetchpriority="high">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
-  <link rel="stylesheet" href="/css/style.css">
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"></noscript>
+  <script src="/js/api.js" defer fetchpriority="high"></script>
+  <script src="/js/auth.js" defer></script>
+  <script type="speculationrules">
+  {
+    "prefetch": [{
+      "where": { "href_matches": "/*.html" },
+      "eagerness": "conservative"
+    }]
+  }
+  </script>
 </head>
 <body>
   <a href="#main-content" class="skip-link">Langsung ke isi utama</a>
@@ -21,65 +32,204 @@
   </header>
 
   <main id="main-content" class="auth-wrapper">
-    <div class="auth-card" style="max-width: 540px;">
-      <div class="auth-header">
-        <h1>Daftar Pasien Baru</h1>
-        <p>Isi data dirimu untuk membuat janji temu di Klinik Sehat.</p>
-      </div>
-
-      <div id="registerAlert" class="alert" role="alert" aria-live="polite"></div>
-
-      <form id="registerForm" novalidate>
-        <div class="form-group">
-          <label class="form-label" for="regName">Nama Lengkap</label>
-          <input type="text" id="regName" name="name" class="form-input" required autocomplete="name" placeholder="Contoh: Budi Santoso…">
+    <div class="auth-split-shell auth-split-shell--register">
+      <section class="auth-form-pane" aria-labelledby="registerHeading">
+        <div class="auth-header">
+          <h1 id="registerHeading">Daftar Pasien Baru</h1>
+          <p>Isi data dirimu dan verifikasi nomor WhatsApp menggunakan kode OTP untuk membuat janji temu di Klinik Sehat.</p>
         </div>
 
-        <div class="form-group">
-          <label class="form-label" for="regEmail">Alamat Email</label>
-          <input type="email" id="regEmail" name="email" class="form-input" required autocomplete="email" spellcheck="false" placeholder="nama@email.com…">
-        </div>
+        <div id="registerAlert" class="alert" role="alert" aria-live="polite"></div>
 
-        <div class="grid-2">
+        <form id="registerForm" novalidate>
           <div class="form-group">
-            <label class="form-label" for="regPhone">Nomor Telepon / WhatsApp</label>
-            <input type="tel" id="regPhone" name="phone_number" class="form-input" inputmode="tel" autocomplete="tel" placeholder="0812xxxxxxxx…">
+            <label class="form-label" for="regName">Nama Lengkap</label>
+            <input type="text" id="regName" name="name" class="form-input" required autocomplete="name" placeholder="Masukkan nama lengkap sesuai identitas…">
           </div>
 
           <div class="form-group">
-            <label class="form-label" for="regBirthDate">Tanggal Lahir</label>
-            <input type="date" id="regBirthDate" name="birth_date" class="form-input" autocomplete="bday">
+            <label class="form-label" for="regEmail">Alamat Email</label>
+            <input type="email" id="regEmail" name="email" class="form-input" required autocomplete="email" spellcheck="false" placeholder="nama@email.com…">
           </div>
-        </div>
 
-        <div class="form-group">
-          <label class="form-label" for="regAddress">Alamat Domisili</label>
-          <input type="text" id="regAddress" name="address" class="form-input" autocomplete="street-address" placeholder="Nama jalan, nomor rumah, kota…">
-        </div>
+          <div class="grid-2">
+            <div class="form-group">
+              <label class="form-label" for="regPhone">Nomor Telepon / WhatsApp (Wajib OTP)</label>
+              <input type="tel" id="regPhone" name="phone_number" class="form-input" required inputmode="tel" autocomplete="tel" placeholder="0812xxxxxxxx…">
+            </div>
 
-        <div class="grid-2">
+            <div class="form-group">
+              <label class="form-label" for="regBirthDate">Tanggal Lahir</label>
+              <input type="date" id="regBirthDate" name="birth_date" class="form-input" autocomplete="bday">
+            </div>
+          </div>
+
           <div class="form-group">
-            <label class="form-label" for="regPassword">Kata Sandi (Min. 8 karakter)</label>
-            <input type="password" id="regPassword" name="password" class="form-input" required minlength="8" autocomplete="new-password" placeholder="Minimal 8 karakter…">
+            <label class="form-label" for="regAddress">Alamat Domisili</label>
+            <input type="text" id="regAddress" name="address" class="form-input" autocomplete="street-address" placeholder="Nama jalan, nomor rumah, kota…">
           </div>
 
-          <div class="form-group">
-            <label class="form-label" for="regPasswordConfirm">Ulangi Kata Sandi</label>
-            <input type="password" id="regPasswordConfirm" name="password_confirmation" class="form-input" required minlength="8" autocomplete="new-password" placeholder="Ketik ulang kata sandi…">
+          <div class="grid-2">
+            <div class="form-group">
+              <label class="form-label" for="regPassword">Kata Sandi (Min. 8 karakter)</label>
+              <div class="input-password-wrap">
+                <input type="password" id="regPassword" name="password" class="form-input" required minlength="8" autocomplete="new-password" placeholder="Minimal 8 karakter…">
+                <button type="button" class="password-toggle-btn" data-toggle-password="regPassword" aria-label="Tampilkan kata sandi" aria-pressed="false">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="regPasswordConfirm">Ulangi Kata Sandi</label>
+              <div class="input-password-wrap">
+                <input type="password" id="regPasswordConfirm" name="password_confirmation" class="form-input" required minlength="8" autocomplete="new-password" placeholder="Ketik ulang kata sandi…">
+                <button type="button" class="password-toggle-btn" data-toggle-password="regPasswordConfirm" aria-label="Tampilkan konfirmasi kata sandi" aria-pressed="false">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <button type="submit" id="regSubmitBtn" class="btn btn-primary btn-block btn-pill mt-2">Kirim OTP &amp; Buat Akun Pasien</button>
+        </form>
+
+        <div class="auth-divider" role="separator" aria-label="Atau lanjutkan dengan">atau lanjutkan dengan</div>
+
+        <div id="googleSignInContainer">
+          <button type="button" id="googleAuthBtn" class="btn btn-google">
+            <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+              <path fill="#EA4335" d="M12 10.2v3.9h5.5c-.2 1.3-1.5 3.8-5.5 3.8-3.3 0-6-2.7-6-6s2.7-6 6-6c1.9 0 3.1.8 3.8 1.5l2.6-2.5C16.8 3.4 14.6 2.5 12 2.5 6.8 2.5 2.5 6.8 2.5 12s4.3 9.5 9.5 9.5c5.5 0 9.1-3.8 9.1-9.2 0-.6-.1-1.1-.2-1.6H12z"/>
+              <path fill="#34A853" d="M3.6 7.4l3.2 2.4C7.7 7.8 9.7 6 12 6c1.9 0 3.1.8 3.8 1.5l2.6-2.5C16.8 3.4 14.6 2.5 12 2.5 8.3 2.5 5.1 4.6 3.6 7.4z"/>
+              <path fill="#FBBC05" d="M12 21.5c2.5 0 4.7-.8 6.3-2.3l-2.9-2.4c-.8.6-1.9 1.1-3.4 1.1-3.9 0-5.2-2.5-5.5-3.8l-3.2 2.5c1.5 3 4.8 4.9 8.7 4.9z"/>
+              <path fill="#4285F4" d="M21.1 12.3c0-.6-.1-1.1-.2-1.6H12v3.9h5.5c-.3 1.3-1.1 2.4-2.1 3.1l2.9 2.4c1.7-1.6 2.8-4 2.8-7.8z"/>
+            </svg>
+            <span>Daftar / Masuk dengan Google</span>
+          </button>
+        </div>
+
+        <div class="auth-footer-note">
+          <p>Sudah punya akun? <a href="/login.html">Masuk di sini</a></p>
+          <p class="mt-2"><a href="/index.html" class="text-muted">Kembali ke Beranda</a></p>
+        </div>
+      </section>
+
+      <aside class="auth-visual-pane" aria-label="Informasi verifikasi nomor WhatsApp">
+        <div class="auth-illustration-stage">
+          <img src="/images/auth-illustration.svg" alt="Ilustrasi janji temu poliklinik dan verifikasi nomor WhatsApp" class="auth-illustration-svg" width="240" height="180" fetchpriority="high">
+
+          <div class="auth-floating-card">
+            <div class="auth-floating-card__title">Verifikasi WhatsApp OTP</div>
+            <div class="auth-floating-card__meta">Kode 6 digit berlaku 5 menit</div>
+            <div class="auth-floating-card__row">
+              <span class="badge badge-selesai">Nomor Terlindungi</span>
+              <span class="badge badge-terjadwal">Pengingat WA</span>
+            </div>
           </div>
         </div>
 
-        <button type="submit" id="regSubmitBtn" class="btn btn-primary btn-block mt-2">Buat Akun Pasien</button>
-      </form>
+        <div class="auth-step-dots" aria-hidden="true">
+          <span class="auth-step-dot"></span>
+          <span class="auth-step-dot auth-step-dot--active"></span>
+          <span class="auth-step-dot"></span>
+        </div>
 
-      <div class="mt-4 pt-4 text-sm text-center" style="border-top: 1px solid var(--color-line);">
-        <p>Sudah punya akun? <a href="/login.html" style="font-weight: 600;">Masuk di sini</a></p>
-        <p class="mt-2"><a href="/index.html" class="text-muted">Kembali ke Beranda</a></p>
-      </div>
+        <div class="auth-visual-caption">
+          <h2>Keamanan akun dan pengingat jadwal langsung ke WhatsApp Anda</h2>
+          <p>Nomor WhatsApp yang terverifikasi memastikan Anda menerima pemberitahuan tepat waktu bila ada pembaruan jadwal dokter.</p>
+        </div>
+      </aside>
     </div>
   </main>
 
-  <script src="/js/api.js"></script>
-  <script src="/js/auth.js"></script>
+  <footer class="container" style="margin-top: 0; margin-bottom: var(--space-6); flex: 0;">
+    <p class="text-sm text-muted text-center">Klinik Sehat. Layanan janji temu poliklinik rawat jalan.</p>
+  </footer>
+
+  <!-- Modal Pengaturan Nomor WhatsApp (Untuk Pengguna Login Google yang Belum Verifikasi WA) -->
+  <div id="googlePhoneModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="googlePhoneTitle">
+    <div class="modal-content">
+      <h2 id="googlePhoneTitle">Atur Nomor WhatsApp Aktif</h2>
+      <p class="text-sm text-muted mb-4">Akun Google Anda berhasil terhubung. Masukkan nomor WhatsApp aktif untuk menerima kode OTP verifikasi dan pemberitahuan jadwal dokter.</p>
+
+      <div id="googlePhoneAlert" class="alert" role="alert" aria-live="polite"></div>
+
+      <form id="googlePhoneForm" novalidate>
+        <div class="form-group">
+          <label class="form-label" for="googlePhoneInput">Nomor Telepon / WhatsApp</label>
+          <input type="tel" id="googlePhoneInput" name="phone_number" class="form-input" required inputmode="tel" autocomplete="tel" placeholder="0812xxxxxxxx…">
+        </div>
+
+        <div style="display: flex; gap: var(--space-3); justify-content: flex-end; margin-top: var(--space-6);">
+          <button type="button" id="cancelGooglePhoneBtn" class="btn btn-secondary">Keluar Akun</button>
+          <button type="submit" id="sendGooglePhoneOtpBtn" class="btn btn-primary btn-pill">Kirim Kode OTP</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Verifikasi Kode OTP 6 Digit -->
+  <div id="otpVerifyModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="otpVerifyTitle">
+    <div class="modal-content">
+      <h2 id="otpVerifyTitle">Verifikasi Kode OTP WhatsApp</h2>
+      <p class="text-sm text-muted mb-2">Masukkan 6 digit kode OTP yang telah kami kirimkan ke WhatsApp <strong id="otpMaskedPhone">-</strong>.</p>
+
+      <div id="otpVerifyAlert" class="alert" role="alert" aria-live="polite"></div>
+
+      <form id="otpVerifyForm" novalidate>
+        <div class="otp-digit-group" role="group" aria-label="6 digit kode OTP">
+          <input type="text" class="otp-digit-input" inputmode="numeric" pattern="[0-9]*" maxlength="1" autocomplete="one-time-code" aria-label="Digit ke-1 kode OTP" data-otp-index="0">
+          <input type="text" class="otp-digit-input" inputmode="numeric" pattern="[0-9]*" maxlength="1" aria-label="Digit ke-2 kode OTP" data-otp-index="1">
+          <input type="text" class="otp-digit-input" inputmode="numeric" pattern="[0-9]*" maxlength="1" aria-label="Digit ke-3 kode OTP" data-otp-index="2">
+          <input type="text" class="otp-digit-input" inputmode="numeric" pattern="[0-9]*" maxlength="1" aria-label="Digit ke-4 kode OTP" data-otp-index="3">
+          <input type="text" class="otp-digit-input" inputmode="numeric" pattern="[0-9]*" maxlength="1" aria-label="Digit ke-5 kode OTP" data-otp-index="4">
+          <input type="text" class="otp-digit-input" inputmode="numeric" pattern="[0-9]*" maxlength="1" aria-label="Digit ke-6 kode OTP" data-otp-index="5">
+        </div>
+
+        <div class="flex-between mb-4">
+          <span id="otpCountdownText" class="text-sm text-muted">Berlaku selama 05:00</span>
+          <button type="button" id="otpResendBtn" class="btn btn-secondary btn-sm" disabled>Kirim Ulang (60d)</button>
+        </div>
+
+        <div style="display: flex; gap: var(--space-3); justify-content: flex-end; margin-top: var(--space-4);">
+          <button type="button" id="otpChangeNumberBtn" class="btn btn-secondary">Ubah Nomor</button>
+          <button type="submit" id="otpVerifySubmitBtn" class="btn btn-primary btn-pill">Verifikasi &amp; Lanjutkan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Masuk dengan Akun Google (Digunakan saat pengujian lokal atau jika Client ID belum diatur) -->
+  <div id="googleAccountModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="googleAccountTitle">
+    <div class="modal-content">
+      <h2 id="googleAccountTitle">Masuk dengan Akun Google</h2>
+      <p class="text-sm text-muted mb-4">Masukkan alamat Gmail dan nama tampilan Anda untuk melanjutkan autentikasi Google di Klinik Sehat.</p>
+
+      <div id="googleAccountAlert" class="alert alert-danger" role="alert" aria-live="polite"></div>
+
+      <form id="googleAccountForm" novalidate>
+        <div class="form-group">
+          <label class="form-label" for="googleModalEmail">Alamat Email Google (Gmail)</label>
+          <input type="email" id="googleModalEmail" class="form-input" required autocomplete="email" placeholder="nama.anda@gmail.com…">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="googleModalName">Nama Lengkap Profil</label>
+          <input type="text" id="googleModalName" class="form-input" required autocomplete="name" placeholder="Nama lengkap sesuai akun Google…">
+        </div>
+
+        <div style="display: flex; gap: var(--space-3); justify-content: flex-end; margin-top: var(--space-6);">
+          <button type="button" id="closeGoogleAccountBtn" class="btn btn-secondary">Batal</button>
+          <button type="submit" id="submitGoogleAccountBtn" class="btn btn-primary btn-pill">Lanjutkan dengan Google</button>
+        </div>
+      </form>
+    </div>
+  </div>
 </body>
 </html>

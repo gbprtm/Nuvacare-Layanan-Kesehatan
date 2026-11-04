@@ -25,6 +25,7 @@ Jangan menyunting atau memindahkannya.
 - Frontend: HTML, CSS, dan JavaScript murni di `public/` dengan `fetch()`.
   Tanpa Blade, tanpa framework UI, tanpa langkah build.
 - Uji: PHPUnit (feature test API) dan Pint. Playwright Chrome opsional.
+- Standar kualitas UI, teks, dan kode: **Wajib selalu memuat dan menerapkan skill `antislop`** beserta sub-skill terkait (`antislop-ui`, `antislop-human`, `antislop-layoutmobile`, `antislop-copywriting`, `antislop-code`) pada setiap pembuatan maupun revisi halaman, komponen, teks UI, dan kode. Setiap perubahan antarmuka wajib melewati pemeriksaan *Anti-Slop Delivery Gate* (satu titik fokus utama per layar, tanpa *em dash*, kontras WCAG AA minimal 4.5:1 untuk teks dan 3:1 untuk tepi kontrol, target sentuh minimal 44x44px, serta tidak ada elemen generik yang berlebihan).
 
 Dependensi baru perlu alasan dan izin pemilik.
 

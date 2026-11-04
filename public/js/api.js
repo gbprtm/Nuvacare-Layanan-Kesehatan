@@ -30,22 +30,28 @@ const api = {
 
   async request(endpoint, options = {}) {
     const token = this.getToken();
+    const { skipAuthRedirect, priority, headers: customHeaders, ...fetchOptions } = options;
+    const method = (fetchOptions.method || 'GET').toUpperCase();
+
     const headers = {
       'Accept': 'application/json',
       'Content-Type': 'application/json',
-      ...(options.headers || {})
+      ...(customHeaders || {})
     };
 
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
+    const resolvedPriority = priority || (method !== 'GET' ? 'high' : 'auto');
+
     const response = await fetch(`${API_BASE}${endpoint}`, {
-      ...options,
-      headers
+      ...fetchOptions,
+      headers,
+      priority: resolvedPriority
     });
 
-    if (response.status === 401 && !options.skipAuthRedirect) {
+    if (response.status === 401 && !skipAuthRedirect) {
       this.clearSession();
       if (!window.location.pathname.endsWith('/login.html')) {
         window.location.href = '/login.html?reason=expired';
@@ -88,7 +94,7 @@ const api = {
 
   async logout() {
     try {
-      await this.request('/logout', { method: 'POST' });
+      await this.request('/logout', { method: 'POST', priority: 'low' });
     } catch {
       // Clear local session even if server token was already invalidated
     } finally {

@@ -21,6 +21,7 @@ class HistoryAndControlApiTest extends TestCase
             'polyclinic_id' => $doctor->polyclinic_id,
             'doctor_id' => $doctor->id,
             'appointment_date' => now()->subDays(5)->format('Y-m-d'),
+            'appointment_time' => '08:00',
             'type' => 'janji_baru',
             'status' => 'selesai',
             'complaint' => 'Sakit kepala sebelah',
@@ -32,7 +33,8 @@ class HistoryAndControlApiTest extends TestCase
             'user_id' => $patient->id,
             'polyclinic_id' => $doctor->polyclinic_id,
             'doctor_id' => $doctor->id,
-            'appointment_date' => now()->addDays(3)->format('Y-m-d'),
+            'appointment_date' => now()->addDays(20)->format('Y-m-d'),
+            'appointment_time' => '10:00',
             'type' => 'janji_baru',
             'status' => 'terjadwal',
             'complaint' => 'Checkup rutin',
@@ -46,6 +48,9 @@ class HistoryAndControlApiTest extends TestCase
         $ids = collect($response->json('data'))->pluck('id')->all();
         $this->assertContains($completedApp->id, $ids);
         $this->assertNotContains($scheduledApp->id, $ids);
+
+        $completedApp->delete();
+        $scheduledApp->delete();
     }
 
     public function test_patient_can_view_routine_control_schedules(): void
@@ -59,7 +64,8 @@ class HistoryAndControlApiTest extends TestCase
             'user_id' => $patient->id,
             'polyclinic_id' => $doctor->polyclinic_id,
             'doctor_id' => $doctor->id,
-            'appointment_date' => now()->addDays(7)->format('Y-m-d'),
+            'appointment_date' => now()->addDays(21)->format('Y-m-d'),
+            'appointment_time' => '11:00',
             'type' => 'kontrol_rutin',
             'status' => 'terjadwal',
             'doctor_notes' => 'Kontrol cek tekanan darah ulang.',
@@ -70,7 +76,8 @@ class HistoryAndControlApiTest extends TestCase
             'user_id' => $patient->id,
             'polyclinic_id' => $doctor->polyclinic_id,
             'doctor_id' => $doctor->id,
-            'appointment_date' => now()->addDays(2)->format('Y-m-d'),
+            'appointment_date' => now()->addDays(22)->format('Y-m-d'),
+            'appointment_time' => '13:00',
             'type' => 'janji_baru',
             'status' => 'terjadwal',
             'complaint' => 'Keluhan flu',
@@ -84,6 +91,9 @@ class HistoryAndControlApiTest extends TestCase
         $ids = collect($response->json('data'))->pluck('id')->all();
         $this->assertContains($controlApp->id, $ids);
         $this->assertNotContains($newApp->id, $ids);
+
+        $controlApp->delete();
+        $newApp->delete();
     }
 
     public function test_patient_cannot_view_other_patients_history(): void
@@ -98,6 +108,7 @@ class HistoryAndControlApiTest extends TestCase
             'polyclinic_id' => $doctor->polyclinic_id,
             'doctor_id' => $doctor->id,
             'appointment_date' => now()->subDay()->format('Y-m-d'),
+            'appointment_time' => '14:00',
             'type' => 'janji_baru',
             'status' => 'selesai',
             'complaint' => 'Sakit perut',
@@ -112,6 +123,8 @@ class HistoryAndControlApiTest extends TestCase
         $response->assertStatus(200);
         $ids = collect($response->json('data'))->pluck('id')->all();
         $this->assertNotContains($otherApp->id, $ids);
+
+        $otherApp->delete();
     }
 
     public function test_endpoints_require_patient_role(): void

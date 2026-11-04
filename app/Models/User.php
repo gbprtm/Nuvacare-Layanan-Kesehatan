@@ -18,9 +18,11 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
+        'google_id',
         'password',
         'role',
         'phone_number',
+        'phone_verified_at',
         'birth_date',
         'address',
     ];
@@ -34,10 +36,16 @@ class User extends Authenticatable
     {
         return [
             'password' => 'hashed',
+            'phone_verified_at' => 'datetime',
             'birth_date' => 'date:Y-m-d',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
         ];
+    }
+
+    public function hasVerifiedPhone(): bool
+    {
+        return ! empty($this->phone_number) && $this->phone_verified_at !== null;
     }
 
     public function appointments(): HasMany

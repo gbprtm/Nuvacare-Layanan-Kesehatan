@@ -15,14 +15,20 @@ Route::get('/public-info', [AuthController::class, 'publicInfo']);
 
 Route::middleware('throttle:15,1')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
+    Route::post('/auth/register/send-otp', [AuthController::class, 'sendRegisterOtp']);
+    Route::post('/auth/register/verify-otp', [AuthController::class, 'verifyRegisterOtp']);
     Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/auth/google', [AuthController::class, 'googleLogin']);
     Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
     Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 });
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
+    Route::post('/auth/phone/send-otp', [AuthController::class, 'sendPhoneOtp']);
+    Route::post('/auth/phone/verify-otp', [AuthController::class, 'verifyPhoneOtp']);
     Route::get('/master-poli', [AuthController::class, 'masterPoli']);
+    Route::get('/slot-tersedia', [AppointmentController::class, 'availableSlots']);
 
     Route::get('/user', function (Request $request) {
         return response()->json([

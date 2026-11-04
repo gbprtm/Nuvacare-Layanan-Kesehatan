@@ -10,6 +10,17 @@ class Appointment extends Model
 {
     use HasFactory;
 
+    public const TIME_SLOTS = [
+        '08:00',
+        '09:00',
+        '10:00',
+        '11:00',
+        '13:00',
+        '14:00',
+        '15:00',
+        '16:00',
+    ];
+
     protected $table = 'appointments';
 
     protected $fillable = [
@@ -17,6 +28,7 @@ class Appointment extends Model
         'polyclinic_id',
         'doctor_id',
         'appointment_date',
+        'appointment_time',
         'type',
         'status',
         'complaint',

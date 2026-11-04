@@ -16,6 +16,7 @@ class ControlScheduleController extends Controller
             ->where('type', 'kontrol_rutin')
             ->where('status', 'terjadwal')
             ->orderBy('appointment_date', 'asc')
+            ->orderBy('appointment_time', 'asc')
             ->orderBy('id', 'asc')
             ->get();
 

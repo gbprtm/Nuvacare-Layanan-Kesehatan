@@ -3,79 +3,210 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#EEF1F6">
-  <title>Beranda - Klinik Sehat</title>
+  <meta name="theme-color" content="#FFFFFF">
+  <title>Beranda Janji Temu - Klinik Sehat</title>
+  <link rel="stylesheet" href="/css/style.css" fetchpriority="high">
+  <link rel="preload" href="/api/public-info" as="fetch" crossorigin="anonymous" fetchpriority="high">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
-  <link rel="stylesheet" href="/css/style.css">
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Cantarell:wght@700&family=DM+Sans:wght@400;500;700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cantarell:wght@700&family=DM+Sans:wght@400;500;700&display=swap"></noscript>
+  <script src="/js/api.js" defer fetchpriority="high"></script>
+  <script src="/js/auth.js" defer></script>
+  <script type="speculationrules">
+  {
+    "prefetch": [{
+      "where": { "href_matches": "/*.html" },
+      "eagerness": "conservative"
+    }]
+  }
+  </script>
 </head>
-<body>
-  <a href="#main-content" class="skip-link">Langsung ke isi utama</a>
+<body class="home-body">
+  <a href="#main" class="skip-link">Langsung ke isi utama</a>
 
-  <header class="site-header">
-    <nav class="navbar" aria-label="Navigasi utama">
+  <!-- Stage 1: Navbar (3 Zona) -->
+  <header class="site-header site-header--sticky">
+    <nav class="navbar--home" aria-label="Navigasi utama">
       <a href="/index.html" class="brand" id="navClinicName" translate="no">Klinik Sehat</a>
-      <div id="navAuthAction" style="display: flex; align-items: center; gap: var(--space-2);">
-        <a href="/login.html" class="btn btn-secondary btn-sm">Masuk</a>
-        <a href="/daftar.html" class="btn btn-secondary btn-sm">Daftar Akun</a>
+
+      <button type="button" id="mobileMenuBtn" class="mobile-menu-toggle" aria-expanded="false" aria-controls="navbarMenuPanel">
+        <span>Menu</span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <path d="M4 7h16M4 12h16M4 17h16"/>
+        </svg>
+      </button>
+
+      <div id="navbarMenuPanel" class="home-nav-panel">
+        <ul class="home-nav-center">
+          <li><a href="/index.html" class="active" aria-current="page">Home</a></li>
+          <li><a href="/login.html?next=%2Fpasien%2Fjanji-temu.html" id="navBookingLink">Buat Janji</a></li>
+        </ul>
+
+        <div class="home-nav-right">
+          <div class="poli-search-wrap" role="search">
+            <label for="poliSearchInput" class="sr-only">Cari poliklinik</label>
+            <input type="search" id="poliSearchInput" class="poli-search-input" placeholder="Cari poli…" autocomplete="off">
+          </div>
+
+          <div id="navAuthAction" style="display: flex; align-items: center; gap: var(--space-2);">
+            <a href="/login.html" class="btn btn-pill-outline">Masuk</a>
+            <a href="/daftar.html" class="btn btn-pill-dark">Daftar</a>
+          </div>
+        </div>
       </div>
     </nav>
   </header>
 
-  <main id="main-content" class="container">
-    <section class="card" aria-labelledby="clinicName">
-      <h1 id="clinicName" translate="no">Klinik Sehat</h1>
-      <p id="clinicDesc" class="text-muted mb-4" style="max-width: 640px;">
-        Layanan pendaftaran janji temu rawat jalan dan pemantauan jadwal kontrol rutin untuk pasien dan keluarga.
-      </p>
-      <div style="display: flex; gap: var(--space-3); flex-wrap: wrap;">
-        <a href="/daftar.html" class="btn btn-primary">Daftar Pasien Baru</a>
-        <a href="/login.html" class="btn btn-secondary">Masuk ke Akunmu</a>
+  <main id="main">
+    <section id="home" class="hero" aria-labelledby="hero-title">
+      <div class="hero-backdrop">
+        <img class="hero-artwork"
+             src="/images/banner-1200.jpg"
+             srcset="/images/banner-400.jpg 400w,
+                     /images/banner-640.jpg 640w,
+                     /images/banner-1200.jpg 1200w,
+                     /images/banner-1920.jpg 1920w"
+             sizes="(max-width: 760px) 100vw, 100vw"
+             width="3840" height="2160"
+             alt="Tenaga medis profesional Klinik Sehat sedang melayani konsultasi pasien di ruang klinik modern"
+             fetchpriority="high" loading="eager" decoding="async">
+      </div>
+      <div class="hero-inner">
+        <div class="hero-copy">
+          <p class="hero-eyebrow">Layanan Rawat Jalan Terpercaya</p>
+          <h1 id="hero-title">Buat Janji Temu di <span id="clinicName" translate="no">Klinik Sehat</span></h1>
+          <p id="clinicDesc" class="hero-description">
+            Pilih poliklinik dan jadwal dokter spesialis secara praktis tanpa antre, serta dapatkan konfirmasi jadwal langsung di WhatsApp.
+          </p>
+          <div class="hero-actions">
+            <a href="/login.html?next=%2Fpasien%2Fjanji-temu.html" id="heroBookingCta" class="btn btn-pill-dark">Buat Janji</a>
+          </div>
+        </div>
+        <a class="scroll-cue" href="#poli">
+          <svg width="20" height="20" aria-hidden="true"><use href="/images/icons.svg#icon-chevron-down"></use></svg>
+          <span>Lihat poli</span>
+        </a>
       </div>
     </section>
 
-    <div class="grid-2">
-      <section aria-labelledby="poliSectionTitle">
-        <h2 id="poliSectionTitle">Poliklinik &amp; Dokter</h2>
-        <div id="publicPoliList" aria-live="polite">
-          <div class="card">
-            <p class="text-muted">Memuat daftar poliklinik dan dokter…</p>
+    <div class="content-sections">
+      <!-- Stage 3: Kartu Poli (Stage Gray #EEF1F6) -->
+      <section id="poli" aria-labelledby="poliSectionTitle">
+        <div class="home-section-header">
+          <div>
+            <h2 id="poliSectionTitle">Pilih Poliklinik</h2>
+            <p>Pilih poliklinik tujuan untuk melanjutkan pendaftaran janji temu dengan dokter spesialis.</p>
+          </div>
+        </div>
+
+        <div id="publicPoliList" class="poli-grid" aria-live="polite">
+          <div class="poli-card">
+            <p class="text-muted">Memuat daftar poliklinik…</p>
           </div>
         </div>
       </section>
 
-      <section aria-labelledby="infoSectionTitle">
-        <h2 id="infoSectionTitle">Informasi Klinik</h2>
-        <div class="card">
-          <h3>Alamat &amp; Jam Layanan</h3>
-          <p class="text-sm"><strong>Alamat:</strong> <span id="clinicAddress">Jl. Kesehatan Raya No. 45, Jakarta Pusat</span></p>
-          <p class="text-sm mt-2"><strong>Telepon / WhatsApp:</strong> <span id="clinicContact">+62 21 555-0199</span></p>
-          <p class="text-sm mt-2">
-            <strong>Jam Operasional:</strong><br>
-            Senin s/d Sabtu: 08.00 sampai 20.00 WIB<br>
-            Minggu &amp; Hari Libur Nasional: Tutup
-          </p>
+      <!-- Stage 4: Blok Informasi Singkat + Alur Klinik (Satu Baris) -->
+      <section id="alur-janji" class="home-stage-row" aria-label="Informasi dan Alur Klinik">
+        <div class="home-highlight-block">
+          <div>
+            <h2>Pengingat Jadwal via WhatsApp</h2>
+            <p>
+              Setiap pendaftaran akun diverifikasi menggunakan kode OTP WhatsApp. Bila terdapat perubahan jam praktik atau jadwal kontrol ulang dari dokter, klinik mengirimkan pemberitahuan langsung ke nomor WhatsApp Anda.
+            </p>
+          </div>
+          <div>
+            <a href="/daftar.html" id="highlightActionLink" class="btn btn-pill-dark">Daftar Akun Pasien</a>
+          </div>
         </div>
 
-        <div class="card">
-          <h3>Alur Pendaftaran Janji Temu</h3>
-          <ol style="padding-left: var(--space-6); font-size: 14px; line-height: 22px; color: var(--color-ink);">
-            <li class="mb-2">Buat akun pasien menggunakan nama lengkap, alamat email, dan nomor telepon aktif.</li>
-            <li class="mb-2">Masuk ke akunmu lalu pilih poliklinik, dokter yang aktif, dan tanggal kunjungan.</li>
-            <li class="mb-2">Datang ke klinik sesuai jadwal yang tercatat pada halaman Janji Temu.</li>
-            <li>Lihat catatan hasil pemeriksaan dokter di menu Riwayat dan pantau jadwal kunjungan ulang di menu Jadwal Kontrol.</li>
+        <div class="home-alur-block">
+          <h2 id="flowSectionTitle">Alur Klinik</h2>
+          <ol class="alur-steps-grid">
+            <li class="alur-step-item alur-step-item--active">
+              <span class="alur-step-marker" aria-hidden="true">1</span>
+              <div>
+                <h3 class="alur-step-title">Masuk atau daftar</h3>
+                <p class="alur-step-desc">Masuk ke akun pasien atau daftar dengan verifikasi OTP WhatsApp.</p>
+              </div>
+            </li>
+
+            <li class="alur-step-item">
+              <span class="alur-step-marker" aria-hidden="true">2</span>
+              <div>
+                <h3 class="alur-step-title">Pilih poli dan tanggal</h3>
+                <p class="alur-step-desc">Pilih poliklinik, dokter aktif, tanggal, dan jam praktik yang tersedia.</p>
+              </div>
+            </li>
+
+            <li class="alur-step-item">
+              <span class="alur-step-marker" aria-hidden="true">3</span>
+              <div>
+                <h3 class="alur-step-title">Kirim janji temu</h3>
+                <p class="alur-step-desc">Jadwal tercatat otomatis dan slot terkunci agar tidak bentrok.</p>
+              </div>
+            </li>
+
+            <li class="alur-step-item">
+              <span class="alur-step-marker" aria-hidden="true">4</span>
+              <div>
+                <h3 class="alur-step-title">Datang sesuai tanggal</h3>
+                <p class="alur-step-desc">Hadir 15 menit lebih awal dan pantau riwayat atau jadwal kontrol di akunmu.</p>
+              </div>
+            </li>
           </ol>
+        </div>
+      </section>
+
+      <!-- Stage 5: Teks Penjelasan (Maksimal 2 Paragraf Pendek, <= 720px) -->
+      <section id="info-layanan" class="home-explanation" aria-labelledby="infoSectionTitle">
+        <div class="home-explanation__inner">
+          <h2 id="infoSectionTitle">Tentang Layanan Janji Temu</h2>
+          <p>
+            Layanan web ini dirancang untuk mencatat pendaftaran janji temu rawat jalan secara terjadwal. Pasien dapat memeriksa ketersediaan jam praktik dokter sebelum datang ke klinik sehingga waktu tunggu di ruang pendaftaran menjadi lebih singkat.
+          </p>
+          <p>
+            Seluruh riwayat kunjungan yang telah selesai beserta catatan pemeriksaan dokter dan jadwal kontrol berikutnya tersimpan rapi di dalam akun masing-masing pasien.
+          </p>
         </div>
       </section>
     </div>
   </main>
 
-  <footer style="margin-top: var(--space-12); padding: var(--space-6) var(--space-4); text-align: center; border-top: 1px solid var(--color-line); font-size: 14px; color: var(--color-ink-2);">
-    &copy; 2026 <span translate="no">Klinik Sehat</span>. Sistem pencatatan janji temu dan jadwal kontrol pasien.
-  </footer>
+  <!-- Stage 6: Footer (Latar Putih) -->
+  <footer class="site-footer">
+    <div class="site-footer__grid">
+      <div>
+        <div class="footer-heading" translate="no">Klinik Sehat</div>
+        <ul class="footer-info-list">
+          <li><strong>Alamat:</strong> <span id="clinicAddress">Jl. Kesehatan Raya No. 45, Jakarta Pusat</span></li>
+          <li><strong>Kontak:</strong> <span id="clinicContact">+62 21 555-0199</span></li>
+        </ul>
+      </div>
 
-  <script src="/js/api.js"></script>
-  <script src="/js/auth.js"></script>
+      <div>
+        <div class="footer-heading">Jam Layanan</div>
+        <ul class="footer-info-list">
+          <li>Senin s/d Sabtu: 08.00 sampai 16.00 WIB</li>
+          <li>Minggu &amp; Libur Nasional: Tutup</li>
+        </ul>
+      </div>
+
+      <div>
+        <div class="footer-heading">Tautan Cepat</div>
+        <ul class="site-footer__links">
+          <li><a href="#poli">Daftar Poliklinik</a></li>
+          <li><a href="#alur-janji">Alur Klinik</a></li>
+          <li><a href="/login.html">Masuk Akun</a></li>
+          <li><a href="/daftar.html">Daftar Pasien Baru</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="site-footer__bottom">
+      <span>&copy; 2026 <span translate="no">Klinik Sehat</span>. Layanan janji temu poliklinik rawat jalan.</span>
+    </div>
+  </footer>
 </body>
 </html>

@@ -8,12 +8,12 @@ berlaku.
 
 | No | Celah | Keputusan |
 |---|---|---|
-| 1 | Registrasi pasien & tamu | Atas arahan pemilik, pasien dapat mendaftar mandiri via `daftar.html` (`POST /api/register`). Tamu dapat mengakses beranda publik `index.html` (`GET /api/public-info`). Reset kata sandi via email (`POST /api/forgot-password` & `POST /api/reset-password`). Tampilan akun demo dihilangkan dari `login.html`. |
+| 1 | Registrasi pasien, OTP WA & Login Google | Atas arahan pemilik, pasien dapat mendaftar mandiri via `daftar.html` dengan verifikasi OTP 6 digit ke WhatsApp (`POST /api/auth/register/send-otp` & `POST /api/auth/register/verify-otp`, TTL 5 menit, maks 5 percobaan). Login mendukung akun Google (`POST /api/auth/google`); bila nomor WhatsApp belum terverifikasi (`phone_verified_at = null`), muncul popup wajib verifikasi OTP WhatsApp (`POST /api/auth/phone/send-otp` & `POST /api/auth/phone/verify-otp`). Tamu dapat mengakses beranda publik `index.html` (`GET /api/public-info`). Reset kata sandi via email (`POST /api/forgot-password` & `POST /api/reset-password`). |
 | 2 | Auth "Session atau Sanctum" | **Sanctum token**. `/api/login` mengembalikan token; `api.js` menyimpannya di `localStorage` dan mengirim `Authorization: Bearer <token>`. `/api/logout` menghapus token. |
 | 3 | Admin butuh `user_id` untuk jadwal kontrol | `user_id` dipilih dari daftar pasien (`GET /api/admin/pasien`) pada formulir jadwal kontrol di `kelola-janji.html`. |
 | 4 | Ketersediaan dokter (`is_active`) | Poli & dokter ditambah melalui `POST`. Admin dapat mengubah status ketersediaan dokter (`is_active`) lewat `PATCH /api/admin/dokter/{id}` agar dokter yang berhalangan tidak muncul di pilihan pasien. |
 | 5 | Siapa yang membatalkan | Hanya admin, lewat `PATCH /api/admin/janji-temu/{id}` dengan `status = 'dibatalkan'`. |
-| 6 | Bentrok jadwal (Tahap 4) | Tidak ada penguncian slot. Admin memfilter daftar janji per tanggal (`?date=YYYY-MM-DD`), mengubah status menjadi `dibatalkan`, dan menuliskan rekomendasi dokter pengganti pada `doctor_notes` yang tampil di halaman `janji-temu.html` pasien. |
+| 6 | Validasi slot & bentrok jadwal | Tanpa tabel `slots` terpisah: kolom `appointment_time` (`08:00`–`16:00`) ditambahkan pada `appointments` dengan PostgreSQL *partial unique index* `(doctor_id, appointment_date, appointment_time) WHERE status = 'terjadwal'` untuk mencegah *double booking*. Saat jadwal diubah atau dibatalkan via `PATCH /api/admin/janji-temu/{id}`, backend mengirim notifikasi WhatsApp (`WhatsAppNotificationService`) dan menyertakan tautan `whatsapp_url` (`https://wa.me/62...`). |
 | 7 | Vite | Tidak dipakai. CSS/JS langsung dari `public/css` dan `public/js`. |
 | 8 | Tipe `id` | `BIGINT` auto increment (pilihan pertama di skema). |
 | 9 | Nama produk | Belum diputuskan; pakai "Klinik Sehat" sebagai sementara. |
@@ -21,15 +21,21 @@ berlaku.
 ## 2. Aturan validasi minimum
 | Endpoint | Aturan |
 |---|---|
-| `GET /api/public-info` | Publik (tanpa token); mengembalikan info klinik dan daftar poliklinik beserta dokter aktif |
+| `GET /api/public-info` | Publik (tanpa token); mengembalikan info klinik, `google_client_id`, dan daftar poliklinik beserta dokter aktif |
 | `POST /api/register` | `name` wajib ≤ 255; `email` unik; `password` min 8 + `confirmed`; `birth_date` opsional sebelum hari ini (`before:today`) |
-| `POST /api/login` | `email` wajib email, `password` wajib (dibatasi `throttle:15,1`) |
+| `POST /api/auth/register/send-otp` | Validasi form pendaftaran + nomor WhatsApp unik; mengirim OTP 6 digit via Fonnte WhatsApp (TTL 5 menit, jeda kirim ulang 60 detik) |
+| `POST /api/auth/register/verify-otp` | `phone_number` + `otp` 6 digit (maks 5 percobaan); membuat akun `User` dengan `phone_verified_at` terisi dan mengembalikan token Sanctum |
+| `POST /api/login` | `email` wajib email, `password` wajib (dibatasi `throttle:15,1`); menyertakan `requires_phone_verification` |
+| `POST /api/auth/google` | Menerima kredensial Google (`credential` ID token / profil OAuth), masuk atau membuat akun pasien, serta mengembalikan `requires_phone_verification` |
+| `POST /api/auth/phone/send-otp` | `auth:sanctum`; mengirim kode OTP 6 digit ke nomor WhatsApp baru pengguna |
+| `POST /api/auth/phone/verify-otp` | `auth:sanctum`; memverifikasi kode OTP 6 digit dan menyimpan `phone_number` serta `phone_verified_at` |
 | `POST /api/forgot-password` | `email` wajib email terdaftar; mengirim tautan reset via SMTP (mengembalikan 503 JSON bila SMTP gagal) |
 | `POST /api/reset-password` | `token` wajib; `email` wajib; `password` min 8 + `confirmed`; mencabut seluruh token Sanctum lama milik pengguna |
-| `POST /api/janji-temu` | `polyclinic_id` ada; `doctor_id` ada, aktif (`is_active = true`), dan milik poli itu; `appointment_date` tanggal ≥ hari ini; `complaint` opsional ≤ 500 karakter |
+| `GET /api/slot-tersedia` | `doctor_id` ada; `date` tanggal ≥ hari ini; mengembalikan daftar slot jam beserta status `available` |
+| `POST /api/janji-temu` | `polyclinic_id` ada; `doctor_id` ada, aktif (`is_active = true`), dan milik poli itu; `appointment_date` tanggal ≥ hari ini; `appointment_time` slot tersedia (menolak *double booking* dengan 422); `complaint` opsional ≤ 500 karakter |
 | `PATCH /api/profil` | `name` ≤ 255; `phone_number` ≤ 30; `birth_date` tanggal sebelum hari ini; `address` teks; `password` opsional min 8 + `password_confirmation` |
 | `GET /api/admin/janji-temu` | Mendukung filter query opsional `?date=YYYY-MM-DD`, `?status=`, `?type=`, dan `?doctor_id=` |
-| `PATCH /api/admin/janji-temu/{id}` | `status` salah satu `terjadwal/selesai/dibatalkan`; `doctor_notes` opsional ≤ 2000 karakter |
+| `PATCH /api/admin/janji-temu/{id}` | `status` (`terjadwal/selesai/dibatalkan`); `appointment_date`, `appointment_time`, `doctor_id` opsional (divalidasi anti-bentrok); `doctor_notes` opsional ≤ 2000 karakter; memicu notifikasi WhatsApp |
 | `POST /api/admin/jadwal-kontrol` | `user_id` wajib pengguna ber-role `pasien`; `polyclinic_id` ada; `doctor_id` aktif dan milik poli itu; `appointment_date` ≥ hari ini |
 | `POST /api/admin/poli` | `name` wajib unik; `description` opsional |
 | `POST /api/admin/dokter` | `polyclinic_id` ada; `name` wajib; `is_active` boolean opsional (default `true`) |

@@ -98,6 +98,7 @@ class DatabaseSeeder extends Seeder
                 'type' => 'janji_baru',
             ],
             [
+                'appointment_time' => '09:00',
                 'status' => 'terjadwal',
                 'complaint' => 'Pusing dan demam sejak kemarin malam.',
             ]
@@ -112,6 +113,7 @@ class DatabaseSeeder extends Seeder
                 'type' => 'janji_baru',
             ],
             [
+                'appointment_time' => '10:00',
                 'status' => 'selesai',
                 'complaint' => 'Nyeri lambung berkepanjangan.',
                 'doctor_notes' => 'Pasien didiagnosis dispepsia fungsional. Disarankan menjaga pola makan teratur dan menghindari makanan pedas/asam.',
@@ -127,6 +129,7 @@ class DatabaseSeeder extends Seeder
                 'type' => 'kontrol_rutin',
             ],
             [
+                'appointment_time' => '13:00',
                 'status' => 'terjadwal',
                 'complaint' => 'Kontrol evaluasi pengobatan lambung.',
             ]
