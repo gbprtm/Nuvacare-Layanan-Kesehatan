@@ -58,7 +58,7 @@ tmp/
 temp/
 
 # Laravel dependencies and generated outputs
-/vendor/
+# /vendor/
 /public/build/
 /public/hot
 /public/storage
