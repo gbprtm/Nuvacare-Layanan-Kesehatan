@@ -44,6 +44,12 @@ Thumbs.db
 !.vscode/launch.json
 !.vscode/extensions.json
 opencode.json
+opencode.jsonc
+
+# Local skills and agent configs
+.agents/
+.ua/
+skills-lock.json
 
 # Cache & Temporary
 .turbo

@@ -50,13 +50,13 @@ Aturan:
 
 | Gaya | Ukuran / tinggi baris | Bobot | Keluarga |
 |---|---|---|---|
-| H1 (judul halaman) | 30 / 38 | 700 | Inter, -apple-system, sans-serif |
-| H2 (judul bagian) | 22 / 30 | 600 | Inter, -apple-system, sans-serif |
-| Isi | 15 / 24 | 400 | Inter, -apple-system, sans-serif |
-| Isi kecil | 14 / 22 | 400 | Inter, -apple-system, sans-serif |
-| Label, tombol, kepala tabel | 14 / 20 | 600 | Inter, -apple-system, sans-serif |
+| H1 (judul halaman) | 32–44 / 38–52 | 700 | Plus Jakarta Sans, -apple-system, sans-serif |
+| H2 (judul bagian) | 22–30 / 30–38 | 700 | Plus Jakarta Sans, -apple-system, sans-serif |
+| Isi | 15–16 / 24–26 | 400 | DM Sans, -apple-system, sans-serif |
+| Isi kecil | 14 / 22 | 400 | DM Sans, -apple-system, sans-serif |
+| Label, tombol, kepala tabel | 14 / 20 | 600 | Plus Jakarta Sans, -apple-system, sans-serif |
 
-Font utama menggunakan **Inter** (Google Fonts dengan fallback system sans-serif). Tidak ada teks di bawah 14px. Target sentuh minimal 44×44 px. Kontras teks lolos WCAG AA (≥ 4.5:1).
+Font utama menggunakan **Plus Jakarta Sans** (judul, label tombol, brand) dan **DM Sans** (isi, ringkasan deskripsi) dengan fallback system sans-serif. Tidak ada teks di bawah 14px untuk konten utama. Target sentuh minimal 44×44 px. Kontras teks lolos WCAG AA (≥ 4.5:1).
 
 ## 4. Tata letak
 

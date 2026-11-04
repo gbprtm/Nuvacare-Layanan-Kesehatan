@@ -34,7 +34,7 @@ class AuthController extends Controller
 
         return response()->json([
             'data' => [
-                'clinic_name' => 'Klinik Sehat',
+                'clinic_name' => 'Nuvacare',
                 'description' => 'Layanan kesehatan terpercaya untuk Anda dan keluarga dengan dokter spesialis profesional.',
                 'address' => 'Jl. Kesehatan Raya No. 45, Jakarta Pusat',
                 'contact' => '+62 21 555-0199',
