@@ -18,3 +18,4 @@ if [ -n "$APP_KEY" ]; then
 fi
 
 exec apache2-foreground
+
