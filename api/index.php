@@ -1,6 +1,5 @@
 <?php
 
-// Forward Vercel requests to Laravel's entry point
 // Prepare /tmp storage and cache for Vercel serverless environment
 $storagePath = '/tmp/storage';
 $cachePath = '/tmp/cache';
@@ -44,4 +43,16 @@ putenv('VIEW_COMPILED_PATH='.$storagePath.'/framework/views');
 $_ENV['VIEW_COMPILED_PATH'] = $storagePath.'/framework/views';
 
 // Route request to Laravel's public entry
-require __DIR__.'/../public/index.php';
+try {
+    require __DIR__.'/../public/index.php';
+} catch (Throwable $e) {
+    http_response_code(500);
+    header('Content-Type: application/json');
+    echo json_encode([
+        'message' => 'Serverless Bootstrap Error',
+        'error' => $e->getMessage(),
+        'file' => $e->getFile(),
+        'line' => $e->getLine(),
+    ]);
+    exit;
+}
