@@ -1,6 +1,6 @@
 # Nuvacare - Sistem Janji Temu Poliklinik Rawat Jalan
 
-Aplikasi web untuk pencatatan dan pengelolaan janji temu rawat jalan di Nuvacare. Sistem ini menghubungkan pasien dan petugas admin klinik dalam satu alur terpadu: pendaftaran mandiri dengan verifikasi WhatsApp OTP, pemilihan jadwal dokter spesialis tanpa antrean fisik, konfirmasi notifikasi jadwal, serta pencatatan riwayat medis dan kontrol lanjutan.
+Aplikasi web kesehatan Nuvacare. Sistem ini menghubungkan pasien dan petugas admin klinik dalam satu alur terpadu: pendaftaran mandiri dengan verifikasi WhatsApp OTP, pemilihan jadwal dokter spesialis tanpa antrean fisik, konfirmasi notifikasi jadwal, serta pencatatan riwayat medis dan kontrol lanjutan.
 
 ---
 
