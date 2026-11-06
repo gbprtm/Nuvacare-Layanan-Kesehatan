@@ -1041,7 +1041,7 @@ tr:last-child td {
   font-size: 14px;
   line-height: 20px;
   background-color: #FFFFFF;
-  border: 1px solid #CBD5E1;
+  border: 1px solid var(--color-line-strong, #7A8494);
   border-radius: var(--radius-full);
   color: #0F172A;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
@@ -1128,7 +1128,7 @@ tr:last-child td {
 .btn-pill-outline {
   background-color: #FFFFFF;
   color: #0F172A;
-  border: 1px solid #CBD5E1;
+  border: 1px solid var(--color-line-strong, #7A8494);
   border-radius: var(--radius-full);
   padding: 10px 20px;
   min-height: 44px;
