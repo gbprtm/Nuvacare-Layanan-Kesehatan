@@ -22,7 +22,7 @@ class ResetPasswordNotification extends Notification
         $resetUrl = url('/reset-password.html?token='.$this->token.'&email='.urlencode($notifiable->getEmailForPasswordReset()));
 
         return (new MailMessage)
-            ->subject('Permintaan Reset Kata Sandi - Klinik Sehat')
+            ->subject('Permintaan Reset Kata Sandi - Nuvacare')
             ->line('Anda menerima email ini karena kami menerima permintaan reset kata sandi untuk akun Anda.')
             ->action('Atur Ulang Kata Sandi', $resetUrl)
             ->line('Tautan pengaturan ulang kata sandi ini akan kedaluwarsa dalam 60 menit.')

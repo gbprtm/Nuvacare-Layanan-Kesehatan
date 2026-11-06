@@ -140,17 +140,17 @@ class WhatsAppNotificationService
         $notes = trim((string) ($appointment->doctor_notes ?? ''));
 
         if ($appointment->status === 'dibatalkan' || $reasonType === 'cancelled') {
-            $text = "Halo {$patientName}, informasi dari Klinik Sehat: Janji temu Anda di {$poliName} bersama {$doctorName} pada tanggal {$dateFormatted} pukul {$timeFormatted} WIB terpaksa dibatalkan karena kendala jadwal rumah sakit.";
+            $text = "Halo {$patientName}, informasi dari Nuvacare: Janji temu Anda di {$poliName} bersama {$doctorName} pada tanggal {$dateFormatted} pukul {$timeFormatted} WIB terpaksa dibatalkan karena kendala jadwal rumah sakit.";
             if ($notes !== '') {
                 $text .= " Catatan klinik: {$notes}";
             }
-            $text .= ' Silakan memilih jadwal atau dokter pengganti melalui website Klinik Sehat.';
+            $text .= ' Silakan memilih jadwal atau dokter pengganti melalui website Nuvacare.';
 
             return $text;
         }
 
         if ($reasonType === 'rescheduled') {
-            $text = "Halo {$patientName}, informasi perubahan jadwal dari Klinik Sehat: Janji temu Anda di {$poliName} telah diperbarui menjadi tanggal {$dateFormatted} pukul {$timeFormatted} WIB bersama {$doctorName}.";
+            $text = "Halo {$patientName}, informasi perubahan jadwal dari Nuvacare: Janji temu Anda di {$poliName} telah diperbarui menjadi tanggal {$dateFormatted} pukul {$timeFormatted} WIB bersama {$doctorName}.";
             if ($notes !== '') {
                 $text .= " Catatan klinik: {$notes}";
             }
@@ -158,7 +158,7 @@ class WhatsAppNotificationService
             return $text;
         }
 
-        $text = "Halo {$patientName}, informasi janji temu Anda di Klinik Sehat ({$poliName} - {$doctorName}) pada {$dateFormatted} pukul {$timeFormatted} WIB berstatus: {$appointment->status}.";
+        $text = "Halo {$patientName}, informasi janji temu Anda di Nuvacare ({$poliName} - {$doctorName}) pada {$dateFormatted} pukul {$timeFormatted} WIB berstatus: {$appointment->status}.";
         if ($notes !== '') {
             $text .= " Catatan: {$notes}";
         }
