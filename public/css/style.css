@@ -168,6 +168,7 @@ a:hover {
   min-height: var(--tap-min);
   display: inline-flex;
   align-items: center;
+  gap: 10px;
 }
 
 .brand:hover {

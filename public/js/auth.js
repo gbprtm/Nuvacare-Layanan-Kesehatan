@@ -865,7 +865,20 @@ async function loadPublicHomepage() {
       const nameEl = document.getElementById('clinicName');
       const navNameEl = document.getElementById('navClinicName');
       if (nameEl) nameEl.textContent = info.clinic_name;
-      if (navNameEl) navNameEl.textContent = info.clinic_name;
+      if (navNameEl) {
+        const brandTextEl = navNameEl.querySelector('.brand-text');
+        if (brandTextEl) {
+          brandTextEl.textContent = info.clinic_name;
+        } else {
+          const logoMark = navNameEl.querySelector('.brand-logo-mark');
+          navNameEl.replaceChildren();
+          if (logoMark) navNameEl.appendChild(logoMark);
+          const textSpan = document.createElement('span');
+          textSpan.className = 'brand-text';
+          textSpan.textContent = info.clinic_name;
+          navNameEl.appendChild(textSpan);
+        }
+      }
     }
     if (info.description) {
       const descEl = document.getElementById('clinicDesc');
