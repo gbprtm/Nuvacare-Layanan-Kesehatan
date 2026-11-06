@@ -870,13 +870,7 @@ async function loadPublicHomepage() {
         if (brandTextEl) {
           brandTextEl.textContent = info.clinic_name;
         } else {
-          const logoMark = navNameEl.querySelector('.brand-logo-mark');
-          navNameEl.replaceChildren();
-          if (logoMark) navNameEl.appendChild(logoMark);
-          const textSpan = document.createElement('span');
-          textSpan.className = 'brand-text';
-          textSpan.textContent = info.clinic_name;
-          navNameEl.appendChild(textSpan);
+          navNameEl.textContent = info.clinic_name;
         }
       }
     }
