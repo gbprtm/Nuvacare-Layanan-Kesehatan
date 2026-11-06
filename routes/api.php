@@ -21,6 +21,9 @@ Route::middleware('throttle:15,1')->group(function () {
     Route::post('/auth/google', [AuthController::class, 'googleLogin']);
     Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
     Route::post('/reset-password', [AuthController::class, 'resetPassword']);
+    Route::post('/auth/forgot-password/send-otp', [AuthController::class, 'sendForgotPasswordOtp']);
+    Route::post('/auth/forgot-password/verify-otp', [AuthController::class, 'verifyForgotPasswordOtp']);
+    Route::post('/auth/forgot-password/reset', [AuthController::class, 'resetPasswordWithOtp']);
 });
 
 Route::middleware('auth:sanctum')->group(function () {

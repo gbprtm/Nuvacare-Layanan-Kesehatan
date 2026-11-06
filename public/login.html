@@ -1,14 +1,16 @@
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#EEF1F6">
-  <title>Masuk - Klinik Sehat</title>
+  <meta name="theme-color" content="#FFFFFF">
+  <title>Masuk - Nuvacare Layanan Kesehatan</title>
   <link rel="stylesheet" href="/css/style.css" fetchpriority="high">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=Plus+Jakarta+Sans:ital,wght@0,500..800;1,500..800&display=swap">
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=Plus+Jakarta+Sans:ital,wght@0,500..800;1,500..800&display=swap">
   <script src="/js/api.js" defer fetchpriority="high"></script>
   <script src="/js/auth.js" defer></script>
   <script type="speculationrules">
@@ -20,183 +22,725 @@
   }
   </script>
 </head>
-<body>
+
+<body class="auth-page-body">
   <a href="#main-content" class="skip-link">Langsung ke isi utama</a>
 
-  <header class="site-header">
-    <nav class="navbar" aria-label="Navigasi utama">
-      <a href="/index.html" class="brand" translate="no">
-        <span class="brand-text">Nuvacare</span>
-      </a>
-      <a href="/daftar.html" class="btn btn-secondary btn-sm">Daftar Akun</a>
-    </nav>
-  </header>
+  <main id="main-content" class="auth-page-shell">
+    <div class="auth-split-card">
 
-  <main id="main-content" class="auth-wrapper">
-    <div class="auth-split-shell">
-      <section class="auth-form-pane" aria-labelledby="loginHeading">
-        <div class="auth-header">
-          <h1 id="loginHeading">Selamat Datang Kembali</h1>
-          <p>Masuk untuk mengelola jadwal konsultasi dokter dan melihat riwayat pemeriksaan di Klinik Sehat.</p>
+      <!-- Panel Kiri: Panduan & Stepper Vertikal Informasi (Soft Pastel Blue #EFF6FF) -->
+      <aside class="auth-stepper-pane" aria-labelledby="authGuideTitle">
+        <div class="auth-stepper-pane__inner">
+
+          <!-- Brand Header (Informasi Statis, Bukan Tautan Navigasi) -->
+          <header class="auth-brand-block">
+            <div class="brand" id="navClinicName" translate="no">
+              <span class="brand-text">Nuvacare</span>
+            </div>
+            <p class="auth-brand-tagline">Layanan Kesehatan Terpadu</p>
+          </header>
+
+          <!-- Judul Panduan Akses -->
+          <section class="auth-guide-section">
+            <span class="auth-guide-eyebrow">Panduan Akses</span>
+            <h2 id="authGuideTitle" class="auth-guide-title">Tahapan Akses Pasien</h2>
+            <p class="auth-guide-desc">Sistem verifikasi data rekam medis terpadu dan aman.</p>
+            <div class="auth-stage-badge" id="sidebarStageCaption">
+              Langkah 1 dari 3: Kredensial &amp; Akun
+            </div>
+          </section>
+
+          <!-- Stepper Vertikal 3 Langkah (Informasi Alur, Non-Klik) -->
+          <nav class="auth-stepper-nav" aria-label="Alur langkah autentikasi">
+            <ol class="auth-stepper-steps">
+              <!-- Langkah 1 -->
+              <li class="auth-step-item auth-step-item--active" id="stepperStep1" data-step="1">
+                <div class="auth-step-marker" aria-hidden="true">
+                  <span class="auth-step-number">1</span>
+                </div>
+                <div class="auth-step-text">
+                  <strong class="auth-step-label">Akun &amp; Kredensial</strong>
+                  <p class="auth-step-detail">Masukkan email dan kata sandi atau gunakan akses cepat SSO Google.</p>
+                </div>
+              </li>
+
+              <!-- Langkah 2 -->
+              <li class="auth-step-item" id="stepperStep2" data-step="2">
+                <div class="auth-step-marker" aria-hidden="true">
+                  <span class="auth-step-number">2</span>
+                </div>
+                <div class="auth-step-text">
+                  <strong class="auth-step-label">Tautkan Nomor WhatsApp</strong>
+                  <p class="auth-step-detail">Hubungkan nomor aktif untuk pengingat jadwal dan antrean poliklinik.</p>
+                </div>
+              </li>
+
+              <!-- Langkah 3 -->
+              <li class="auth-step-item" id="stepperStep3" data-step="3">
+                <div class="auth-step-marker" aria-hidden="true">
+                  <span class="auth-step-number">3</span>
+                </div>
+                <div class="auth-step-text">
+                  <strong class="auth-step-label">Verifikasi Kode OTP</strong>
+                  <p class="auth-step-detail">Masukkan 4 digit kode keamanan yang dikirimkan ke WhatsApp Anda.</p>
+                </div>
+              </li>
+            </ol>
+          </nav>
+
+          <!-- Footer Panel Kiri: Informasi Keamanan (Bukan Tautan Navigasi) -->
+          <footer class="auth-aside-footer">
+            <div class="auth-aside-info-note">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+              </svg>
+              <span>Data Rekam Medis Terenkripsi &amp; Aman</span>
+            </div>
+          </footer>
+
         </div>
+      </aside>
 
-        <div id="loginAlert" class="alert alert-danger" role="alert" aria-live="polite"></div>
+      <!-- Panel Kanan: Canvas Formulir Autentikasi (#FFFFFF) -->
+      <section class="auth-canvas-pane" aria-labelledby="loginHeading">
+        <div class="auth-canvas-pane__inner">
 
-        <form id="loginForm" novalidate>
-          <div class="form-group">
-            <label class="form-label" for="email">Alamat Email</label>
-            <input type="email" id="email" name="email" class="form-input" required autocomplete="email" spellcheck="false" placeholder="nama@email.com…">
-          </div>
+          <!-- Top Navigation & Stage Switcher (Tombol Kembali Utama Tunggal) -->
+          <nav class="auth-canvas-top-nav" aria-label="Navigasi tahap">
+            <a href="/index.html" class="auth-top-back-btn" id="btnTopBack">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <line x1="19" y1="12" x2="5" y2="12"></line>
+                <polyline points="12 19 5 12 12 5"></polyline>
+              </svg>
+              <span>Kembali</span>
+            </a>
 
-          <div class="form-group">
-            <label class="form-label" for="password">Kata Sandi</label>
-            <div class="input-password-wrap">
-              <input type="password" id="password" name="password" class="form-input" required autocomplete="current-password" placeholder="Masukkan kata sandi…">
-              <button type="button" class="password-toggle-btn" data-toggle-password="password" aria-label="Tampilkan kata sandi" aria-pressed="false">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                  <circle cx="12" cy="12" r="3"></circle>
-                </svg>
+            <!-- Tab Pills 3 Tahap (Tahap Berikutnya Disabled sampai Tahap Sebelumnya Selesai) -->
+            <div class="auth-stage-tabs" role="tablist" aria-label="Pilihan tahap autentikasi">
+              <button type="button" role="tab" id="tabBtn1" class="auth-stage-tab auth-stage-tab--active"
+                aria-selected="true" aria-controls="stagePanel1" onclick="switchAuthStage(1)">
+                Tahap 1: Login
+              </button>
+              <button type="button" role="tab" id="tabBtn2" class="auth-stage-tab" aria-selected="false"
+                aria-controls="stagePanel2" disabled aria-disabled="true" onclick="switchAuthStage(2)">
+                Tahap 2: Nomor WhatsApp
+              </button>
+              <button type="button" role="tab" id="tabBtn3" class="auth-stage-tab" aria-selected="false"
+                aria-controls="stagePanel3" disabled aria-disabled="true" onclick="switchAuthStage(3)">
+                Tahap 3: Verifikasi OTP
               </button>
             </div>
-            <div class="forgot-link-row">
-              <a href="/lupa-password.html">Lupa kata sandi?</a>
+          </nav>
+
+          <!-- Konten Tahap 1: Form Login (Default & Aktif) -->
+          <div class="auth-stage-container" id="stagePanel1" role="tabpanel" aria-labelledby="tabBtn1">
+
+            <header class="auth-form-header">
+              <div class="auth-brand-badge">
+                <span class="brand auth-brand-logo" translate="no"><span class="brand-text">Nuvacare</span></span>
+                <p class="auth-brand-badge__sub">Website Layanan Kesehatan</p>
+              </div>
+              <h1 id="loginHeading" class="auth-form-title">Masuk ke Akun Pasien</h1>
+              <p class="auth-form-subtitle">Masukkan kredensial Anda untuk mengakses layanan Nuvacare.</p>
+            </header>
+
+            <div id="loginAlert" class="alert alert-danger" role="alert" aria-live="polite"></div>
+
+            <form id="loginForm" novalidate>
+              <!-- Email / No. RM -->
+              <div class="form-group">
+                <label class="form-label" for="email">
+                  Masukkan Email <span class="required-indicator" aria-hidden="true">*</span>
+                </label>
+                <div class="input-with-icon">
+                  <svg class="input-prefix-icon" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                    aria-hidden="true">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                    <polyline points="22,6 12,13 2,6"></polyline>
+                  </svg>
+                  <input type="text" id="email" name="email" class="form-input" required autocomplete="username"
+                    spellcheck="false" placeholder="nama@email.com atau 00-12-34">
+                </div>
+              </div>
+
+              <!-- Kata Sandi -->
+              <div class="form-group">
+                <div class="form-label-row">
+                  <label class="form-label" for="password">
+                    Kata Sandi <span class="required-indicator" aria-hidden="true">*</span>
+                  </label>
+                  <a href="/lupa-password.html" class="auth-inline-link">Lupa kata sandi?</a>
+                </div>
+                <div class="input-with-icon input-password-wrap">
+                  <svg class="input-prefix-icon" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                    aria-hidden="true">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                  </svg>
+                  <input type="password" id="password" name="password" class="form-input" required
+                    autocomplete="current-password" placeholder="••••••••">
+                  <button type="button" class="password-toggle-btn" data-toggle-password="password"
+                    aria-label="Tampilkan kata sandi" aria-pressed="false">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                      stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                      <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Ingat Saya -->
+              <div class="form-group form-options-row">
+                <label class="checkbox-inline" for="rememberMe">
+                  <input type="checkbox" id="rememberMe" name="remember" class="form-checkbox">
+                  <span>Ingat Saya</span>
+                </label>
+              </div>
+
+              <!-- Tombol CTA Utama (Dimulai Dalam Kondisi Disabled sampai Input Terisi Lengkap) -->
+              <button type="submit" id="submitBtn" class="btn btn-primary btn-block btn-pill auth-cta-btn" disabled>
+                <span>Login &amp; Lanjutkan</span>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                  stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                  <polyline points="12 5 19 12 12 19"></polyline>
+                </svg>
+              </button>
+            </form>
+
+            <!-- Pemisah Garis Halus -->
+            <div class="auth-divider" role="separator" aria-label="Atau masuk dengan">
+              <span>ATAU MASUK DENGAN</span>
             </div>
+
+            <!-- Tombol SSO Google Berbentuk Pil -->
+            <div class="auth-sso-wrap" id="googleSignInContainer">
+              <button type="button" id="googleAuthBtn" class="btn btn-sso-pill">
+                <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+                  <path fill="#EA4335"
+                    d="M12 10.2v3.9h5.5c-.2 1.3-1.5 3.8-5.5 3.8-3.3 0-6-2.7-6-6s2.7-6 6-6c1.9 0 3.1.8 3.8 1.5l2.6-2.5C16.8 3.4 14.6 2.5 12 2.5 6.8 2.5 2.5 6.8 2.5 12s4.3 9.5 9.5 9.5c5.5 0 9.1-3.8 9.1-9.2 0-.6-.1-1.1-.2-1.6H12z" />
+                  <path fill="#34A853"
+                    d="M3.6 7.4l3.2 2.4C7.7 7.8 9.7 6 12 6c1.9 0 3.1.8 3.8 1.5l2.6-2.5C16.8 3.4 14.6 2.5 12 2.5 8.3 2.5 5.1 4.6 3.6 7.4z" />
+                  <path fill="#FBBC05"
+                    d="M12 21.5c2.5 0 4.7-.8 6.3-2.3l-2.9-2.4c-.8.6-1.9 1.1-3.4 1.1-3.9 0-5.2-2.5-5.5-3.8l-3.2 2.5c1.5 3 4.8 4.9 8.7 4.9z" />
+                  <path fill="#4285F4"
+                    d="M21.1 12.3c0-.6-.1-1.1-.2-1.6H12v3.9h5.5c-.3 1.3-1.1 2.4-2.1 3.1l2.9 2.4c1.7-1.6 2.8-4 2.8-7.8z" />
+                </svg>
+                <span>Lanjutkan dengan Google</span>
+              </button>
+            </div>
+
+            <!-- Tautan Pendaftaran -->
+            <footer class="auth-form-footer">
+              <p>Belum memiliki akun? <a href="/daftar.html" class="auth-link-bold">Daftar akun baru</a></p>
+            </footer>
+
           </div>
 
-          <button type="submit" id="submitBtn" class="btn btn-primary btn-block btn-pill mt-2">Masuk</button>
-        </form>
+          <!-- Konten Tahap 2: Tautkan WhatsApp (Interaktif dengan Validasi Ketat) -->
+          <div class="auth-stage-container auth-stage-container--hidden" id="stagePanel2" role="tabpanel"
+            aria-labelledby="tabBtn2">
+            <header class="auth-form-header">
+              <div class="auth-stage-icon-badge" aria-hidden="true">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                </svg>
+              </div>
+              <h2 class="auth-form-title">Tautkan Nomor WhatsApp</h2>
+              <p class="auth-form-subtitle">Dapatkan pengingat jadwal konsultasi dan nomor antrean poliklinik langsung
+                di pesan WhatsApp Anda.</p>
+            </header>
 
-        <div class="auth-divider" role="separator" aria-label="Atau lanjutkan dengan">atau lanjutkan dengan</div>
+            <div id="stagePhoneAlert" class="alert alert-danger" role="alert" aria-live="polite"></div>
 
-        <div id="googleSignInContainer">
-          <button type="button" id="googleAuthBtn" class="btn btn-google">
-            <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-              <path fill="#EA4335" d="M12 10.2v3.9h5.5c-.2 1.3-1.5 3.8-5.5 3.8-3.3 0-6-2.7-6-6s2.7-6 6-6c1.9 0 3.1.8 3.8 1.5l2.6-2.5C16.8 3.4 14.6 2.5 12 2.5 6.8 2.5 2.5 6.8 2.5 12s4.3 9.5 9.5 9.5c5.5 0 9.1-3.8 9.1-9.2 0-.6-.1-1.1-.2-1.6H12z"/>
-              <path fill="#34A853" d="M3.6 7.4l3.2 2.4C7.7 7.8 9.7 6 12 6c1.9 0 3.1.8 3.8 1.5l2.6-2.5C16.8 3.4 14.6 2.5 12 2.5 8.3 2.5 5.1 4.6 3.6 7.4z"/>
-              <path fill="#FBBC05" d="M12 21.5c2.5 0 4.7-.8 6.3-2.3l-2.9-2.4c-.8.6-1.9 1.1-3.4 1.1-3.9 0-5.2-2.5-5.5-3.8l-3.2 2.5c1.5 3 4.8 4.9 8.7 4.9z"/>
-              <path fill="#4285F4" d="M21.1 12.3c0-.6-.1-1.1-.2-1.6H12v3.9h5.5c-.3 1.3-1.1 2.4-2.1 3.1l2.9 2.4c1.7-1.6 2.8-4 2.8-7.8z"/>
-            </svg>
-            <span>Lanjutkan dengan Google</span>
-          </button>
-        </div>
+            <form id="stagePhoneForm" novalidate>
+              <div class="form-group">
+                <label class="form-label" for="stagePhoneInput">
+                  Nomor WhatsApp Aktif <span class="required-indicator" aria-hidden="true">*</span>
+                </label>
+                <div class="input-with-icon">
+                  <div class="input-prefix-pill" aria-hidden="true">
+                    <span>🇮🇩</span> <span>+62</span>
+                  </div>
+                  <input type="tel" id="stagePhoneInput" name="phone_number" class="form-input form-input-with-pill"
+                    required inputmode="tel" autocomplete="tel" placeholder="812-xxxx-xxxx">
+                </div>
+                <p class="form-help-text text-muted text-xs mt-1">Masukkan minimal 9 hingga 13 digit angka.</p>
+              </div>
 
-        <div class="auth-footer-note">
-          <p>Belum punya akun pasien? <a href="/daftar.html">Daftar sekarang</a></p>
-          <p class="mt-2"><a href="/index.html" class="text-muted">Kembali ke Beranda</a></p>
+              <article class="auth-info-card">
+                <div class="auth-info-card__icon" aria-hidden="true">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                  </svg>
+                </div>
+                <div class="auth-info-card__content">
+                  <strong class="auth-info-card__title">Pengiriman Notifikasi</strong>
+                  <p class="auth-info-card__desc">Nomor WhatsApp digunakan untuk mengirimkan kode OTP dan konfirmasi
+                    jadwal konsultasi resmi Nuvacare.</p>
+                </div>
+              </article>
+
+              <div class="auth-stage-actions">
+                <button type="button" class="btn btn-secondary btn-pill" onclick="switchAuthStage(1)">Kembali ke
+                  Login</button>
+                <button type="submit" id="btnSendStageOtp" class="btn btn-primary btn-pill auth-cta-btn" disabled>
+                  <span>Kirim Kode OTP</span>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                    <polyline points="12 5 19 12 12 19"></polyline>
+                  </svg>
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Konten Tahap 3: Verifikasi OTP (Interaktif dengan Validasi Ketat 4 Digit) -->
+          <div class="auth-stage-container auth-stage-container--hidden" id="stagePanel3" role="tabpanel"
+            aria-labelledby="tabBtn3">
+            <header class="auth-form-header">
+              <div class="auth-stage-icon-badge" aria-hidden="true">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                </svg>
+              </div>
+              <h2 class="auth-form-title">Verifikasi Kode OTP</h2>
+              <p class="auth-form-subtitle">Masukkan 4 digit kode keamanan yang dikirimkan ke nomor WhatsApp <strong
+                  id="stageOtpPhoneDisplay">+62 -</strong>.</p>
+            </header>
+
+            <div id="stageOtpAlert" class="alert alert-danger" role="alert" aria-live="polite"></div>
+            <div id="stageOtpDevNotice" class="alert alert-info" role="status"></div>
+
+            <form id="stageOtpForm" novalidate>
+              <div class="stage-otp-row otp-digit-group" role="group" aria-label="4 digit kode OTP">
+                <input type="text" class="otp-digit-input stage-otp-input" inputmode="numeric" pattern="[0-9]*"
+                  maxlength="1" autocomplete="one-time-code" aria-label="Digit ke-1" data-index="0">
+                <input type="text" class="otp-digit-input stage-otp-input" inputmode="numeric" pattern="[0-9]*"
+                  maxlength="1" aria-label="Digit ke-2" data-index="1">
+                <input type="text" class="otp-digit-input stage-otp-input" inputmode="numeric" pattern="[0-9]*"
+                  maxlength="1" aria-label="Digit ke-3" data-index="2">
+                <input type="text" class="otp-digit-input stage-otp-input" inputmode="numeric" pattern="[0-9]*"
+                  maxlength="1" aria-label="Digit ke-4" data-index="3">
+              </div>
+
+              <div class="flex-between mb-4">
+                <span id="stageOtpCountdownText" class="text-sm text-muted">Berlaku selama 05:00</span>
+                <button type="button" id="stageOtpResendBtn" class="btn btn-secondary btn-sm" disabled>Kirim Ulang
+                  (60d)</button>
+              </div>
+
+              <div class="auth-stage-actions">
+                <button type="button" class="btn btn-secondary btn-pill" onclick="switchAuthStage(2)">Ubah
+                  Nomor</button>
+                <button type="submit" id="btnVerifyStageOtp" class="btn btn-primary btn-pill auth-cta-btn" disabled>
+                  <span>Verifikasi &amp; Masuk Dashboard</span>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                  </svg>
+                </button>
+              </div>
+            </form>
+          </div>
+
         </div>
       </section>
 
-      <aside class="auth-visual-pane" aria-label="Informasi layanan janji temu">
-        <div class="auth-illustration-stage">
-          <img src="/images/auth-illustration.svg" alt="Ilustrasi janji temu poliklinik dan notifikasi WhatsApp" class="auth-illustration-svg" width="240" height="180" fetchpriority="high">
-
-          <div class="auth-floating-card">
-            <div class="auth-floating-card__title">Janji Temu Poliklinik</div>
-            <div class="auth-floating-card__meta">Notifikasi &amp; OTP via WhatsApp</div>
-            <div class="auth-floating-card__row">
-              <span class="badge badge-terjadwal">Terjadwal</span>
-              <span class="badge badge-selesai">OTP Aktif</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="auth-step-dots" aria-hidden="true">
-          <span class="auth-step-dot"></span>
-          <span class="auth-step-dot"></span>
-          <span class="auth-step-dot auth-step-dot--active"></span>
-        </div>
-
-        <div class="auth-visual-caption">
-          <h2>Atur jadwal konsultasi lebih mudah dan terorganisir bersama Klinik Sehat</h2>
-          <p>Pilih jam praktik yang tersedia dan terima pemberitahuan perubahan jadwal langsung di WhatsApp Anda.</p>
-        </div>
-      </aside>
     </div>
   </main>
 
-  <footer class="container" style="margin-top: 0; margin-bottom: var(--space-6); flex: 0;">
-    <p class="text-sm text-muted text-center">Klinik Sehat. Layanan janji temu poliklinik rawat jalan.</p>
-  </footer>
-
-  <!-- Modal Pengaturan Nomor WhatsApp (Untuk Pengguna Login Google yang Belum Verifikasi WA) -->
-  <div id="googlePhoneModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="googlePhoneTitle">
-    <div class="modal-content">
-      <h2 id="googlePhoneTitle">Atur Nomor WhatsApp Aktif</h2>
-      <p class="text-sm text-muted mb-4">Akun Google Anda berhasil terhubung. Masukkan nomor WhatsApp aktif untuk menerima kode OTP verifikasi dan pemberitahuan jadwal dokter.</p>
-
-      <div id="googlePhoneAlert" class="alert" role="alert" aria-live="polite"></div>
-
-      <form id="googlePhoneForm" novalidate>
-        <div class="form-group">
-          <label class="form-label" for="googlePhoneInput">Nomor Telepon / WhatsApp</label>
-          <input type="tel" id="googlePhoneInput" name="phone_number" class="form-input" required inputmode="tel" autocomplete="tel" placeholder="0812xxxxxxxx…">
-        </div>
-
-        <div style="display: flex; gap: var(--space-3); justify-content: flex-end; margin-top: var(--space-6);">
-          <button type="button" id="cancelGooglePhoneBtn" class="btn btn-secondary">Keluar Akun</button>
-          <button type="submit" id="sendGooglePhoneOtpBtn" class="btn btn-primary btn-pill">Kirim Kode OTP</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- Modal Verifikasi Kode OTP 6 Digit -->
-  <div id="otpVerifyModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="otpVerifyTitle">
-    <div class="modal-content">
-      <h2 id="otpVerifyTitle">Verifikasi Kode OTP WhatsApp</h2>
-      <p class="text-sm text-muted mb-2">Masukkan 6 digit kode OTP yang telah kami kirimkan ke WhatsApp <strong id="otpMaskedPhone">-</strong>.</p>
-
-      <div id="otpVerifyAlert" class="alert" role="alert" aria-live="polite"></div>
-
-      <form id="otpVerifyForm" novalidate>
-        <div class="otp-digit-group" role="group" aria-label="6 digit kode OTP">
-          <input type="text" class="otp-digit-input" inputmode="numeric" pattern="[0-9]*" maxlength="1" autocomplete="one-time-code" aria-label="Digit ke-1 kode OTP" data-otp-index="0">
-          <input type="text" class="otp-digit-input" inputmode="numeric" pattern="[0-9]*" maxlength="1" aria-label="Digit ke-2 kode OTP" data-otp-index="1">
-          <input type="text" class="otp-digit-input" inputmode="numeric" pattern="[0-9]*" maxlength="1" aria-label="Digit ke-3 kode OTP" data-otp-index="2">
-          <input type="text" class="otp-digit-input" inputmode="numeric" pattern="[0-9]*" maxlength="1" aria-label="Digit ke-4 kode OTP" data-otp-index="3">
-          <input type="text" class="otp-digit-input" inputmode="numeric" pattern="[0-9]*" maxlength="1" aria-label="Digit ke-5 kode OTP" data-otp-index="4">
-          <input type="text" class="otp-digit-input" inputmode="numeric" pattern="[0-9]*" maxlength="1" aria-label="Digit ke-6 kode OTP" data-otp-index="5">
-        </div>
-
-        <div class="flex-between mb-4">
-          <span id="otpCountdownText" class="text-sm text-muted">Berlaku selama 05:00</span>
-          <button type="button" id="otpResendBtn" class="btn btn-secondary btn-sm" disabled>Kirim Ulang (60d)</button>
-        </div>
-
-        <div style="display: flex; gap: var(--space-3); justify-content: flex-end; margin-top: var(--space-4);">
-          <button type="button" id="otpChangeNumberBtn" class="btn btn-secondary">Ubah Nomor</button>
-          <button type="submit" id="otpVerifySubmitBtn" class="btn btn-primary btn-pill">Verifikasi &amp; Lanjutkan</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- Modal Masuk dengan Akun Google (Digunakan saat pengujian lokal atau jika Client ID belum diatur) -->
-  <div id="googleAccountModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="googleAccountTitle">
+  <!-- Modal Masuk dengan Akun Google (Pengujian lokal atau fallback) -->
+  <div id="googleAccountModal" class="modal-backdrop" role="dialog" aria-modal="true"
+    aria-labelledby="googleAccountTitle">
     <div class="modal-content">
       <h2 id="googleAccountTitle">Masuk dengan Akun Google</h2>
-      <p class="text-sm text-muted mb-4">Masukkan alamat Gmail dan nama tampilan Anda untuk melanjutkan autentikasi Google di Klinik Sehat.</p>
+      <p class="text-sm text-muted mb-4">Masukkan alamat Gmail dan nama tampilan Anda untuk melanjutkan autentikasi
+        Google di Nuvacare.</p>
 
       <div id="googleAccountAlert" class="alert alert-danger" role="alert" aria-live="polite"></div>
 
       <form id="googleAccountForm" novalidate>
         <div class="form-group">
           <label class="form-label" for="googleModalEmail">Alamat Email Google (Gmail)</label>
-          <input type="email" id="googleModalEmail" class="form-input" required autocomplete="email" placeholder="nama.anda@gmail.com…">
+          <input type="email" id="googleModalEmail" class="form-input" required autocomplete="email"
+            placeholder="nama.anda@gmail.com…">
         </div>
 
         <div class="form-group">
           <label class="form-label" for="googleModalName">Nama Lengkap Profil</label>
-          <input type="text" id="googleModalName" class="form-input" required autocomplete="name" placeholder="Nama lengkap sesuai akun Google…">
+          <input type="text" id="googleModalName" class="form-input" required autocomplete="name"
+            placeholder="Nama lengkap sesuai akun Google…">
         </div>
 
         <div style="display: flex; gap: var(--space-3); justify-content: flex-end; margin-top: var(--space-6);">
           <button type="button" id="closeGoogleAccountBtn" class="btn btn-secondary">Batal</button>
-          <button type="submit" id="submitGoogleAccountBtn" class="btn btn-primary btn-pill">Lanjutkan dengan Google</button>
+          <button type="submit" id="submitGoogleAccountBtn" class="btn btn-primary btn-pill">Lanjutkan dengan
+            Google</button>
         </div>
       </form>
     </div>
   </div>
+
+  <script>
+    // State Navigasi Tahapan Terkunci (Sequential Enforcement)
+    let maxUnlockedStage = 1;
+    let currentStage = 1;
+    let activeUserPhone = '';
+
+    function canAccessStage(stageNum) {
+      return stageNum <= maxUnlockedStage;
+    }
+
+    function unlockStage(stageNum) {
+      if (stageNum > maxUnlockedStage) {
+        maxUnlockedStage = stageNum;
+      }
+      const tabBtn = document.getElementById('tabBtn' + stageNum);
+      if (tabBtn) {
+        tabBtn.disabled = false;
+        tabBtn.removeAttribute('aria-disabled');
+      }
+    }
+
+    function switchAuthStage(stageNum) {
+      // Pembatasan Ketat: Pengguna dilarang melewati tahapan yang belum selesai
+      if (!canAccessStage(stageNum)) {
+        return false;
+      }
+
+      currentStage = stageNum;
+      const stages = [1, 2, 3];
+      const captionMap = {
+        1: 'Langkah 1 dari 3: Kredensial & Akun',
+        2: 'Langkah 2 dari 3: Tautkan WhatsApp',
+        3: 'Langkah 3 dari 3: Verifikasi Kode OTP'
+      };
+
+      stages.forEach(function (num) {
+        const panel = document.getElementById('stagePanel' + num);
+        const tabBtn = document.getElementById('tabBtn' + num);
+        const stepItem = document.getElementById('stepperStep' + num);
+
+        if (num === stageNum) {
+          if (panel) panel.classList.remove('auth-stage-container--hidden');
+          if (tabBtn) {
+            tabBtn.classList.add('auth-stage-tab--active');
+            tabBtn.setAttribute('aria-selected', 'true');
+          }
+          if (stepItem) {
+            stepItem.className = 'auth-step-item auth-step-item--active';
+            stepItem.setAttribute('aria-current', 'step');
+          }
+        } else if (num < stageNum) {
+          if (panel) panel.classList.add('auth-stage-container--hidden');
+          if (tabBtn) {
+            tabBtn.classList.remove('auth-stage-tab--active');
+            tabBtn.setAttribute('aria-selected', 'false');
+          }
+          if (stepItem) {
+            stepItem.className = 'auth-step-item auth-step-item--completed';
+            stepItem.removeAttribute('aria-current');
+          }
+        } else {
+          if (panel) panel.classList.add('auth-stage-container--hidden');
+          if (tabBtn) {
+            tabBtn.classList.remove('auth-stage-tab--active');
+            tabBtn.setAttribute('aria-selected', 'false');
+          }
+          if (stepItem) {
+            stepItem.className = 'auth-step-item';
+            stepItem.removeAttribute('aria-current');
+          }
+        }
+      });
+
+      const captionEl = document.getElementById('sidebarStageCaption');
+      if (captionEl && captionMap[stageNum]) {
+        captionEl.textContent = captionMap[stageNum];
+      }
+
+      // Auto-focus elemen pertama pada tahap aktif
+      if (stageNum === 2) {
+        const phoneInput = document.getElementById('stagePhoneInput');
+        if (phoneInput) setTimeout(() => phoneInput.focus(), 60);
+      } else if (stageNum === 3) {
+        const firstOtp = document.querySelector('.stage-otp-input[data-index="0"]');
+        if (firstOtp) setTimeout(() => firstOtp.focus(), 60);
+      }
+      return true;
+    }
+
+    // =========================================================================
+    // VALIDASI REAKTIF TAHAP 1: FORM LOGIN
+    // =========================================================================
+    function checkLoginValidity() {
+      const emailInput = document.getElementById('email');
+      const passwordInput = document.getElementById('password');
+      const submitBtn = document.getElementById('submitBtn');
+      if (!emailInput || !passwordInput || !submitBtn) return;
+
+      const emailVal = emailInput.value.trim();
+      const passVal = passwordInput.value;
+
+      // Persyaratan Tahap 1: Email/No. RM minimal 3 karakter dan kata sandi minimal 6 karakter
+      const isValid = emailVal.length >= 3 && passVal.length >= 6;
+      submitBtn.disabled = !isValid;
+    }
+
+    // =========================================================================
+    // VALIDASI REAKTIF TAHAP 2: NOMOR WHATSAPP
+    // =========================================================================
+    function cleanPhoneNumber(val) {
+      return val.replace(/[^0-9]/g, '');
+    }
+
+    function maskPhoneNumber(phone) {
+      if (!phone) return '+62 -';
+      const clean = String(phone).replace(/\D/g, '');
+      if (clean.length <= 6) return phone;
+      if (clean.startsWith('62')) {
+        return `+62 ${clean.slice(2, 5)}-••••-${clean.slice(-3)}`;
+      }
+      return `${clean.slice(0, 4)}-••••-${clean.slice(-3)}`;
+    }
+
+    function checkStagePhoneValidity() {
+      const phoneInput = document.getElementById('stagePhoneInput');
+      const sendBtn = document.getElementById('btnSendStageOtp');
+      if (!phoneInput || !sendBtn) return;
+
+      const raw = phoneInput.value.trim();
+      const digits = cleanPhoneNumber(raw);
+
+      // Nomor Indonesia: 9 sampai 14 digit angka
+      const isValid = digits.length >= 9 && digits.length <= 14;
+      sendBtn.disabled = !isValid;
+    }
+
+    // =========================================================================
+    // VALIDASI REAKTIF TAHAP 3: 4 DIGIT KODE OTP
+    // =========================================================================
+    function getStageOtpCode() {
+      const inputs = document.querySelectorAll('.stage-otp-input');
+      let code = '';
+      inputs.forEach(input => {
+        code += (input.value || '').trim();
+      });
+      return code;
+    }
+
+    function checkStageOtpValidity() {
+      const verifyBtn = document.getElementById('btnVerifyStageOtp');
+      if (!verifyBtn) return;
+
+      const code = getStageOtpCode();
+      verifyBtn.disabled = (code.length !== 4);
+    }
+
+    // Integrasi Global dengan auth.js
+    window.unlockAndGoToStage = function (stageNum, phone, expiresIn, resendIn, debugOtp, whatsappUrl, sentViaGateway) {
+      if (phone) {
+        activeUserPhone = phone;
+        const stagePhoneInput = document.getElementById('stagePhoneInput');
+        if (stagePhoneInput) {
+          stagePhoneInput.value = phone.replace(/^\+?62/, '').replace(/^0/, '');
+          checkStagePhoneValidity();
+        }
+        const displayEl = document.getElementById('stageOtpPhoneDisplay');
+        if (displayEl) displayEl.textContent = maskPhoneNumber(phone);
+      }
+      const devNotice = document.getElementById('stageOtpDevNotice');
+      if (devNotice) {
+        if (debugOtp) {
+          devNotice.textContent = `Mode Uji/Lokal: Kode OTP Anda adalah ${debugOtp}`;
+          devNotice.style.display = 'block';
+        } else if (whatsappUrl && sentViaGateway === false) {
+          devNotice.innerHTML = `Gateway WhatsApp belum terhubung. Anda dapat <a href="${whatsappUrl}" target="_blank" rel="noopener noreferrer" style="text-decoration: underline; font-weight: 600;">mengirim pesan verifikasi secara manual melalui tautan WhatsApp ini</a>.`;
+          devNotice.style.display = 'block';
+        } else {
+          devNotice.style.display = 'none';
+        }
+      }
+      unlockStage(stageNum);
+      switchAuthStage(stageNum);
+    };
+
+    document.addEventListener('DOMContentLoaded', function () {
+      // Inisialisasi status tombol
+      checkLoginValidity();
+      checkStagePhoneValidity();
+      checkStageOtpValidity();
+
+      // Listener Input Tahap 1
+      const emailInput = document.getElementById('email');
+      const passwordInput = document.getElementById('password');
+      if (emailInput) {
+        emailInput.addEventListener('input', checkLoginValidity);
+        emailInput.addEventListener('change', checkLoginValidity);
+      }
+      if (passwordInput) {
+        passwordInput.addEventListener('input', checkLoginValidity);
+        passwordInput.addEventListener('change', checkLoginValidity);
+      }
+
+      // Listener Input Tahap 2
+      const stagePhoneInput = document.getElementById('stagePhoneInput');
+      if (stagePhoneInput) {
+        stagePhoneInput.addEventListener('input', checkStagePhoneValidity);
+        stagePhoneInput.addEventListener('change', checkStagePhoneValidity);
+      }
+
+      // Handler Submit Tahap 2
+      const stagePhoneForm = document.getElementById('stagePhoneForm');
+      if (stagePhoneForm) {
+        stagePhoneForm.addEventListener('submit', async function (e) {
+          e.preventDefault();
+          const sendBtn = document.getElementById('btnSendStageOtp');
+          const alertEl = document.getElementById('stagePhoneAlert');
+          if (alertEl) {
+            alertEl.style.display = 'none';
+            alertEl.textContent = '';
+          }
+
+          const rawPhone = stagePhoneInput.value.trim();
+          let clean = cleanPhoneNumber(rawPhone);
+          if (clean.startsWith('0')) clean = clean.substring(1);
+          const fullPhone = '+62' + clean;
+
+          try {
+            sendBtn.disabled = true;
+            sendBtn.textContent = 'Mengirim OTP…';
+
+            if (typeof api !== 'undefined' && api.request) {
+              const res = await api.request('/auth/phone/send-otp', {
+                method: 'POST',
+                body: JSON.stringify({ phone_number: fullPhone })
+              });
+
+              const devNotice = document.getElementById('stageOtpDevNotice');
+              if (devNotice) {
+                if (res.data?.debug_otp) {
+                  devNotice.textContent = `Mode Uji/Lokal: Kode OTP Anda adalah ${res.data.debug_otp}`;
+                  devNotice.style.display = 'block';
+                } else if (res.data?.whatsapp_url && res.data?.sent_via_gateway === false) {
+                  devNotice.innerHTML = `Gateway WhatsApp belum terhubung. Anda dapat <a href="${res.data.whatsapp_url}" target="_blank" rel="noopener noreferrer" style="text-decoration: underline; font-weight: 600;">mengirim pesan verifikasi secara manual melalui tautan WhatsApp ini</a>.`;
+                  devNotice.style.display = 'block';
+                } else {
+                  devNotice.style.display = 'none';
+                }
+              }
+            }
+
+            activeUserPhone = fullPhone;
+            const displayEl = document.getElementById('stageOtpPhoneDisplay');
+            if (displayEl) displayEl.textContent = maskPhoneNumber(fullPhone);
+
+            // Tahap 2 Berhasil -> Buka & Masuk Tahap 3
+            unlockStage(3);
+            switchAuthStage(3);
+          } catch (err) {
+            if (alertEl) {
+              alertEl.textContent = err.errors?.phone_number?.[0] || err.message || 'Gagal mengirim kode OTP. Periksa nomor Anda.';
+              alertEl.style.display = 'block';
+            }
+          } finally {
+            sendBtn.disabled = false;
+            sendBtn.innerHTML = '<span>Kirim Kode OTP</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>';
+            checkStagePhoneValidity();
+          }
+        });
+      }
+
+      // Listener & Keyboard Auto-Advancement Tahap 3
+      const otpInputs = document.querySelectorAll('.stage-otp-input');
+      otpInputs.forEach(function (input, idx) {
+        input.addEventListener('input', function (e) {
+          input.value = input.value.replace(/[^0-9]/g, '');
+          if (input.value && idx < otpInputs.length - 1) {
+            otpInputs[idx + 1].focus();
+          }
+          checkStageOtpValidity();
+        });
+
+        input.addEventListener('keydown', function (e) {
+          if (e.key === 'Backspace' && !input.value && idx > 0) {
+            otpInputs[idx - 1].focus();
+          }
+        });
+
+        input.addEventListener('paste', function (e) {
+          e.preventDefault();
+          const pasteData = (e.clipboardData || window.clipboardData).getData('text').trim();
+          const digits = cleanPhoneNumber(pasteData).slice(0, 4);
+          digits.split('').forEach(function (digit, i) {
+            if (otpInputs[i]) otpInputs[i].value = digit;
+          });
+          const nextIndex = Math.min(digits.length, otpInputs.length - 1);
+          otpInputs[nextIndex].focus();
+          checkStageOtpValidity();
+        });
+      });
+
+      // Handler Submit Tahap 3
+      const stageOtpForm = document.getElementById('stageOtpForm');
+      if (stageOtpForm) {
+        stageOtpForm.addEventListener('submit', async function (e) {
+          e.preventDefault();
+          const verifyBtn = document.getElementById('btnVerifyStageOtp');
+          const alertEl = document.getElementById('stageOtpAlert');
+          if (alertEl) {
+            alertEl.style.display = 'none';
+            alertEl.textContent = '';
+          }
+
+          const otpCode = getStageOtpCode();
+          if (otpCode.length !== 4) return;
+
+          try {
+            verifyBtn.disabled = true;
+            verifyBtn.textContent = 'Memverifikasi…';
+
+            if (typeof api !== 'undefined' && api.request) {
+              const res = await api.request('/auth/phone/verify-otp', {
+                method: 'POST',
+                body: JSON.stringify({
+                  phone_number: activeUserPhone,
+                  otp: otpCode
+                })
+              });
+              if (res.token) api.setToken(res.token);
+              if (res.user) api.setUser(res.user);
+            }
+
+            window.location.href = (typeof getSafeNextUrl === 'function') ? getSafeNextUrl() : '/pasien/janji-temu.html';
+          } catch (err) {
+            if (alertEl) {
+              alertEl.textContent = err.errors?.otp?.[0] || err.message || 'Kode OTP tidak sesuai atau sudah kedaluwarsa.';
+              alertEl.style.display = 'block';
+            }
+          } finally {
+            verifyBtn.disabled = false;
+            verifyBtn.innerHTML = '<span>Verifikasi &amp; Masuk Dashboard</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+            checkStageOtpValidity();
+          }
+        });
+      }
+    });
+  </script>
 </body>
+
 </html>

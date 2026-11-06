@@ -10,6 +10,7 @@ use App\Services\WhatsAppNotificationService;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Password;
@@ -81,7 +82,7 @@ class AuthController extends Controller
             ], 429);
         }
 
-        $otpCode = (string) random_int(100000, 999999);
+        $otpCode = (string) random_int(1000, 9999);
 
         WhatsappOtp::updateOrCreate(
             [
@@ -106,14 +107,18 @@ class AuthController extends Controller
 
         $dispatch = $whatsApp->sendOtp($normalizedPhone, $otpCode, 'register');
 
+        $isDev = app()->isLocal() || (bool) config('app.debug');
+
         return response()->json([
-            'message' => 'Kode OTP 6 digit telah dikirim ke nomor WhatsApp Anda.',
+            'message' => 'Kode OTP 4 digit telah dikirim ke nomor WhatsApp Anda.',
             'data' => [
                 'phone_number' => $normalizedPhone,
                 'masked_phone' => $this->maskPhone($normalizedPhone),
                 'expires_in' => self::OTP_TTL_MINUTES * 60,
                 'resend_in' => self::OTP_COOLDOWN_SECONDS,
                 'sent_via_gateway' => $dispatch['sent'],
+                'whatsapp_url' => $dispatch['whatsapp_url'] ?? null,
+                'debug_otp' => $isDev ? $otpCode : null,
             ],
         ]);
     }
@@ -122,7 +127,7 @@ class AuthController extends Controller
     {
         $validated = $request->validate([
             'phone_number' => ['required', 'string', 'max:30'],
-            'otp' => ['required', 'digits:6'],
+            'otp' => ['required', 'digits:4'],
         ]);
 
         $normalizedPhone = $whatsApp->normalizePhone($validated['phone_number']);
@@ -311,7 +316,7 @@ class AuthController extends Controller
             ], 429);
         }
 
-        $otpCode = (string) random_int(100000, 999999);
+        $otpCode = (string) random_int(1000, 9999);
 
         WhatsappOtp::updateOrCreate(
             [
@@ -332,6 +337,8 @@ class AuthController extends Controller
 
         $dispatch = $whatsApp->sendOtp($normalizedPhone, $otpCode, 'verify_phone');
 
+        $isDev = app()->isLocal() || (bool) config('app.debug');
+
         return response()->json([
             'message' => 'Kode OTP verifikasi telah dikirim ke WhatsApp Anda.',
             'data' => [
@@ -340,6 +347,8 @@ class AuthController extends Controller
                 'expires_in' => self::OTP_TTL_MINUTES * 60,
                 'resend_in' => self::OTP_COOLDOWN_SECONDS,
                 'sent_via_gateway' => $dispatch['sent'],
+                'whatsapp_url' => $dispatch['whatsapp_url'] ?? null,
+                'debug_otp' => $isDev ? $otpCode : null,
             ],
         ]);
     }
@@ -350,7 +359,7 @@ class AuthController extends Controller
 
         $validated = $request->validate([
             'phone_number' => ['required', 'string', 'max:30'],
-            'otp' => ['required', 'digits:6'],
+            'otp' => ['required', 'digits:4'],
         ]);
 
         $normalizedPhone = $whatsApp->normalizePhone($validated['phone_number']);
@@ -406,6 +415,192 @@ class AuthController extends Controller
 
         return response()->json([
             'data' => $polyclinics,
+        ]);
+    }
+
+    public function sendForgotPasswordOtp(Request $request, WhatsAppNotificationService $whatsApp): JsonResponse
+    {
+        $request->validate([
+            'identifier' => ['required', 'string', 'max:255'],
+        ]);
+
+        $rawIdentifier = trim($request->input('identifier'));
+        $normalizedPhone = $whatsApp->normalizePhone($rawIdentifier);
+        $localPhone = $normalizedPhone !== '' && str_starts_with($normalizedPhone, '62')
+            ? '0'.substr($normalizedPhone, 2)
+            : $rawIdentifier;
+
+        $user = User::where('email', $rawIdentifier)
+            ->when($normalizedPhone !== '', function ($query) use ($normalizedPhone, $localPhone, $rawIdentifier) {
+                $query->orWhere('phone_number', $normalizedPhone)
+                    ->orWhere('phone_number', $localPhone)
+                    ->orWhere('phone_number', $rawIdentifier);
+            })
+            ->first();
+
+        if (! $user) {
+            throw ValidationException::withMessages([
+                'identifier' => ['Akun dengan email atau nomor WhatsApp tersebut tidak ditemukan.'],
+            ]);
+        }
+
+        $userPhone = $user->phone_number;
+        if (! $userPhone) {
+            throw ValidationException::withMessages([
+                'identifier' => ['Akun ini belum memiliki nomor WhatsApp terdaftar. Silakan hubungi admin klinik.'],
+            ]);
+        }
+
+        $normalizedUserPhone = $whatsApp->normalizePhone($userPhone);
+        $localUserPhone = $normalizedUserPhone !== '' && str_starts_with($normalizedUserPhone, '62')
+            ? '0'.substr($normalizedUserPhone, 2)
+            : $userPhone;
+
+        $existingOtp = WhatsappOtp::where(function ($query) use ($normalizedUserPhone, $localUserPhone, $userPhone) {
+            $query->where('phone_number', $normalizedUserPhone)
+                ->orWhere('phone_number', $localUserPhone)
+                ->orWhere('phone_number', $userPhone);
+        })
+            ->where('purpose', 'reset_password')
+            ->first();
+
+        if ($existingOtp && $existingOtp->last_sent_at && $existingOtp->last_sent_at->diffInSeconds(now()) < self::OTP_COOLDOWN_SECONDS) {
+            $waitSeconds = (int) ceil(self::OTP_COOLDOWN_SECONDS - $existingOtp->last_sent_at->diffInSeconds(now()));
+
+            return response()->json([
+                'message' => "Tunggu {$waitSeconds} detik sebelum meminta kode OTP baru.",
+                'retry_after' => $waitSeconds,
+            ], 429);
+        }
+
+        $otpCode = (string) random_int(1000, 9999);
+
+        // Always store normalized phone in WhatsappOtp for consistency
+        WhatsappOtp::updateOrCreate(
+            [
+                'phone_number' => $normalizedUserPhone,
+                'purpose' => 'reset_password',
+            ],
+            [
+                'code_hash' => Hash::make($otpCode),
+                'payload' => [
+                    'user_id' => $user->id,
+                    'phone_number' => $normalizedUserPhone,
+                    'raw_phone' => $userPhone,
+                    'email' => $user->email,
+                ],
+                'attempts' => 0,
+                'expires_at' => now()->addMinutes(self::OTP_TTL_MINUTES),
+                'last_sent_at' => now(),
+            ]
+        );
+
+        $dispatch = $whatsApp->sendOtp($normalizedUserPhone, $otpCode, 'reset_password');
+
+        $isDev = app()->isLocal() || (bool) config('app.debug');
+
+        return response()->json([
+            'message' => 'Kode OTP 4 digit untuk pemulihan kata sandi telah dikirim ke nomor WhatsApp Anda.',
+            'data' => [
+                'phone_number' => $normalizedUserPhone,
+                'masked_phone' => $this->maskPhone($userPhone),
+                'expires_in' => self::OTP_TTL_MINUTES * 60,
+                'resend_in' => self::OTP_COOLDOWN_SECONDS,
+                'sent_via_gateway' => $dispatch['sent'],
+                'whatsapp_url' => $dispatch['whatsapp_url'] ?? null,
+                'debug_otp' => $isDev ? $otpCode : null,
+            ],
+        ]);
+    }
+
+    public function verifyForgotPasswordOtp(Request $request, WhatsAppNotificationService $whatsApp): JsonResponse
+    {
+        $validated = $request->validate([
+            'phone_number' => ['required', 'string', 'max:30'],
+            'otp' => ['required', 'digits:4'],
+        ]);
+
+        $normalizedPhone = $whatsApp->normalizePhone($validated['phone_number']);
+
+        $otpRecord = WhatsappOtp::where('phone_number', $normalizedPhone)
+            ->where('purpose', 'reset_password')
+            ->first();
+
+        $this->validateOtpAttempt($otpRecord, $validated['otp']);
+
+        $resetToken = Str::random(64);
+        $payload = $otpRecord->payload ?? [];
+        $payload['reset_token_hash'] = Hash::make($resetToken);
+        $payload['reset_token_expires_at'] = now()->addMinutes(15)->toIso8601String();
+
+        $otpRecord->update([
+            'payload' => $payload,
+        ]);
+
+        return response()->json([
+            'message' => 'Verifikasi kode OTP berhasil. Silakan buat kata sandi baru Anda.',
+            'data' => [
+                'reset_token' => $resetToken,
+                'phone_number' => $normalizedPhone,
+            ],
+        ]);
+    }
+
+    public function resetPasswordWithOtp(Request $request, WhatsAppNotificationService $whatsApp): JsonResponse
+    {
+        $validated = $request->validate([
+            'phone_number' => ['required', 'string', 'max:30'],
+            'reset_token' => ['required', 'string'],
+            'password' => ['required', 'string', PasswordRule::min(8), 'confirmed'],
+        ]);
+
+        $normalizedPhone = $whatsApp->normalizePhone($validated['phone_number']);
+
+        $otpRecord = WhatsappOtp::where('phone_number', $normalizedPhone)
+            ->where('purpose', 'reset_password')
+            ->first();
+
+        if (! $otpRecord) {
+            throw ValidationException::withMessages([
+                'reset_token' => ['Sesi pemulihan kata sandi tidak valid atau telah kedaluwarsa. Silakan ulangi proses.'],
+            ]);
+        }
+
+        $payload = $otpRecord->payload ?? [];
+        $tokenHash = $payload['reset_token_hash'] ?? null;
+        $expiresAt = isset($payload['reset_token_expires_at']) ? Carbon::parse($payload['reset_token_expires_at']) : null;
+
+        if (! $tokenHash || ! $expiresAt || $expiresAt->isPast() || ! Hash::check($validated['reset_token'], $tokenHash)) {
+            $otpRecord->delete();
+            throw ValidationException::withMessages([
+                'reset_token' => ['Token verifikasi tidak sesuai atau telah kedaluwarsa. Silakan minta kode OTP baru.'],
+            ]);
+        }
+
+        $userId = $payload['user_id'] ?? null;
+        $user = User::find($userId);
+
+        if (! $user) {
+            $otpRecord->delete();
+            throw ValidationException::withMessages([
+                'reset_token' => ['Pengguna tidak ditemukan. Silakan ulangi proses pemulihan kata sandi.'],
+            ]);
+        }
+
+        $user->forceFill([
+            'password' => Hash::make($validated['password']),
+        ])->save();
+
+        // Revoke all active sessions
+        $user->tokens()->delete();
+
+        // Remove OTP record
+        $otpRecord->delete();
+
+        event(new PasswordReset($user));
+
+        return response()->json([
+            'message' => 'Kata sandi berhasil diperbarui. Silakan masuk menggunakan kata sandi baru Anda.',
         ]);
     }
 
@@ -570,12 +765,23 @@ class AuthController extends Controller
 
     private function maskPhone(string $phone): string
     {
-        $len = strlen($phone);
+        $digits = preg_replace('/\D+/', '', $phone) ?? '';
+        $len = strlen($digits);
         if ($len <= 6) {
             return $phone;
         }
 
-        return substr($phone, 0, 5).'••••'.substr($phone, -3);
+        if (str_starts_with($digits, '62')) {
+            $prefix = '+62 '.substr($digits, 2, 3);
+            $suffix = substr($digits, -3);
+
+            return $prefix.'-••••-'.$suffix;
+        }
+
+        $prefix = substr($digits, 0, 4);
+        $suffix = substr($digits, -3);
+
+        return $prefix.'-••••-'.$suffix;
     }
 
     private function formatUserPayload(User $user): array

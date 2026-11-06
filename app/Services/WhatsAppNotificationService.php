@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Appointment;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class WhatsAppNotificationService
@@ -33,9 +34,11 @@ class WhatsAppNotificationService
     public function sendOtp(string $phone, string $otpCode, string $purpose = 'register'): array
     {
         $normalizedPhone = $this->normalizePhone($phone);
-        $contextLabel = $purpose === 'verify_phone'
-            ? 'verifikasi nomor WhatsApp akun Klinik Sehat'
-            : 'pendaftaran akun pasien Klinik Sehat';
+        $contextLabel = match ($purpose) {
+            'verify_phone' => 'verifikasi nomor WhatsApp akun Nuvacare',
+            'reset_password' => 'pemulihan kata sandi akun Nuvacare',
+            default => 'pendaftaran akun pasien Nuvacare',
+        };
 
         $message = "Kode OTP {$contextLabel} Anda adalah: *{$otpCode}*. Kode ini berlaku selama 5 menit. Jangan berikan kode ini kepada siapa pun.";
 
@@ -63,18 +66,48 @@ class WhatsAppNotificationService
         }
 
         try {
-            $response = Http::timeout(5)
+            $response = Http::asForm()
+                ->timeout(15)
                 ->withHeaders([
                     'Authorization' => $gatewayToken,
                 ])
                 ->post($gatewayUrl, [
                     'target' => $normalizedPhone,
-                    'phone' => $normalizedPhone,
                     'message' => $message,
+                    'countryCode' => '0',
                 ]);
 
-            return $response->successful();
-        } catch (Throwable) {
+            if (! $response->successful()) {
+                Log::warning('WhatsApp Gateway HTTP failure', [
+                    'status' => $response->status(),
+                    'phone' => $normalizedPhone,
+                ]);
+
+                return false;
+            }
+
+            $data = $response->json();
+            if (is_array($data) && array_key_exists('status', $data) && $data['status'] === false) {
+                Log::warning('WhatsApp Gateway rejected message', [
+                    'phone' => $normalizedPhone,
+                    'reason' => $data['reason'] ?? $data['detail'] ?? 'unknown',
+                ]);
+
+                return false;
+            }
+
+            Log::info('WhatsApp Gateway sent successfully', [
+                'phone' => $normalizedPhone,
+                'detail' => is_array($data) ? ($data['detail'] ?? 'ok') : 'ok',
+            ]);
+
+            return true;
+        } catch (Throwable $e) {
+            Log::error('WhatsApp Gateway exception', [
+                'phone' => $normalizedPhone,
+                'message' => $e->getMessage(),
+            ]);
+
             return false;
         }
     }

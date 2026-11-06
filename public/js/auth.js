@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       api.setUser(verifiedUser);
 
       const isPhoneVerified = Boolean(verifiedUser.phone_verified || verifiedUser.phone_verified_at);
-      if (verifiedUser.role === 'pasien' && !isPhoneVerified && document.getElementById('googlePhoneModal')) {
+      if (verifiedUser.role === 'pasien' && !isPhoneVerified && (document.getElementById('googlePhoneModal') || typeof window.unlockAndGoToStage === 'function')) {
         openGooglePhoneModal(verifiedUser.phone_number || '');
       } else {
         window.location.href =
@@ -81,7 +81,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       try {
         submitBtn.disabled = true;
-        submitBtn.textContent = 'Memproses…';
+        const textSpan = submitBtn.querySelector('span');
+        if (textSpan) {
+          textSpan.textContent = 'Memproses…';
+        } else {
+          submitBtn.textContent = 'Memproses…';
+        }
 
         const res = await api.request('/login', {
           method: 'POST',
@@ -94,8 +99,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         api.showAlert('loginAlert', msg, 'danger');
         emailInput.focus();
       } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Masuk';
+        const textSpan = submitBtn.querySelector('span');
+        if (textSpan) {
+          textSpan.textContent = 'Login & Lanjutkan';
+        } else {
+          submitBtn.textContent = 'Masuk';
+        }
+        if (typeof checkLoginValidity === 'function') {
+          checkLoginValidity();
+        } else {
+          submitBtn.disabled = false;
+        }
       }
     });
   }
@@ -143,7 +157,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       try {
         submitBtn.disabled = true;
-        submitBtn.textContent = 'Mengirim OTP ke WhatsApp…';
+        const textSpan = submitBtn.querySelector('span');
+        if (textSpan) {
+          textSpan.textContent = 'Mengirim OTP ke WhatsApp…';
+        } else {
+          submitBtn.textContent = 'Mengirim OTP ke WhatsApp…';
+        }
 
         const res = await api.request('/auth/register/send-otp', {
           method: 'POST',
@@ -157,7 +176,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         openOtpVerifyModal(
           res.data?.masked_phone || phone_number,
           res.data?.expires_in || 300,
-          res.data?.resend_in || 60
+          res.data?.resend_in || 60,
+          res.data?.debug_otp || null,
+          res.data?.whatsapp_url || null,
+          res.data?.sent_via_gateway ?? true
         );
       } catch (err) {
         const msg =
@@ -170,19 +192,29 @@ document.addEventListener('DOMContentLoaded', async () => {
           'Gagal mengirim kode OTP. Periksa kembali isian formulirmu.';
         api.showAlert('registerAlert', msg, 'danger');
       } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Kirim OTP & Buat Akun Pasien';
+        const textSpan = submitBtn.querySelector('span');
+        if (textSpan) {
+          textSpan.textContent = 'Kirim OTP & Lanjutkan';
+        } else {
+          submitBtn.textContent = 'Kirim OTP & Buat Akun Pasien';
+        }
+        if (typeof checkRegisterValidity === 'function') {
+          checkRegisterValidity();
+        } else {
+          submitBtn.disabled = false;
+        }
       }
     });
   }
 
   const forgotForm = document.getElementById('forgotForm');
-  if (forgotForm) {
+  const legacyForgotEmail = document.getElementById('forgotEmail');
+  if (forgotForm && legacyForgotEmail) {
     forgotForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       api.hideAlert('forgotAlert');
 
-      const email = document.getElementById('forgotEmail').value.trim();
+      const email = legacyForgotEmail.value.trim();
       const submitBtn = document.getElementById('forgotSubmitBtn');
 
       if (!email) {
@@ -374,7 +406,7 @@ function initOtpInputs() {
 
     input.addEventListener('paste', (e) => {
       e.preventDefault();
-      const pasted = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '').slice(0, 6);
+      const pasted = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '').slice(0, 4);
       if (!pasted) return;
 
       pasted.split('').forEach((char, i) => {
@@ -400,13 +432,30 @@ function clearOtpInputs() {
   if (inputs[0]) inputs[0].focus();
 }
 
-function openOtpVerifyModal(maskedPhone, expiresInSeconds = 300, resendInSeconds = 60) {
+function maskPhoneNumber(phone) {
+  if (!phone) return '+62 -';
+  const clean = String(phone).replace(/\D/g, '');
+  if (clean.length <= 6) return phone;
+  if (clean.startsWith('62')) {
+    return `+62 ${clean.slice(2, 5)}-••••-${clean.slice(-3)}`;
+  }
+  return `${clean.slice(0, 4)}-••••-${clean.slice(-3)}`;
+}
+
+function openOtpVerifyModal(maskedPhone, expiresInSeconds = 300, resendInSeconds = 60, debugOtp = null, whatsappUrl = null, sentViaGateway = true) {
+  const displayPhone = maskPhoneNumber(maskedPhone);
+  if (typeof window.unlockAndGoToStage === 'function') {
+    const targetStage = window.AUTH_OTP_STAGE || 3;
+    window.unlockAndGoToStage(targetStage, displayPhone, expiresInSeconds, resendInSeconds, debugOtp, whatsappUrl, sentViaGateway);
+    return;
+  }
+
   const modal = document.getElementById('otpVerifyModal');
   if (!modal) return;
 
   api.hideAlert('otpVerifyAlert');
   const maskedEl = document.getElementById('otpMaskedPhone');
-  if (maskedEl) maskedEl.textContent = maskedPhone;
+  if (maskedEl) maskedEl.textContent = displayPhone;
 
   modal.style.display = 'flex';
   clearOtpInputs();
@@ -475,6 +524,11 @@ function updateOtpTimerDom() {
 }
 
 function openGooglePhoneModal(prefillPhone = '') {
+  if (typeof window.unlockAndGoToStage === 'function') {
+    window.unlockAndGoToStage(2, prefillPhone);
+    return;
+  }
+
   const modal = document.getElementById('googlePhoneModal');
   if (!modal) return;
 
@@ -501,8 +555,8 @@ function initAuthModals() {
       api.hideAlert('otpVerifyAlert');
 
       const otpCode = getOtpCodeFromInputs();
-      if (otpCode.length !== 6) {
-        api.showAlert('otpVerifyAlert', 'Masukkan 6 digit angka kode OTP secara lengkap.', 'danger');
+      if (otpCode.length !== 4) {
+        api.showAlert('otpVerifyAlert', 'Masukkan 4 digit angka kode OTP secara lengkap.', 'danger');
         return;
       }
 
@@ -572,6 +626,20 @@ function initAuthModals() {
 
         clearOtpInputs();
         startOtpTimers(res.data?.expires_in || 300, res.data?.resend_in || 60);
+
+        const devNotice = document.getElementById('stageOtpDevNotice');
+        if (devNotice) {
+          if (res.data?.debug_otp) {
+            devNotice.textContent = `Mode Uji/Lokal: Kode OTP baru Anda adalah ${res.data.debug_otp}`;
+            devNotice.style.display = 'block';
+          } else if (res.data?.whatsapp_url && res.data?.sent_via_gateway === false) {
+            devNotice.innerHTML = `Gateway WhatsApp belum terhubung. Anda dapat <a href="${res.data.whatsapp_url}" target="_blank" rel="noopener noreferrer" style="text-decoration: underline; font-weight: 600;">mengirim pesan verifikasi secara manual melalui tautan WhatsApp ini</a>.`;
+            devNotice.style.display = 'block';
+          } else {
+            devNotice.style.display = 'none';
+          }
+        }
+
         api.showAlert('otpVerifyAlert', 'Kode OTP baru telah dikirimkan ke WhatsApp Anda.', 'success');
       } catch (err) {
         const msg = err.errors?.phone_number?.[0] || err.message || 'Gagal mengirim ulang kode OTP.';
@@ -626,7 +694,10 @@ function initAuthModals() {
         openOtpVerifyModal(
           res.data?.masked_phone || phone,
           res.data?.expires_in || 300,
-          res.data?.resend_in || 60
+          res.data?.resend_in || 60,
+          res.data?.debug_otp || null,
+          res.data?.whatsapp_url || null,
+          res.data?.sent_via_gateway ?? true
         );
       } catch (err) {
         const msg = err.errors?.phone_number?.[0] || err.message || 'Gagal mengirim kode OTP ke nomor tersebut.';

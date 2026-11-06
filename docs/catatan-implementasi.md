@@ -8,7 +8,7 @@ berlaku.
 
 | No | Celah | Keputusan |
 |---|---|---|
-| 1 | Registrasi pasien, OTP WA & Login Google | Atas arahan pemilik, pasien dapat mendaftar mandiri via `daftar.html` dengan verifikasi OTP 6 digit ke WhatsApp (`POST /api/auth/register/send-otp` & `POST /api/auth/register/verify-otp`, TTL 5 menit, maks 5 percobaan). Login mendukung akun Google (`POST /api/auth/google`); bila nomor WhatsApp belum terverifikasi (`phone_verified_at = null`), muncul popup wajib verifikasi OTP WhatsApp (`POST /api/auth/phone/send-otp` & `POST /api/auth/phone/verify-otp`). Tamu dapat mengakses beranda publik `index.html` (`GET /api/public-info`). Reset kata sandi via email (`POST /api/forgot-password` & `POST /api/reset-password`). |
+| 1 | Registrasi pasien, OTP WA & Login Google | Atas arahan pemilik, pasien dapat mendaftar mandiri via `daftar.html` dengan verifikasi OTP 4 digit ke WhatsApp (`POST /api/auth/register/send-otp` & `POST /api/auth/register/verify-otp`, TTL 5 menit, maks 5 percobaan). Login mendukung akun Google (`POST /api/auth/google`); bila nomor WhatsApp belum terverifikasi (`phone_verified_at = null`), muncul verifikasi wajib OTP WhatsApp 4 digit (`POST /api/auth/phone/send-otp` & `POST /api/auth/phone/verify-otp`). Pemulihan kata sandi didukung penuh via WhatsApp OTP 3-tahap (`lupa-password.html`: `POST /api/auth/forgot-password/send-otp`, `verify-otp`, `reset`) dengan sensor/masking nomor telepon pada frontend untuk keamanan. Pengiriman gateway WhatsApp Fonnte menggunakan format `asForm()` dengan `countryCode: '0'`. Tamu dapat mengakses beranda publik `index.html` (`GET /api/public-info`). Reset kata sandi via email tetap didukung (`POST /api/forgot-password` & `POST /api/reset-password`). |
 | 2 | Auth "Session atau Sanctum" | **Sanctum token**. `/api/login` mengembalikan token; `api.js` menyimpannya di `localStorage` dan mengirim `Authorization: Bearer <token>`. `/api/logout` menghapus token. |
 | 3 | Admin butuh `user_id` untuk jadwal kontrol | `user_id` dipilih dari daftar pasien (`GET /api/admin/pasien`) pada formulir jadwal kontrol di `kelola-janji.html`. |
 | 4 | Ketersediaan dokter (`is_active`) | Poli & dokter ditambah melalui `POST`. Admin dapat mengubah status ketersediaan dokter (`is_active`) lewat `PATCH /api/admin/dokter/{id}` agar dokter yang berhalangan tidak muncul di pilihan pasien. |
@@ -23,12 +23,15 @@ berlaku.
 |---|---|
 | `GET /api/public-info` | Publik (tanpa token); mengembalikan info klinik, `google_client_id`, dan daftar poliklinik beserta dokter aktif |
 | `POST /api/register` | `name` wajib ≤ 255; `email` unik; `password` min 8 + `confirmed`; `birth_date` opsional sebelum hari ini (`before:today`) |
-| `POST /api/auth/register/send-otp` | Validasi form pendaftaran + nomor WhatsApp unik; mengirim OTP 6 digit via Fonnte WhatsApp (TTL 5 menit, jeda kirim ulang 60 detik) |
-| `POST /api/auth/register/verify-otp` | `phone_number` + `otp` 6 digit (maks 5 percobaan); membuat akun `User` dengan `phone_verified_at` terisi dan mengembalikan token Sanctum |
+| `POST /api/auth/register/send-otp` | Validasi form pendaftaran + nomor WhatsApp unik; mengirim OTP 4 digit via Fonnte WhatsApp (TTL 5 menit, jeda kirim ulang 60 detik) |
+| `POST /api/auth/register/verify-otp` | `phone_number` + `otp` 4 digit (maks 5 percobaan); membuat akun `User` dengan `phone_verified_at` terisi dan mengembalikan token Sanctum |
 | `POST /api/login` | `email` wajib email, `password` wajib (dibatasi `throttle:15,1`); menyertakan `requires_phone_verification` |
 | `POST /api/auth/google` | Menerima kredensial Google (`credential` ID token / profil OAuth), masuk atau membuat akun pasien, serta mengembalikan `requires_phone_verification` |
-| `POST /api/auth/phone/send-otp` | `auth:sanctum`; mengirim kode OTP 6 digit ke nomor WhatsApp baru pengguna |
-| `POST /api/auth/phone/verify-otp` | `auth:sanctum`; memverifikasi kode OTP 6 digit dan menyimpan `phone_number` serta `phone_verified_at` |
+| `POST /api/auth/phone/send-otp` | `auth:sanctum`; mengirim kode OTP 4 digit ke nomor WhatsApp baru pengguna |
+| `POST /api/auth/phone/verify-otp` | `auth:sanctum`; memverifikasi kode OTP 4 digit dan menyimpan `phone_number` serta `phone_verified_at` |
+| `POST /api/auth/forgot-password/send-otp` | `identifier` (email atau nomor WhatsApp terdaftar); mengirim kode OTP 4 digit via WhatsApp |
+| `POST /api/auth/forgot-password/verify-otp` | `phone_number` + `otp` 4 digit (maks 5 percobaan); mengembalikan `reset_token` berlaku 15 menit |
+| `POST /api/auth/forgot-password/reset` | `phone_number` + `reset_token` + `password` min 8 + `confirmed`; memperbarui sandi dan mencabut sesi |
 | `POST /api/forgot-password` | `email` wajib email terdaftar; mengirim tautan reset via SMTP (mengembalikan 503 JSON bila SMTP gagal) |
 | `POST /api/reset-password` | `token` wajib; `email` wajib; `password` min 8 + `confirmed`; mencabut seluruh token Sanctum lama milik pengguna |
 | `GET /api/slot-tersedia` | `doctor_id` ada; `date` tanggal ≥ hari ini; mengembalikan daftar slot jam beserta status `available` |
@@ -68,7 +71,7 @@ Fornas, profil kesehatan) tidak sesuai rancangan. Pada Tahap 1:
 ```powershell
 php artisan migrate --seed   # hanya pada database terisolasi
 php artisan serve            # buka http://127.0.0.1:8000 (beranda) atau /login.html
-php artisan test             # menjalankan 30 feature test API & database
+php artisan test             # menjalankan 39 feature test API & database
 vendor/bin/pint --test       # memeriksa standar gaya kode PHP
 node scripts/check-docs.mjs  # validasi tautan dokumen dan papan status
 ```

@@ -245,11 +245,11 @@ class AuthApiTest extends TestCase
             ->where('purpose', 'register')
             ->firstOrFail();
 
-        $otpRecord->update(['code_hash' => Hash::make('654321')]);
+        $otpRecord->update(['code_hash' => Hash::make('6543')]);
 
         $wrongAttempt = $this->postJson('/api/auth/register/verify-otp', [
             'phone_number' => $rawPhone,
-            'otp' => '111111',
+            'otp' => '1111',
         ]);
         $wrongAttempt->assertStatus(422)
             ->assertJsonValidationErrors(['otp']);
@@ -257,7 +257,7 @@ class AuthApiTest extends TestCase
         $otpRecord->update(['expires_at' => now()->subMinute()]);
         $expiredAttempt = $this->postJson('/api/auth/register/verify-otp', [
             'phone_number' => $rawPhone,
-            'otp' => '654321',
+            'otp' => '6543',
         ]);
         $expiredAttempt->assertStatus(422)
             ->assertJsonValidationErrors(['otp']);
@@ -265,7 +265,7 @@ class AuthApiTest extends TestCase
         WhatsappOtp::create([
             'phone_number' => $normalizedPhone,
             'purpose' => 'register',
-            'code_hash' => Hash::make('246810'),
+            'code_hash' => Hash::make('2468'),
             'payload' => [
                 'name' => 'Pasien OTP WA',
                 'email' => $uniqueEmail,
@@ -281,7 +281,7 @@ class AuthApiTest extends TestCase
 
         $verifyRes = $this->postJson('/api/auth/register/verify-otp', [
             'phone_number' => $rawPhone,
-            'otp' => '246810',
+            'otp' => '2468',
         ]);
 
         $verifyRes->assertStatus(201)
@@ -336,12 +336,12 @@ class AuthApiTest extends TestCase
             ->where('purpose', 'verify_phone')
             ->firstOrFail();
 
-        $otpRecord->update(['code_hash' => Hash::make('889900')]);
+        $otpRecord->update(['code_hash' => Hash::make('8899')]);
 
         $verifyPhoneOtp = $this->withHeader('Authorization', 'Bearer '.$token)
             ->postJson('/api/auth/phone/verify-otp', [
                 'phone_number' => $rawPhone,
-                'otp' => '889900',
+                'otp' => '8899',
             ]);
 
         $verifyPhoneOtp->assertStatus(200)
