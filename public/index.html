@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#FFFFFF">
+  <meta name="theme-color" content="#F8FAFC">
   <title>Nuvacare - Layanan Janji Temu Poliklinik Rawat Jalan</title>
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
@@ -14,7 +15,7 @@
   <link rel="preload" href="/api/public-info" as="fetch" crossorigin="anonymous" fetchpriority="high">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=Plus+Jakarta+Sans:ital,wght@0,500..800;1,500..800&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=Fira+Code:wght@400;500;600&family=Plus+Jakarta+Sans:ital,wght@0,500..800;1,500..800&display=swap">
   <script src="/js/api.js" defer fetchpriority="high"></script>
   <script src="/js/auth.js" defer></script>
   <script type="speculationrules">
@@ -26,6 +27,7 @@
   }
   </script>
 </head>
+
 <body class="home-body">
   <a href="#main" class="skip-link">Langsung ke isi utama</a>
 
@@ -36,15 +38,17 @@
         <span class="brand-text">Nuvacare</span>
       </a>
 
-      <button type="button" id="mobileMenuBtn" class="mobile-menu-toggle" aria-expanded="false" aria-controls="navbarMenuPanel">
+      <button type="button" id="mobileMenuBtn" class="mobile-menu-toggle" aria-expanded="false"
+        aria-controls="navbarMenuPanel">
         <span>Menu</span>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
-          <path d="M4 7h16M4 12h16M4 17h16"/>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" aria-hidden="true">
+          <path d="M4 7h16M4 12h16M4 17h16" />
         </svg>
       </button>
 
       <div id="navbarMenuPanel" class="home-nav-panel">
-        <ul class="home-nav-center">
+        <ul id="homeNavLinks" class="home-nav-center">
           <li><a href="/index.html" class="active" aria-current="page">Beranda</a></li>
           <li><a href="#poli">Poliklinik</a></li>
           <li><a href="#alur-janji">Alur Janji</a></li>
@@ -54,7 +58,8 @@
         <div class="home-nav-right">
           <div class="poli-search-wrap" role="search">
             <label for="poliSearchInput" class="sr-only">Cari poliklinik</label>
-            <input type="search" id="poliSearchInput" class="poli-search-input" placeholder="Cari poliklinik atau dokter…" autocomplete="off">
+            <input type="search" id="poliSearchInput" class="poli-search-input"
+              placeholder="Cari poliklinik atau dokter…" autocomplete="off">
           </div>
 
           <div id="navAuthAction" class="nav-auth-wrap">
@@ -85,14 +90,17 @@
           </h1>
 
           <p id="clinicDesc" class="hero-summary">
-            Akses mudah konsultasi dokter spesialis, reservasi poliklinik terpercaya, dan pantau riwayat medis Anda dalam satu sistem yang ramah dan transparan.
+            Akses mudah konsultasi dokter spesialis, reservasi poliklinik terpercaya, dan pantau riwayat medis Anda
+            dalam satu sistem yang ramah dan transparan.
           </p>
 
           <div class="hero-actions">
-            <a href="/login.html?next=%2Fpasien%2Fjanji-temu.html" id="heroBookingCta" class="btn btn-pill-primary hero-btn-cta">
+            <a href="/login.html?next=%2Fpasien%2Fjanji-temu.html" id="heroBookingCta"
+              class="btn btn-pill-primary hero-btn-cta">
               <span>Buat Janji Sekarang</span>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M5 12h14m-7-7 7 7-7 7"/>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M5 12h14m-7-7 7 7-7 7" />
               </svg>
             </a>
             <a href="#poli" class="btn btn-pill-outline">
@@ -104,13 +112,14 @@
           <div class="hero-trust-bar" aria-label="Informasi keunggulan klinik">
             <div class="hero-trust-item">
               <span class="hero-trust-icon" aria-hidden="true">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
-                  <circle cx="9" cy="7" r="4"/>
-                  <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                  <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
                 </svg>
               </span>
-              <div>
+              <div class="hero-trust-content">
                 <span class="hero-trust-number">Dokter Spesialis</span>
                 <span class="hero-trust-label">Jadwal Praktik Pasti</span>
               </div>
@@ -118,11 +127,13 @@
 
             <div class="hero-trust-item">
               <span class="hero-trust-icon" aria-hidden="true">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path
+                    d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
                 </svg>
               </span>
-              <div>
+              <div class="hero-trust-content">
                 <span class="hero-trust-number">WhatsApp OTP</span>
                 <span class="hero-trust-label">Konfirmasi Otomatis</span>
               </div>
@@ -130,38 +141,15 @@
 
             <div class="hero-trust-item">
               <span class="hero-trust-icon" aria-hidden="true">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                  <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" />
                 </svg>
               </span>
-              <div>
+              <div class="hero-trust-content">
                 <span class="hero-trust-number">Rekam Medis</span>
                 <span class="hero-trust-label">Riwayat Kunjungan Rapi</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Right Column: Visual Frame + Floating Card -->
-        <div class="hero-split__visual">
-          <div class="hero-visual-card">
-            <img class="hero-visual-img"
-                 src="/images/banner-1200.jpg"
-                 srcset="/images/banner-400.jpg 400w,
-                         /images/banner-640.jpg 640w,
-                         /images/banner-1200.jpg 1200w,
-                         /images/banner-1920.jpg 1920w"
-                 sizes="(max-width: 768px) 100vw, 560px"
-                 width="1200" height="800"
-                 alt="Dokter spesialis Nuvacare sedang berkonsultasi secara ramah dengan pasien di ruang periksa klinik yang nyaman"
-                 fetchpriority="high" loading="eager" decoding="async">
-
-            <div class="hero-status-pill">
-              <span class="hero-status-dot" aria-hidden="true"></span>
-              <div class="hero-status-content">
-                <span class="hero-status-title">Dokter Siaga Hari Ini</span>
-                <span class="hero-status-sub">Sesuai Jadwal Praktik Poliklinik</span>
               </div>
             </div>
           </div>
@@ -193,7 +181,8 @@
         <div class="home-section-header text-center-header">
           <div class="section-kicker">Alur Praktis Tanpa Antre</div>
           <h2 id="flowSectionTitle">Alur Janji Dokter dalam 3 Langkah</h2>
-          <p>Kelola jadwal kunjungan langsung dari perangkat Anda kapan saja tanpa perlu antre sejak pagi di loket fisik.</p>
+          <p>Kelola jadwal kunjungan langsung dari perangkat Anda kapan saja tanpa perlu antre sejak pagi di loket
+            fisik.</p>
         </div>
 
         <ol class="alur-steps-modern">
@@ -201,7 +190,8 @@
             <span class="alur-step-num" aria-hidden="true">01</span>
             <div class="alur-step-body">
               <h3 class="alur-step-title">Daftar atau Masuk Akun</h3>
-              <p class="alur-step-desc">Masuk ke portal pasien atau daftar akun baru menggunakan verifikasi kode OTP WhatsApp yang cepat dan aman.</p>
+              <p class="alur-step-desc">Masuk ke portal pasien atau daftar akun baru menggunakan verifikasi kode OTP
+                WhatsApp yang cepat dan aman.</p>
             </div>
           </li>
 
@@ -209,7 +199,8 @@
             <span class="alur-step-num" aria-hidden="true">02</span>
             <div class="alur-step-body">
               <h3 class="alur-step-title">Pilih Poli, Dokter, dan Jam</h3>
-              <p class="alur-step-desc">Pilih poliklinik tujuan, tentukan dokter spesialis aktif, dan pilih tanggal serta slot jam yang tidak berbenturan.</p>
+              <p class="alur-step-desc">Pilih poliklinik tujuan, tentukan dokter spesialis aktif, dan pilih tanggal
+                serta slot jam yang tidak berbenturan.</p>
             </div>
           </li>
 
@@ -217,7 +208,8 @@
             <span class="alur-step-num" aria-hidden="true">03</span>
             <div class="alur-step-body">
               <h3 class="alur-step-title">Terima Konfirmasi WhatsApp</h3>
-              <p class="alur-step-desc">Jadwal Anda langsung terkunci di sistem. Pengingat resmi dan estimasi jam hadir dikirim langsung ke WhatsApp Anda.</p>
+              <p class="alur-step-desc">Jadwal Anda langsung terkunci di sistem. Pengingat resmi dan estimasi jam hadir
+                dikirim langsung ke WhatsApp Anda.</p>
             </div>
           </li>
         </ol>
@@ -227,10 +219,11 @@
       <section id="info-layanan" class="section-benefit" aria-label="Informasi dan Keunggulan Layanan">
         <div class="benefit-card">
           <div class="benefit-card__content">
-            <div class="section-kicker section-kicker--light">Integrasi Layanan Digital</div>
             <h2 class="benefit-title">Pengingat Jadwal dan Notifikasi WhatsApp Resmi</h2>
             <p class="benefit-desc">
-              Setiap janji temu, hasil verifikasi pendaftaran, dan jadwal kontrol rutin dari dokter dikonfirmasikan secara transparan ke nomor WhatsApp Anda. Jika ada pembaruan jam praktik, Anda menerima pemberitahuan langsung tanpa perlu menunggu di ruang klinik.
+              Setiap janji temu, hasil verifikasi pendaftaran, dan jadwal kontrol rutin dari dokter dikonfirmasikan
+              secara transparan ke nomor WhatsApp Anda. Jika ada pembaruan jam praktik, Anda menerima pemberitahuan
+              langsung tanpa perlu menunggu di ruang klinik.
             </p>
             <div class="benefit-actions">
               <a href="/daftar.html" id="highlightActionLink" class="btn btn-pill-light">Daftar Akun Pasien</a>
@@ -239,26 +232,30 @@
           <div class="benefit-card__meta">
             <div class="benefit-meta-item">
               <span class="benefit-meta-icon" aria-hidden="true">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                 </svg>
               </span>
               <div>
-                <h4 class="benefit-meta-title">Data Rekam Aman</h4>
-                <p class="benefit-meta-text">Akses riwayat pemeriksaan dan catatan dokter hanya dapat dilihat oleh pasien bersangkutan.</p>
+                <h4 class="benefit-meta-title">Data Terjamin Aman</h4>
+                <p class="benefit-meta-text">Akses riwayat pemeriksaan dan catatan dokter hanya dapat dilihat oleh
+                  pasien bersangkutan.</p>
               </div>
             </div>
 
             <div class="benefit-meta-item">
               <span class="benefit-meta-icon" aria-hidden="true">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="12" cy="12" r="10"/>
-                  <polyline points="12 6 12 12 16 14"/>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <polyline points="12 6 12 12 16 14" />
                 </svg>
               </span>
               <div>
                 <h4 class="benefit-meta-title">Tepat Waktu & Tertib</h4>
-                <p class="benefit-meta-text">Slot janji temu terjadwal meminimalkan penumpukan pasien di ruang tunggu rawat jalan.</p>
+                <p class="benefit-meta-text">Slot janji temu terjadwal meminimalkan penumpukan pasien di ruang tunggu
+                  rawat jalan.</p>
               </div>
             </div>
           </div>
@@ -270,11 +267,13 @@
         <div class="quote-card">
           <div class="quote-icon" aria-hidden="true">
             <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M4.583 17.321C3.553 16.227 3 15 3 13.011c0-3.5 2.457-6.637 6.03-8.188l.893 1.378c-3.335 1.804-3.987 4.145-4.247 5.621.537-.278 1.24-.375 1.929-.311 1.804.167 3.226 1.648 3.226 3.489a3.5 3.5 0 0 1-3.5 3.5c-1.073 0-2.099-.49-2.748-1.179zm10 0C13.553 16.227 13 15 13 13.011c0-3.5 2.457-6.637 6.03-8.188l.893 1.378c-3.335 1.804-3.987 4.145-4.247 5.621.537-.278 1.24-.375 1.929-.311 1.804.167 3.226 1.648 3.226 3.489a3.5 3.5 0 0 1-3.5 3.5c-1.073 0-2.099-.49-2.748-1.179z"/>
+              <path
+                d="M4.583 17.321C3.553 16.227 3 15 3 13.011c0-3.5 2.457-6.637 6.03-8.188l.893 1.378c-3.335 1.804-3.987 4.145-4.247 5.621.537-.278 1.24-.375 1.929-.311 1.804.167 3.226 1.648 3.226 3.489a3.5 3.5 0 0 1-3.5 3.5c-1.073 0-2.099-.49-2.748-1.179zm10 0C13.553 16.227 13 15 13 13.011c0-3.5 2.457-6.637 6.03-8.188l.893 1.378c-3.335 1.804-3.987 4.145-4.247 5.621.537-.278 1.24-.375 1.929-.311 1.804.167 3.226 1.648 3.226 3.489a3.5 3.5 0 0 1-3.5 3.5c-1.073 0-2.099-.49-2.748-1.179z" />
             </svg>
           </div>
           <blockquote class="quote-text">
-            “Pelayanan kesehatan yang bermutu berawal dari kepastian waktu dan rasa tenang. Melalui sistem reservasi terpadu ini, pasien mendapatkan kepastian jadwal dokter tanpa hambatan administratif yang menyita tenaga.”
+            “Pelayanan kesehatan yang bermutu berawal dari kepastian waktu dan rasa tenang. Melalui sistem reservasi
+            terpadu ini, pasien mendapatkan kepastian jadwal dokter tanpa hambatan administratif yang menyita tenaga.”
           </blockquote>
           <div class="quote-author">
             <span class="quote-name">dr. Hendra Wijaya, Sp.PD</span>
@@ -291,7 +290,8 @@
       <div class="footer-col-brand">
         <div class="footer-brand-title" translate="no">Nuvacare</div>
         <p class="footer-brand-desc">
-          Layanan janji temu poliklinik rawat jalan berbasis teknologi terintegrasi untuk kenyamanan dan ketepatan medis keluarga Anda.
+          Layanan janji temu poliklinik rawat jalan berbasis teknologi terintegrasi untuk kenyamanan dan ketepatan medis
+          keluarga Anda.
         </p>
       </div>
 
@@ -330,5 +330,5 @@
     </div>
   </footer>
 </body>
-</html>
 
+</html>

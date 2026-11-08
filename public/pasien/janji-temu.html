@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#EEF1F6">
-  <title>Janji Temu - Nuvacare</title>
+  <meta name="theme-color" content="#F8FAFC">
+  <title>Buat Janji Temu Poliklinik - Nuvacare</title>
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
@@ -13,7 +13,7 @@
   <link rel="stylesheet" href="/css/style.css" fetchpriority="high">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=Plus+Jakarta+Sans:ital,wght@0,500..800;1,500..800&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=Fira+Code:wght@400;500;600&family=Plus+Jakarta+Sans:ital,wght@0,500..800;1,500..800&display=swap">
   <script src="/js/api.js" defer fetchpriority="high"></script>
   <script src="/js/pasien.js" defer></script>
   <script type="speculationrules">
@@ -25,101 +25,387 @@
   }
   </script>
 </head>
-<body>
+<body class="booking-page-body">
   <a href="#main-content" class="skip-link">Langsung ke isi utama</a>
 
   <header class="site-header">
     <nav class="navbar" aria-label="Navigasi utama">
-      <a href="/pasien/janji-temu.html" class="brand" translate="no">
+      <a href="/index.html" class="brand" translate="no">
         <span class="brand-text">Nuvacare</span>
       </a>
       <ul class="nav-links">
+        <li><a href="/index.html">Beranda</a></li>
         <li><a href="/pasien/janji-temu.html" class="active" aria-current="page">Janji Temu</a></li>
-        <li><a href="/pasien/riwayat.html">Riwayat</a></li>
         <li><a href="/pasien/jadwal-kontrol.html">Jadwal Kontrol</a></li>
-        <li><a href="/pasien/profil.html">Profil</a></li>
+        <li><a href="/pasien/riwayat.html">Riwayat Pemeriksaan</a></li>
         <li class="nav-user">
-          <span id="navUserName" class="nav-user-name"></span>
+          <a href="/pasien/profil.html" class="nav-profile-link">
+            <span id="navUserName" class="nav-user-name"></span>
+            <span class="nav-profile-badge">Profil</span>
+          </a>
           <button type="button" id="logoutBtn" class="btn btn-secondary btn-sm">Keluar</button>
         </li>
       </ul>
     </nav>
   </header>
 
-  <main id="main-content" class="container">
-    <div class="mb-4">
-      <h1 class="page-title">Janji Temu</h1>
-      <p class="text-sm text-muted">Pilih poliklinik, dokter, dan tanggal kunjunganmu, lalu pantau status janji di bawah ini.</p>
+  <main id="main-content" class="container booking-container">
+    <div class="booking-page-header">
+      <nav class="booking-breadcrumb" aria-label="Breadcrumb">
+        <a href="/index.html">Beranda</a>
+        <span class="breadcrumb-sep" aria-hidden="true">&rsaquo;</span>
+        <a href="/index.html#poliklinik">Poliklinik</a>
+        <span class="breadcrumb-sep" aria-hidden="true">&rsaquo;</span>
+        <span aria-current="page" class="breadcrumb-current">Buat Janji Temu</span>
+      </nav>
+      <div class="booking-header-copy">
+        <h1 class="page-title">Buat Janji Temu Poliklinik</h1>
+        <p class="booking-page-subtitle">Pilih tanggal konsultasi, tentukan dokter spesialis, tentukan sesi kunjungan, dan konfirmasi tiket reservasi Anda.</p>
+      </div>
     </div>
 
-    <section class="card" aria-labelledby="formBookingTitle">
-      <h2 id="formBookingTitle" class="card-title">Buat Janji Baru</h2>
-      <div id="bookingAlert" class="alert" role="status" aria-live="polite"></div>
+    <div id="bookingAlert" class="alert" role="status" aria-live="polite"></div>
 
-      <form id="bookingForm" novalidate>
-        <div class="grid-2">
-          <div class="form-group">
-            <label class="form-label" for="polyclinic_id">Poliklinik</label>
-            <select id="polyclinic_id" name="polyclinic_id" class="form-select" required autocomplete="off">
-              <option value="">Memuat daftar poliklinik…</option>
-            </select>
+    <form id="bookingForm" novalidate>
+      <div class="booking-workspace booking-workspace-5steps">
+        <!-- Kolom Kiri: Vertical Stepper Navigation -->
+        <aside class="booking-stepper-nav booking-stepper-col" aria-label="Tahapan Pemesanan">
+          <div class="booking-stepper-card">
+            <div class="booking-stepper-header stepper-header">
+              <span class="booking-stepper-sub stepper-eyebrow">ALUR PENDAFTARAN</span>
+              <h2 class="booking-stepper-title stepper-main-title">Tahapan Reservasi</h2>
+            </div>
+            <ol class="booking-stepper-list">
+              <li class="booking-stepper-item stepper-step is-active" data-step="1" id="stepperStep1">
+                <div class="booking-stepper-marker stepper-marker">
+                  <span class="stepper-num">1</span>
+                  <span class="stepper-check" aria-hidden="true">&#10003;</span>
+                </div>
+                <div class="booking-stepper-content stepper-info">
+                  <span class="booking-stepper-name stepper-label">Langkah 1</span>
+                  <span class="booking-stepper-desc stepper-name">Pilih Tanggal Kunjungan</span>
+                </div>
+              </li>
+              <li class="booking-stepper-item stepper-step is-upcoming is-disabled" data-step="2" id="stepperStep2">
+                <div class="booking-stepper-marker stepper-marker">
+                  <span class="stepper-num">2</span>
+                  <span class="stepper-check" aria-hidden="true">&#10003;</span>
+                </div>
+                <div class="booking-stepper-content stepper-info">
+                  <span class="booking-stepper-name stepper-label">Langkah 2</span>
+                  <span class="booking-stepper-desc stepper-name">Pilih Dokter Spesialis</span>
+                </div>
+              </li>
+              <li class="booking-stepper-item stepper-step is-upcoming is-disabled" data-step="3" id="stepperStep3">
+                <div class="booking-stepper-marker stepper-marker">
+                  <span class="stepper-num">3</span>
+                  <span class="stepper-check" aria-hidden="true">&#10003;</span>
+                </div>
+                <div class="booking-stepper-content stepper-info">
+                  <span class="booking-stepper-name stepper-label">Langkah 3</span>
+                  <span class="booking-stepper-desc stepper-name">Sesi Jam Kunjungan</span>
+                </div>
+              </li>
+              <li class="booking-stepper-item stepper-step is-upcoming is-disabled" data-step="4" id="stepperStep4">
+                <div class="booking-stepper-marker stepper-marker">
+                  <span class="stepper-num">4</span>
+                  <span class="stepper-check" aria-hidden="true">&#10003;</span>
+                </div>
+                <div class="booking-stepper-content stepper-info">
+                  <span class="booking-stepper-name stepper-label">Langkah 4</span>
+                  <span class="booking-stepper-desc stepper-name">Notifikasi WhatsApp</span>
+                </div>
+              </li>
+              <li class="booking-stepper-item stepper-step is-upcoming is-disabled" data-step="5" id="stepperStep5">
+                <div class="booking-stepper-marker stepper-marker">
+                  <span class="stepper-num">5</span>
+                  <span class="stepper-check" aria-hidden="true">&#10003;</span>
+                </div>
+                <div class="booking-stepper-content stepper-info">
+                  <span class="booking-stepper-name stepper-label">Langkah 5</span>
+                  <span class="booking-stepper-desc stepper-name">Keluhan Medis</span>
+                </div>
+              </li>
+            </ol>
           </div>
+        </aside>
 
-          <div class="form-group">
-            <label class="form-label" for="doctor_id">Dokter</label>
-            <select id="doctor_id" name="doctor_id" class="form-select" required disabled autocomplete="off">
-              <option value="">Pilih poliklinik terlebih dahulu…</option>
-            </select>
-          </div>
+        <!-- Kolom Tengah: Form 5 Langkah -->
+        <div class="booking-steps-col">
+          <!-- Step 1: Pilih Tanggal Kunjungan (Kalender Interaktif Minimalis) -->
+          <section class="booking-step-card is-step-active" id="stepCard1" aria-labelledby="step1Title">
+            <div class="booking-step-header">
+              <div class="booking-step-title-group">
+                <span class="step-num-badge" aria-hidden="true">1</span>
+                <div>
+                  <h2 id="step1Title" class="booking-step-title">Pilih Tanggal Kunjungan</h2>
+                  <p class="booking-step-sub">Pilih tanggal reservasi klinik (tersedia hari ini hingga 4 hari ke depan)</p>
+                </div>
+              </div>
+              <div class="calendar-nav-controls">
+                <button type="button" id="calendarPrevMonth" class="calendar-nav-btn" aria-label="Bulan sebelumnya">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                </button>
+                <span id="calendarMonthLabel" class="calendar-month-heading">Bulan Tahun</span>
+                <button type="button" id="calendarNextMonth" class="calendar-nav-btn" aria-label="Bulan berikutnya">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="calendar-card-body">
+              <div class="calendar-weekdays-row" aria-hidden="true">
+                <span class="calendar-weekday">Min</span>
+                <span class="calendar-weekday">Sen</span>
+                <span class="calendar-weekday">Sel</span>
+                <span class="calendar-weekday">Rab</span>
+                <span class="calendar-weekday">Kam</span>
+                <span class="calendar-weekday">Jum</span>
+                <span class="calendar-weekday">Sab</span>
+              </div>
+              <div id="calendarDaysGrid" class="calendar-days-grid" role="grid" aria-label="Kalender tanggal reservasi"></div>
+            </div>
+
+            <div class="sr-only">
+              <label for="appointment_date">Tanggal Kunjungan</label>
+              <input type="date" id="appointment_date" name="appointment_date" required autocomplete="off">
+              <span id="dateStripMonthLabel"></span>
+              <button type="button" id="dateStripPrev" aria-label="Sebelumnya"></button>
+              <button type="button" id="dateStripNext" aria-label="Berikutnya"></button>
+              <div id="dateStripContainer"></div>
+            </div>
+          </section>
+
+          <!-- Step 2: Pilih Poliklinik & Dokter Spesialis -->
+          <section class="booking-step-card is-step-hidden" id="stepCard2" aria-labelledby="step2Title">
+            <div class="booking-step-header">
+              <div class="booking-step-title-group">
+                <span class="step-num-badge" aria-hidden="true">2</span>
+                <div>
+                  <h2 id="step2Title" class="booking-step-title">Pilih Dokter Spesialis</h2>
+                  <p id="step2Subtitle" class="booking-step-sub">Filter poliklinik dan pilih dokter yang aktif bertugas</p>
+                </div>
+              </div>
+              <span id="activeDoctorCount" class="step-meta-badge">Memuat dokter...</span>
+            </div>
+
+            <div id="poliFilterPills" class="poli-filter-pills" role="group" aria-label="Filter poliklinik"></div>
+
+            <div class="sr-only">
+              <label for="polyclinic_id">Poliklinik</label>
+              <select id="polyclinic_id" name="polyclinic_id" required autocomplete="off">
+                <option value="">Memuat daftar poliklinik…</option>
+              </select>
+              <label for="doctor_id">Dokter Spesialis</label>
+              <select id="doctor_id" name="doctor_id" required disabled autocomplete="off">
+                <option value="">Pilih poliklinik terlebih dahulu…</option>
+              </select>
+            </div>
+
+            <div id="doctorCardsGrid" class="doctor-cards-grid" aria-live="polite">
+              <div class="booking-empty-hint">Memuat daftar dokter spesialis...</div>
+            </div>
+          </section>
+
+          <!-- Step 3: Pilih Sesi Jam Kunjungan -->
+          <section class="booking-step-card is-step-hidden" id="stepCard3" aria-labelledby="step3Title">
+            <div class="booking-step-header">
+              <div class="booking-step-title-group">
+                <span class="step-num-badge" aria-hidden="true">3</span>
+                <div>
+                  <h2 id="step3Title" class="booking-step-title">Sesi Jam Kunjungan</h2>
+                  <p class="booking-step-sub">Pilih jam konsultasi yang tersedia untuk kunjungan Anda</p>
+                </div>
+              </div>
+              <span id="slotCountBadge" class="step-meta-badge">Pilih dokter &amp; tanggal</span>
+            </div>
+
+            <div class="session-filter-toolbar">
+              <span class="session-filter-title">Tampilkan ketersediaan:</span>
+              <div class="session-filter-options">
+                <label class="session-filter-chip">
+                  <input type="checkbox" id="filterSessionPagi" class="session-filter-checkbox" checked>
+                  <span class="session-chip-text">Pagi</span>
+                </label>
+                <label class="session-filter-chip">
+                  <input type="checkbox" id="filterSessionSore" class="session-filter-checkbox" checked>
+                  <span class="session-chip-text">Siang &amp; Sore</span>
+                </label>
+              </div>
+            </div>
+
+            <div id="timeSlotColumns" class="time-slot-columns" aria-live="polite">
+              <div class="time-slot-col" data-session-col="morning">
+                <div class="time-slot-col-header">
+                  <span class="session-col-title">Pagi</span>
+                  <span class="session-col-time">08:00 - 11:30</span>
+                </div>
+                <div class="time-slot-col-body" id="morningSlotsGrid">
+                  <div class="booking-empty-hint">Pilih dokter &amp; tanggal untuk melihat jam.</div>
+                </div>
+              </div>
+              <div class="time-slot-col" data-session-col="afternoon">
+                <div class="time-slot-col-header">
+                  <span class="session-col-title">Siang</span>
+                  <span class="session-col-time">12:00 - 15:00</span>
+                </div>
+                <div class="time-slot-col-body" id="afternoonSlotsGrid">
+                  <div class="booking-empty-hint">-</div>
+                </div>
+              </div>
+              <div class="time-slot-col" data-session-col="evening">
+                <div class="time-slot-col-header">
+                  <span class="session-col-title">Sore</span>
+                  <span class="session-col-time">15:30 - 18:00</span>
+                </div>
+                <div class="time-slot-col-body" id="eveningSlotsGrid">
+                  <div class="booking-empty-hint">-</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="sr-only">
+              <div id="timeSlotGroups" class="time-slot-groups"></div>
+              <label for="appointment_time">Jam Kunjungan Terpilih</label>
+              <select id="appointment_time" name="appointment_time" required disabled autocomplete="off">
+                <option value="">Pilih dokter dan tanggal terlebih dahulu…</option>
+              </select>
+            </div>
+          </section>
+
+          <!-- Step 4: Notifikasi Jadwal & Tiket via WhatsApp -->
+          <section class="booking-step-card booking-step-card--wa is-step-hidden" id="stepCard4" aria-labelledby="step4Title">
+            <div class="booking-step-header">
+              <div class="booking-step-title-group">
+                <span class="step-num-badge step-num-badge--wa" aria-hidden="true">4</span>
+                <div>
+                  <div class="wa-title-row">
+                    <h2 id="step4Title" class="booking-step-title">Notifikasi WhatsApp</h2>
+                    <span class="wa-status-pill">Otomatis Aktif</span>
+                  </div>
+                  <p class="booking-step-sub">Informasi jadwal, perubahan waktu praktik, serta pengingat kunjungan dikirimkan ke nomor terdaftar Anda.</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="wa-info-box">
+              <label class="form-label" for="bookingWhatsappDisplay">Nomor WhatsApp Pasien Terhubung</label>
+              <div class="wa-number-row">
+                <span class="wa-country-prefix">ID +62</span>
+                <input type="text" id="bookingWhatsappDisplay" class="form-input wa-number-input" value="Memuat nomor..." readonly aria-readonly="true">
+                <span class="wa-connected-badge">Tersambung</span>
+              </div>
+              <label class="wa-checkbox-label" for="waReminderCheck">
+                <input type="checkbox" id="waReminderCheck" checked>
+                <span>Kirim pengingat jadwal dan konfirmasi resmi ke nomor WhatsApp ini</span>
+              </label>
+            </div>
+          </section>
+
+          <!-- Step 5: Keluhan Medis Pasien -->
+          <section class="booking-step-card is-step-hidden" id="stepCard5" aria-labelledby="step5Title">
+            <div class="booking-step-header">
+              <div class="booking-step-title-group">
+                <span class="step-num-badge" aria-hidden="true">5</span>
+                <div>
+                  <h2 id="step5Title" class="booking-step-title">Keluhan Medis</h2>
+                  <p class="booking-step-sub">Membantu dokter menyiapkan observasi awal sebelum sesi konsultasi</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="symptom-chips-row" role="group" aria-label="Pilihan gejala cepat">
+              <span class="symptom-chips-label">Gejala cepat:</span>
+              <button type="button" class="symptom-chip-btn" data-symptom="Pemeriksaan Rutin">Pemeriksaan Rutin</button>
+              <button type="button" class="symptom-chip-btn" data-symptom="Demam / Flu">Demam / Flu</button>
+              <button type="button" class="symptom-chip-btn" data-symptom="Nyeri Dada / Sesak">Nyeri Dada / Sesak</button>
+              <button type="button" class="symptom-chip-btn" data-symptom="Kontrol Pasca Rawat">Kontrol Pasca Rawat</button>
+            </div>
+
+            <div class="form-group booking-complaint-group">
+              <label class="form-label" for="complaint">Keluhan Singkat (Opsional, maks. 500 karakter)</label>
+              <textarea id="complaint" name="complaint" class="form-textarea" maxlength="500" rows="3" autocomplete="off" placeholder="Ketik gejala atau keluhan yang dialami secara rinci..."></textarea>
+            </div>
+          </section>
         </div>
 
-        <div class="grid-2">
-          <div class="form-group">
-            <label class="form-label" for="appointment_date">Tanggal Kunjungan</label>
-            <input type="date" id="appointment_date" name="appointment_date" class="form-input" required autocomplete="off">
+        <!-- Kolom Kanan: Sticky Reservation Summary Slip -->
+        <aside class="booking-summary-col" aria-labelledby="summaryTitle">
+          <div class="booking-summary-card">
+            <div class="booking-summary-head">
+              <div>
+                <span class="summary-eyebrow">RINGKASAN RESERVASI</span>
+                <h2 id="summaryTitle" class="summary-title">Rincian Janji Temu</h2>
+              </div>
+            </div>
+
+            <div class="summary-items-list">
+              <div class="summary-item-row">
+                <div class="summary-item-icon" aria-hidden="true">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
+                </div>
+                <div class="summary-item-body">
+                  <span class="summary-item-label">Poliklinik &amp; Dokter</span>
+                  <p id="summaryPoli" class="summary-item-primary">Belum dipilih</p>
+                  <p id="summaryDoctor" class="summary-item-secondary">Pilih dokter spesialis pada Langkah 2</p>
+                </div>
+              </div>
+
+              <div class="summary-item-row">
+                <div class="summary-item-icon" aria-hidden="true">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                </div>
+                <div class="summary-item-body">
+                  <span class="summary-item-label">Tanggal &amp; Sesi Jam</span>
+                  <p id="summaryDate" class="summary-item-primary">Pilih tanggal</p>
+                  <p id="summaryTime" class="summary-item-secondary">Pilih sesi jam pada Langkah 3</p>
+                </div>
+              </div>
+
+              <div class="summary-item-row">
+                <div class="summary-item-icon" aria-hidden="true">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                </div>
+                <div class="summary-item-body">
+                  <span class="summary-item-label">Lokasi Klinik</span>
+                  <p class="summary-item-primary">Nuvacare Central Clinic</p>
+                  <p id="summaryRoom" class="summary-item-secondary">Gedung Utama Rawat Jalan</p>
+                </div>
+              </div>
+
+              <div class="summary-item-row">
+                <div class="summary-item-icon summary-item-icon--patient" aria-hidden="true">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                </div>
+                <div class="summary-item-body">
+                  <span class="summary-item-label">Data Pasien</span>
+                  <p id="summaryPatientName" class="summary-item-primary">Memuat nama pasien...</p>
+                  <p id="summaryPatientPhone" class="summary-item-secondary summary-item-secondary--wa">WhatsApp terhubung</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="summary-payment-box">
+              <div class="summary-payment-row">
+                <span class="summary-payment-label">Status Pembayaran</span>
+                <span class="summary-payment-badge">Bayar di Loket Klinik</span>
+              </div>
+              <p class="summary-payment-note">Pembayaran dilakukan langsung di klinik saat kunjungan (Tunai / QRIS / Asuransi).</p>
+            </div>
+
+            <button type="submit" id="submitBookingBtn" class="btn btn-primary booking-submit-btn">
+              <span>Konfirmasi &amp; Buat Janji Temu</span>
+              <span class="submit-arrow" aria-hidden="true">&rarr;</span>
+            </button>
+
+            <p class="summary-privacy-note">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+              <span>Data kunjungan medis tercatat aman pada rekam jejak poliklinik Nuvacare</span>
+            </p>
           </div>
-
-          <div class="form-group">
-            <label class="form-label" for="appointment_time">Jam Kunjungan (Slot Tersedia)</label>
-            <select id="appointment_time" name="appointment_time" class="form-select" required disabled autocomplete="off">
-              <option value="">Pilih dokter dan tanggal terlebih dahulu…</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="complaint">Keluhan Singkat (Opsional, maks. 500 karakter)</label>
-          <textarea id="complaint" name="complaint" class="form-textarea" maxlength="500" autocomplete="off" placeholder="Tuliskan keluhan atau alasan kunjunganmu…"></textarea>
-        </div>
-
-        <button type="submit" class="btn btn-primary">Buat janji</button>
-      </form>
-    </section>
-
-    <section class="card" aria-labelledby="listBookingTitle">
-      <h2 id="listBookingTitle" class="card-title">Daftar Janji Temu</h2>
-      <div class="table-responsive">
-        <table>
-          <thead>
-            <tr>
-              <th>Tanggal &amp; Jam</th>
-              <th>Poliklinik</th>
-              <th>Dokter</th>
-              <th>Keluhan</th>
-              <th>Status</th>
-              <th>Catatan Klinik</th>
-            </tr>
-          </thead>
-          <tbody id="appointmentTableBody" aria-live="polite">
-            <tr>
-              <td colspan="6" class="text-muted text-center" style="padding: var(--space-6);">
-                Memuat daftar janji temu…
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        </aside>
       </div>
-    </section>
+    </form>
   </main>
 </body>
 </html>

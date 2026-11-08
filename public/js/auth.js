@@ -936,6 +936,7 @@ async function loadPublicHomepage() {
 
   const token = api.getToken();
   const user = api.getUser();
+  const navLinks = document.getElementById('homeNavLinks') || document.querySelector('.home-nav-center');
   const navAction = document.getElementById('navAuthAction');
   const navBookingLink = document.getElementById('navBookingLink');
   const heroBookingCta = document.getElementById('heroBookingCta');
@@ -943,22 +944,59 @@ async function loadPublicHomepage() {
   const isLoggedInPatient = Boolean(token && user && user.role === 'pasien');
 
   if (token && user && navAction) {
-    const dashboardUrl = user.role === 'admin' ? '/admin/kelola-janji.html' : '/pasien/janji-temu.html';
-    navAction.innerHTML = `
-      <span class="nav-user-name">${escapeHtml(user.name)}</span>
-      <a href="${dashboardUrl}" class="btn btn-pill-dark">Buka Dashboard</a>
-    `;
+    if (user.role === 'pasien') {
+      if (navLinks) {
+        navLinks.innerHTML = `
+          <li><a href="/index.html" class="active" aria-current="page">Beranda</a></li>
+          <li><a href="/pasien/janji-temu.html" id="navBookingLink">Janji Temu</a></li>
+          <li><a href="/pasien/jadwal-kontrol.html">Jadwal Kontrol</a></li>
+          <li><a href="/pasien/riwayat.html">Riwayat Pemeriksaan</a></li>
+        `;
+      }
 
-    if (navBookingLink) {
-      navBookingLink.setAttribute('href', dashboardUrl);
-    }
-    if (heroBookingCta) {
-      heroBookingCta.setAttribute('href', dashboardUrl);
-      heroBookingCta.textContent = user.role === 'admin' ? 'Kelola Janji' : 'Buat Janji';
-    }
-    if (highlightActionLink) {
-      highlightActionLink.setAttribute('href', dashboardUrl);
-      highlightActionLink.textContent = 'Buat Janji Sekarang';
+      navAction.innerHTML = `
+        <a href="/pasien/profil.html" class="btn btn-pill-outline nav-profile-pill" title="Profil Pasien">
+          <span class="nav-user-name">${escapeHtml(user.name)}</span>
+          <span>· Profil</span>
+        </a>
+        <button type="button" id="homeLogoutBtn" class="btn btn-pill-primary">Keluar</button>
+      `;
+
+      const homeLogoutBtn = document.getElementById('homeLogoutBtn');
+      if (homeLogoutBtn) {
+        homeLogoutBtn.addEventListener('click', () => {
+          if (confirm('Keluar dari akunmu sekarang?')) {
+            api.logout();
+          }
+        });
+      }
+
+      if (heroBookingCta) {
+        heroBookingCta.setAttribute('href', '/pasien/janji-temu.html');
+        heroBookingCta.textContent = 'Buat Janji Sekarang';
+      }
+      if (highlightActionLink) {
+        highlightActionLink.setAttribute('href', '/pasien/janji-temu.html');
+        highlightActionLink.textContent = 'Buat Janji Sekarang';
+      }
+    } else {
+      const dashboardUrl = '/admin/kelola-janji.html';
+      navAction.innerHTML = `
+        <span class="nav-user-name">${escapeHtml(user.name)}</span>
+        <a href="${dashboardUrl}" class="btn btn-pill-dark">Buka Dashboard</a>
+      `;
+
+      if (navBookingLink) {
+        navBookingLink.setAttribute('href', dashboardUrl);
+      }
+      if (heroBookingCta) {
+        heroBookingCta.setAttribute('href', dashboardUrl);
+        heroBookingCta.textContent = 'Kelola Janji';
+      }
+      if (highlightActionLink) {
+        highlightActionLink.setAttribute('href', dashboardUrl);
+        highlightActionLink.textContent = 'Buat Janji Sekarang';
+      }
     }
   }
 

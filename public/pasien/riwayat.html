@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#EEF1F6">
+  <meta name="theme-color" content="#F8FAFC">
   <title>Riwayat Pemeriksaan - Nuvacare</title>
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
@@ -13,7 +13,7 @@
   <link rel="stylesheet" href="/css/style.css" fetchpriority="high">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=Plus+Jakarta+Sans:ital,wght@0,500..800;1,500..800&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=Fira+Code:wght@400;500;600&family=Plus+Jakarta+Sans:ital,wght@0,500..800;1,500..800&display=swap">
   <script src="/js/api.js" defer fetchpriority="high"></script>
   <script src="/js/pasien.js" defer></script>
   <script type="speculationrules">
@@ -30,16 +30,19 @@
 
   <header class="site-header">
     <nav class="navbar" aria-label="Navigasi utama">
-      <a href="/pasien/janji-temu.html" class="brand" translate="no">
+      <a href="/index.html" class="brand" translate="no">
         <span class="brand-text">Nuvacare</span>
       </a>
       <ul class="nav-links">
+        <li><a href="/index.html">Beranda</a></li>
         <li><a href="/pasien/janji-temu.html">Janji Temu</a></li>
-        <li><a href="/pasien/riwayat.html" class="active" aria-current="page">Riwayat</a></li>
         <li><a href="/pasien/jadwal-kontrol.html">Jadwal Kontrol</a></li>
-        <li><a href="/pasien/profil.html">Profil</a></li>
+        <li><a href="/pasien/riwayat.html" class="active" aria-current="page">Riwayat Pemeriksaan</a></li>
         <li class="nav-user">
-          <span id="navUserName" class="nav-user-name"></span>
+          <a href="/pasien/profil.html" class="nav-profile-link">
+            <span id="navUserName" class="nav-user-name"></span>
+            <span class="nav-profile-badge">Profil</span>
+          </a>
           <button type="button" id="logoutBtn" class="btn btn-secondary btn-sm">Keluar</button>
         </li>
       </ul>

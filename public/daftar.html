@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#FFFFFF">
+  <meta name="theme-color" content="#F8FAFC">
   <title>Daftar Pasien Baru - Nuvacare Layanan Kesehatan</title>
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
@@ -14,8 +14,7 @@
   <link rel="stylesheet" href="/css/style.css" fetchpriority="high">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet"
-    href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=Plus+Jakarta+Sans:ital,wght@0,500..800;1,500..800&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=Fira+Code:wght@400;500;600&family=Plus+Jakarta+Sans:ital,wght@0,500..800;1,500..800&display=swap">
   <script src="/js/api.js" defer fetchpriority="high"></script>
   <script src="/js/auth.js" defer></script>
   <script type="speculationrules">
@@ -34,71 +33,7 @@
   <main id="main-content" class="auth-page-shell">
     <div class="auth-split-card">
 
-      <!-- Panel Kiri: Panduan & Stepper Vertikal Informasi (Soft Pastel Blue #EFF6FF) -->
-      <aside class="auth-stepper-pane" aria-labelledby="authGuideTitle">
-        <div class="auth-stepper-pane__inner">
-
-          <!-- Brand Header (Informasi Statis, Bukan Tautan Navigasi) -->
-          <header class="auth-brand-block">
-            <div class="brand" id="navClinicName" translate="no">
-              <span class="brand-text">Nuvacare</span>
-            </div>
-            <p class="auth-brand-tagline">Layanan Kesehatan Terpadu</p>
-          </header>
-
-          <!-- Judul Panduan Pendaftaran -->
-          <section class="auth-guide-section">
-            <span class="auth-guide-eyebrow">Panduan Pendaftaran</span>
-            <h2 id="authGuideTitle" class="auth-guide-title">Pendaftaran Pasien Baru</h2>
-            <p class="auth-guide-desc">Sistem verifikasi data rekam medis terpadu dan aman.</p>
-            <div class="auth-stage-badge" id="sidebarStageCaption">
-              Langkah 1 dari 2: Data Pasien &amp; Akun
-            </div>
-          </section>
-
-          <!-- Stepper Vertikal 2 Langkah (Informasi Alur, Non-Klik) -->
-          <nav class="auth-stepper-nav" aria-label="Alur pendaftaran pasien">
-            <ol class="auth-stepper-steps">
-              <!-- Langkah 1 -->
-              <li class="auth-step-item auth-step-item--active" id="stepperStep1" data-step="1">
-                <div class="auth-step-marker" aria-hidden="true">
-                  <span class="auth-step-number">1</span>
-                </div>
-                <div class="auth-step-text">
-                  <strong class="auth-step-label">Data Pasien &amp; Akun</strong>
-                  <p class="auth-step-detail">Lengkapi identitas rekam medis dan kata sandi pengaman akun Anda.</p>
-                </div>
-              </li>
-
-              <!-- Langkah 2 -->
-              <li class="auth-step-item" id="stepperStep2" data-step="2">
-                <div class="auth-step-marker" aria-hidden="true">
-                  <span class="auth-step-number">2</span>
-                </div>
-                <div class="auth-step-text">
-                  <strong class="auth-step-label">Verifikasi Kode OTP</strong>
-                  <p class="auth-step-detail">Masukkan 4 digit kode keamanan yang dikirimkan ke WhatsApp Anda.</p>
-                </div>
-              </li>
-            </ol>
-          </nav>
-
-          <!-- Footer Panel Kiri: Informasi Keamanan (Bukan Tautan Navigasi) -->
-          <footer class="auth-aside-footer">
-            <div class="auth-aside-info-note">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-              </svg>
-              <span>Data Rekam Medis Terenkripsi &amp; Aman</span>
-            </div>
-          </footer>
-
-        </div>
-      </aside>
-
-      <!-- Panel Kanan: Canvas Formulir Pendaftaran (#FFFFFF) -->
+      <!-- Panel Formulir Pendaftaran (#FFFFFF) -->
       <section class="auth-canvas-pane" aria-labelledby="registerHeading">
         <div class="auth-canvas-pane__inner">
 
@@ -117,11 +52,13 @@
             <div class="auth-stage-tabs" role="tablist" aria-label="Pilihan tahap pendaftaran">
               <button type="button" role="tab" id="tabBtn1" class="auth-stage-tab auth-stage-tab--active"
                 aria-selected="true" aria-controls="stagePanel1" onclick="switchRegisterStage(1)">
-                Tahap 1: Data Pasien
+                <span class="auth-stage-tab-full">Tahap 1: Data Pasien</span>
+                <span class="auth-stage-tab-short">1. Pasien</span>
               </button>
               <button type="button" role="tab" id="tabBtn2" class="auth-stage-tab" aria-selected="false"
                 aria-controls="stagePanel2" disabled aria-disabled="true" onclick="switchRegisterStage(2)">
-                Tahap 2: Verifikasi OTP
+                <span class="auth-stage-tab-full">Tahap 2: Verifikasi OTP</span>
+                <span class="auth-stage-tab-short">2. OTP</span>
               </button>
             </div>
           </nav>
