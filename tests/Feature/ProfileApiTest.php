@@ -47,30 +47,44 @@ class ProfileApiTest extends TestCase
     public function test_patient_can_update_profile_and_password(): void
     {
         $patient = User::where('email', 'pasien1@klinik.local')->first();
+        $originalName = $patient->name;
+        $originalPhone = $patient->phone_number;
+        $originalBirthDate = $patient->birth_date?->format('Y-m-d');
+        $originalAddress = $patient->address;
         $token = $patient->createToken('patient-token')->plainTextToken;
 
-        $response = $this->withHeader('Authorization', 'Bearer '.$token)
-            ->patchJson('/api/profil', [
-                'name' => 'Budi Santoso Baru',
-                'phone_number' => '089988776655',
-                'birth_date' => '1990-10-20',
-                'address' => 'Jl. Kebon Jeruk No. 88',
-                'password' => 'PasienKlinik2026!',
-                'password_confirmation' => 'PasienKlinik2026!',
-            ]);
-
-        $response->assertStatus(200)
-            ->assertJson([
-                'message' => 'Profil berhasil diperbarui',
-                'data' => [
+        try {
+            $response = $this->withHeader('Authorization', 'Bearer '.$token)
+                ->patchJson('/api/profil', [
                     'name' => 'Budi Santoso Baru',
                     'phone_number' => '089988776655',
                     'birth_date' => '1990-10-20',
                     'address' => 'Jl. Kebon Jeruk No. 88',
-                ],
-            ]);
+                    'password' => 'PasienKlinik2026!',
+                    'password_confirmation' => 'PasienKlinik2026!',
+                ]);
 
-        $patient->refresh();
-        $this->assertTrue(Hash::check('PasienKlinik2026!', $patient->password));
+            $response->assertStatus(200)
+                ->assertJson([
+                    'message' => 'Profil berhasil diperbarui',
+                    'data' => [
+                        'name' => 'Budi Santoso Baru',
+                        'phone_number' => '6289988776655',
+                        'birth_date' => '1990-10-20',
+                        'address' => 'Jl. Kebon Jeruk No. 88',
+                    ],
+                ]);
+
+            $patient->refresh();
+            $this->assertTrue(Hash::check('PasienKlinik2026!', $patient->password));
+        } finally {
+            $patient->update([
+                'name' => $originalName,
+                'phone_number' => $originalPhone,
+                'birth_date' => $originalBirthDate,
+                'address' => $originalAddress,
+            ]);
+            $patient->tokens()->where('name', 'patient-token')->delete();
+        }
     }
 }

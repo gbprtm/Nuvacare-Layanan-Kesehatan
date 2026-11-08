@@ -119,12 +119,20 @@ class WhatsAppNotificationService
             return '';
         }
 
-        if (str_starts_with($digits, '0')) {
-            return '62'.substr($digits, 1);
+        while (str_starts_with($digits, '0062')) {
+            $digits = substr($digits, 2);
         }
 
-        if (str_starts_with($digits, '8')) {
-            return '62'.$digits;
+        while (str_starts_with($digits, '6262')) {
+            $digits = substr($digits, 2);
+        }
+
+        if (str_starts_with($digits, '620')) {
+            $digits = '62'.ltrim(substr($digits, 2), '0');
+        } elseif (str_starts_with($digits, '0')) {
+            $digits = '62'.ltrim($digits, '0');
+        } elseif (str_starts_with($digits, '8')) {
+            $digits = '62'.$digits;
         }
 
         return $digits;

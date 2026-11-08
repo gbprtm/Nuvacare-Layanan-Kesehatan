@@ -38,30 +38,40 @@ class AuthApiTest extends TestCase
     public function test_patient_can_register(): void
     {
         $uniqueEmail = 'pasien_baru_'.uniqid().'@test.local';
+        $rawPhone = '0812'.random_int(10000000, 99999999);
+        $normalizedPhone = '62'.substr($rawPhone, 1);
 
         $response = $this->postJson('/api/register', [
             'name' => 'Pasien Baru Mandiri',
             'email' => $uniqueEmail,
             'password' => 'Password123!',
             'password_confirmation' => 'Password123!',
-            'phone_number' => '081299887766',
+            'phone_number' => $rawPhone,
             'birth_date' => '1995-04-12',
             'address' => 'Jl. Merdeka No. 10',
         ]);
 
-        $response->assertStatus(201)
-            ->assertJsonStructure([
-                'message',
-                'token',
-                'user' => ['id', 'name', 'email', 'role'],
-            ]);
+        try {
+            $response->assertStatus(201)
+                ->assertJsonStructure([
+                    'message',
+                    'token',
+                    'user' => ['id', 'name', 'email', 'role'],
+                ]);
 
-        $this->assertEquals('pasien', $response->json('user.role'));
-        $this->assertDatabaseHas('klinik.users', [
-            'email' => $uniqueEmail,
-            'role' => 'pasien',
-            'phone_number' => '081299887766',
-        ]);
+            $this->assertEquals('pasien', $response->json('user.role'));
+            $this->assertDatabaseHas('klinik.users', [
+                'email' => $uniqueEmail,
+                'role' => 'pasien',
+                'phone_number' => $normalizedPhone,
+            ]);
+        } finally {
+            $createdUser = User::where('email', $uniqueEmail)->first();
+            if ($createdUser) {
+                $createdUser->tokens()->delete();
+                $createdUser->delete();
+            }
+        }
     }
 
     public function test_login_success(): void
@@ -362,6 +372,176 @@ class AuthApiTest extends TestCase
         if ($user) {
             $user->tokens()->delete();
             $user->delete();
+        }
+    }
+
+    public function test_generated_otp_works_across_62_08_and_other_phone_formats(): void
+    {
+        Http::fake([
+            '*' => Http::response(['status' => true], 200),
+        ]);
+
+        config([
+            'services.whatsapp.url' => 'https://api.fonnte.com/send',
+            'services.whatsapp.token' => 'test-fonnte-token',
+            'app.debug' => true,
+        ]);
+
+        $baseDigits = '813'.random_int(10000000, 99999999);
+        $canonicalPhone = '62'.$baseDigits;
+        $variants = [
+            '0'.$baseDigits,
+            '62'.$baseDigits,
+            '+62'.$baseDigits,
+            $baseDigits,
+            '620'.$baseDigits,
+            '+62 0'.substr($baseDigits, 0, 3).'-'.substr($baseDigits, 3, 4).'-'.substr($baseDigits, 7),
+            '+6262'.$baseDigits,
+        ];
+
+        foreach ($variants as $idx => $inputFormat) {
+            $email = "format_{$idx}_".uniqid().'@test.local';
+
+            try {
+                $sendRes = $this->postJson('/api/auth/register/send-otp', [
+                    'name' => 'Pasien Format Uji',
+                    'email' => $email,
+                    'phone_number' => $inputFormat,
+                    'password' => 'Password123!',
+                    'password_confirmation' => 'Password123!',
+                ]);
+
+                $sendRes->assertStatus(200)
+                    ->assertJsonPath('data.phone_number', $canonicalPhone);
+
+                $generatedOtp = $sendRes->json('data.debug_otp');
+                $this->assertNotEmpty($generatedOtp);
+
+                // Verify using a different format variant (e.g. 08... vs 62...)
+                $verifyPhoneInput = $variants[($idx + 1) % count($variants)];
+                $verifyRes = $this->postJson('/api/auth/register/verify-otp', [
+                    'phone_number' => $verifyPhoneInput,
+                    'otp' => $generatedOtp,
+                ]);
+
+                $verifyRes->assertStatus(201)
+                    ->assertJsonPath('user.phone_number', $canonicalPhone)
+                    ->assertJsonPath('user.phone_verified', true);
+            } finally {
+                WhatsappOtp::where('phone_number', $canonicalPhone)->delete();
+                $u = User::where('email', $email)->first();
+                if ($u) {
+                    $u->tokens()->delete();
+                    $u->delete();
+                }
+            }
+        }
+    }
+
+    public function test_already_registered_phone_returns_clear_message_across_formats_and_endpoints(): void
+    {
+        Http::fake([
+            '*' => Http::response(['status' => true], 200),
+        ]);
+
+        $baseDigits = '812'.random_int(10000000, 99999999);
+        $localPhone = '0'.$baseDigits;
+        $canonicalPhone = '62'.$baseDigits;
+        $existingEmail = 'existing_'.uniqid().'@test.local';
+
+        $existingUser = User::create([
+            'name' => 'Pasien Terdaftar',
+            'email' => $existingEmail,
+            'password' => Hash::make('Password123!'),
+            'role' => 'pasien',
+            'phone_number' => $localPhone,
+            'phone_verified_at' => now(),
+        ]);
+
+        $otherUser = User::create([
+            'name' => 'Pasien Kedua',
+            'email' => 'other_'.uniqid().'@test.local',
+            'password' => Hash::make('Password123!'),
+            'role' => 'pasien',
+            'phone_number' => null,
+            'phone_verified_at' => null,
+        ]);
+        $otherToken = $otherUser->createToken('other-token')->plainTextToken;
+
+        try {
+            $formatsToTest = [
+                $localPhone,
+                $canonicalPhone,
+                '+'.$canonicalPhone,
+                $baseDigits,
+                '620'.$baseDigits,
+                '+62 0'.$baseDigits,
+            ];
+
+            foreach ($formatsToTest as $format) {
+                $resRegisterOtp = $this->postJson('/api/auth/register/send-otp', [
+                    'name' => 'Calon Pasien Baru',
+                    'email' => 'calon_'.uniqid().'@test.local',
+                    'phone_number' => $format,
+                    'password' => 'Password123!',
+                    'password_confirmation' => 'Password123!',
+                ]);
+
+                $resRegisterOtp->assertStatus(422)
+                    ->assertJsonValidationErrors(['phone_number']);
+                $this->assertStringContainsString(
+                    'sudah terdaftar',
+                    $resRegisterOtp->json('errors.phone_number.0')
+                );
+
+                $resPhoneOtp = $this->withHeader('Authorization', 'Bearer '.$otherToken)
+                    ->postJson('/api/auth/phone/send-otp', [
+                        'phone_number' => $format,
+                    ]);
+
+                $resPhoneOtp->assertStatus(422)
+                    ->assertJsonValidationErrors(['phone_number']);
+                $this->assertStringContainsString(
+                    'sudah terdaftar',
+                    $resPhoneOtp->json('errors.phone_number.0')
+                );
+            }
+
+            // Even if email is ALSO already registered, phone_number error must still be reported
+            $resBothDup = $this->postJson('/api/auth/register/send-otp', [
+                'name' => 'Calon Pasien Duplikat',
+                'email' => $existingEmail,
+                'phone_number' => $canonicalPhone,
+                'password' => 'Password123!',
+                'password_confirmation' => 'Password123!',
+            ]);
+            $resBothDup->assertStatus(422)
+                ->assertJsonValidationErrors(['email', 'phone_number']);
+
+            // Direct POST /api/register must also reject already-registered phone
+            $resDirectReg = $this->postJson('/api/register', [
+                'name' => 'Pasien Langsung',
+                'email' => 'direct_'.uniqid().'@test.local',
+                'phone_number' => $canonicalPhone,
+                'password' => 'Password123!',
+                'password_confirmation' => 'Password123!',
+            ]);
+            $resDirectReg->assertStatus(422)
+                ->assertJsonValidationErrors(['phone_number']);
+
+            // PATCH /api/profil must also reject updating phone to another user's registered phone
+            $resProfileUpdate = $this->withHeader('Authorization', 'Bearer '.$otherToken)
+                ->patchJson('/api/profil', [
+                    'name' => 'Pasien Kedua',
+                    'phone_number' => $canonicalPhone,
+                ]);
+            $resProfileUpdate->assertStatus(422)
+                ->assertJsonValidationErrors(['phone_number']);
+        } finally {
+            $otherUser->tokens()->delete();
+            $otherUser->delete();
+            $existingUser->tokens()->delete();
+            $existingUser->delete();
         }
     }
 }

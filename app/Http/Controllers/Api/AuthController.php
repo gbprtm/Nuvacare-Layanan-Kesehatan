@@ -50,27 +50,37 @@ class AuthController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'phone_number' => ['required', 'string', 'min:9', 'max:30'],
+            'phone_number' => [
+                'required',
+                'string',
+                'min:9',
+                'max:30',
+                function (string $attribute, mixed $value, \Closure $fail) use ($whatsApp) {
+                    $normalized = $whatsApp->normalizePhone((string) $value);
+                    if (strlen($normalized) < 10) {
+                        $fail('Masukkan nomor WhatsApp yang valid (contoh: 081234567890).');
+
+                        return;
+                    }
+
+                    if ($this->isPhoneTaken($normalized)) {
+                        $fail('Nomor WhatsApp ini sudah terdaftar pada akun lain.');
+                    }
+                },
+            ],
             'birth_date' => ['nullable', 'date', 'before:today'],
             'address' => ['nullable', 'string', 'max:1000'],
             'password' => ['required', 'string', PasswordRule::min(8), 'confirmed'],
+        ], [
+            'email.unique' => 'Alamat email ini sudah terdaftar pada akun lain.',
         ]);
 
         $normalizedPhone = $whatsApp->normalizePhone($validated['phone_number']);
-        if (strlen($normalizedPhone) < 10) {
-            throw ValidationException::withMessages([
-                'phone_number' => ['Masukkan nomor WhatsApp yang valid (contoh: 081234567890).'],
-            ]);
-        }
+        $phoneVariants = $this->phoneVariants($normalizedPhone);
 
-        if ($this->isPhoneTaken($normalizedPhone)) {
-            throw ValidationException::withMessages([
-                'phone_number' => ['Nomor WhatsApp ini sudah terdaftar pada akun lain.'],
-            ]);
-        }
-
-        $existingOtp = WhatsappOtp::where('phone_number', $normalizedPhone)
+        $existingOtp = WhatsappOtp::whereIn('phone_number', $phoneVariants ?: [$normalizedPhone])
             ->where('purpose', 'register')
+            ->orderByDesc('last_sent_at')
             ->first();
 
         if ($existingOtp && $existingOtp->last_sent_at && $existingOtp->last_sent_at->diffInSeconds(now()) < self::OTP_COOLDOWN_SECONDS) {
@@ -83,6 +93,11 @@ class AuthController extends Controller
         }
 
         $otpCode = (string) random_int(1000, 9999);
+
+        WhatsappOtp::whereIn('phone_number', $phoneVariants)
+            ->where('phone_number', '!=', $normalizedPhone)
+            ->where('purpose', 'register')
+            ->delete();
 
         WhatsappOtp::updateOrCreate(
             [
@@ -131,12 +146,16 @@ class AuthController extends Controller
         ]);
 
         $normalizedPhone = $whatsApp->normalizePhone($validated['phone_number']);
+        $phoneVariants = $this->phoneVariants($normalizedPhone);
 
-        $otpRecord = WhatsappOtp::where('phone_number', $normalizedPhone)
+        $otpRecord = WhatsappOtp::whereIn('phone_number', $phoneVariants ?: [$normalizedPhone])
             ->where('purpose', 'register')
+            ->orderByDesc('last_sent_at')
             ->first();
 
         $this->validateOtpAttempt($otpRecord, $validated['otp']);
+
+        $canonicalPhone = $whatsApp->normalizePhone((string) ($otpRecord->payload['phone_number'] ?? $otpRecord->phone_number ?: $normalizedPhone));
 
         $payload = $otpRecord->payload ?? [];
         if (empty($payload['email']) || empty($payload['name']) || empty($payload['password_hash'])) {
@@ -153,7 +172,7 @@ class AuthController extends Controller
             ]);
         }
 
-        if ($this->isPhoneTaken($normalizedPhone)) {
+        if ($this->isPhoneTaken($canonicalPhone)) {
             $otpRecord->delete();
             throw ValidationException::withMessages([
                 'phone_number' => ['Nomor WhatsApp ini sudah terdaftar pada akun lain.'],
@@ -164,7 +183,7 @@ class AuthController extends Controller
             'name' => $payload['name'],
             'email' => $payload['email'],
             'role' => 'pasien',
-            'phone_number' => $normalizedPhone,
+            'phone_number' => $canonicalPhone,
             'phone_verified_at' => now(),
             'birth_date' => $payload['birth_date'] ?? null,
             'address' => $payload['address'] ?? null,
@@ -184,24 +203,50 @@ class AuthController extends Controller
         ], 201);
     }
 
-    public function register(Request $request): JsonResponse
+    public function register(Request $request, WhatsAppNotificationService $whatsApp): JsonResponse
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', PasswordRule::min(8), 'confirmed'],
-            'phone_number' => ['nullable', 'string', 'max:30'],
+            'phone_number' => [
+                'nullable',
+                'string',
+                'max:30',
+                function (string $attribute, mixed $value, \Closure $fail) use ($whatsApp) {
+                    if ($value === null || trim((string) $value) === '') {
+                        return;
+                    }
+
+                    $normalized = $whatsApp->normalizePhone((string) $value);
+                    if (strlen($normalized) < 10) {
+                        $fail('Masukkan nomor WhatsApp yang valid (contoh: 081234567890).');
+
+                        return;
+                    }
+
+                    if ($this->isPhoneTaken($normalized)) {
+                        $fail('Nomor WhatsApp ini sudah terdaftar pada akun lain.');
+                    }
+                },
+            ],
             'birth_date' => ['nullable', 'date', 'before:today'],
             'address' => ['nullable', 'string', 'max:1000'],
+        ], [
+            'email.unique' => 'Alamat email ini sudah terdaftar pada akun lain.',
         ]);
+
+        $normalizedPhone = ! empty($validated['phone_number'])
+            ? $whatsApp->normalizePhone($validated['phone_number'])
+            : null;
 
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
             'role' => 'pasien',
-            'phone_number' => $validated['phone_number'] ?? null,
-            'phone_verified_at' => ! empty($validated['phone_number']) ? now() : null,
+            'phone_number' => $normalizedPhone,
+            'phone_verified_at' => $normalizedPhone !== null ? now() : null,
             'birth_date' => $validated['birth_date'] ?? null,
             'address' => $validated['address'] ?? null,
         ]);
@@ -299,12 +344,15 @@ class AuthController extends Controller
 
         if ($this->isPhoneTaken($normalizedPhone, $user->id)) {
             throw ValidationException::withMessages([
-                'phone_number' => ['Nomor WhatsApp ini sudah digunakan oleh akun lain.'],
+                'phone_number' => ['Nomor WhatsApp ini sudah terdaftar pada akun lain.'],
             ]);
         }
 
-        $existingOtp = WhatsappOtp::where('phone_number', $normalizedPhone)
+        $phoneVariants = $this->phoneVariants($normalizedPhone);
+
+        $existingOtp = WhatsappOtp::whereIn('phone_number', $phoneVariants ?: [$normalizedPhone])
             ->where('purpose', 'verify_phone')
+            ->orderByDesc('last_sent_at')
             ->first();
 
         if ($existingOtp && $existingOtp->last_sent_at && $existingOtp->last_sent_at->diffInSeconds(now()) < self::OTP_COOLDOWN_SECONDS) {
@@ -317,6 +365,11 @@ class AuthController extends Controller
         }
 
         $otpCode = (string) random_int(1000, 9999);
+
+        WhatsappOtp::whereIn('phone_number', $phoneVariants)
+            ->where('phone_number', '!=', $normalizedPhone)
+            ->where('purpose', 'verify_phone')
+            ->delete();
 
         WhatsappOtp::updateOrCreate(
             [
@@ -363,12 +416,16 @@ class AuthController extends Controller
         ]);
 
         $normalizedPhone = $whatsApp->normalizePhone($validated['phone_number']);
+        $phoneVariants = $this->phoneVariants($normalizedPhone);
 
-        $otpRecord = WhatsappOtp::where('phone_number', $normalizedPhone)
+        $otpRecord = WhatsappOtp::whereIn('phone_number', $phoneVariants ?: [$normalizedPhone])
             ->where('purpose', 'verify_phone')
+            ->orderByDesc('last_sent_at')
             ->first();
 
         $this->validateOtpAttempt($otpRecord, $validated['otp']);
+
+        $canonicalPhone = $whatsApp->normalizePhone((string) ($otpRecord->payload['phone_number'] ?? $otpRecord->phone_number ?: $normalizedPhone));
 
         $payloadUserId = $otpRecord->payload['user_id'] ?? null;
         if ($payloadUserId !== null && (int) $payloadUserId !== (int) $user->id) {
@@ -377,15 +434,15 @@ class AuthController extends Controller
             ]);
         }
 
-        if ($this->isPhoneTaken($normalizedPhone, $user->id)) {
+        if ($this->isPhoneTaken($canonicalPhone, $user->id)) {
             $otpRecord->delete();
             throw ValidationException::withMessages([
-                'phone_number' => ['Nomor WhatsApp ini sudah digunakan oleh akun lain.'],
+                'phone_number' => ['Nomor WhatsApp ini sudah terdaftar pada akun lain.'],
             ]);
         }
 
         $user->update([
-            'phone_number' => $normalizedPhone,
+            'phone_number' => $canonicalPhone,
             'phone_verified_at' => now(),
         ]);
 
@@ -425,16 +482,13 @@ class AuthController extends Controller
         ]);
 
         $rawIdentifier = trim($request->input('identifier'));
-        $normalizedPhone = $whatsApp->normalizePhone($rawIdentifier);
-        $localPhone = $normalizedPhone !== '' && str_starts_with($normalizedPhone, '62')
-            ? '0'.substr($normalizedPhone, 2)
-            : $rawIdentifier;
+        $isEmailInput = str_contains($rawIdentifier, '@');
+        $normalizedPhone = $isEmailInput ? '' : $whatsApp->normalizePhone($rawIdentifier);
+        $identifierVariants = $normalizedPhone !== '' ? $this->phoneVariants($normalizedPhone) : [];
 
         $user = User::where('email', $rawIdentifier)
-            ->when($normalizedPhone !== '', function ($query) use ($normalizedPhone, $localPhone, $rawIdentifier) {
-                $query->orWhere('phone_number', $normalizedPhone)
-                    ->orWhere('phone_number', $localPhone)
-                    ->orWhere('phone_number', $rawIdentifier);
+            ->when(! empty($identifierVariants), function ($query) use ($identifierVariants, $rawIdentifier) {
+                $query->orWhereIn('phone_number', array_values(array_unique([...$identifierVariants, $rawIdentifier])));
             })
             ->first();
 
@@ -452,16 +506,11 @@ class AuthController extends Controller
         }
 
         $normalizedUserPhone = $whatsApp->normalizePhone($userPhone);
-        $localUserPhone = $normalizedUserPhone !== '' && str_starts_with($normalizedUserPhone, '62')
-            ? '0'.substr($normalizedUserPhone, 2)
-            : $userPhone;
+        $userPhoneVariants = $this->phoneVariants($normalizedUserPhone);
 
-        $existingOtp = WhatsappOtp::where(function ($query) use ($normalizedUserPhone, $localUserPhone, $userPhone) {
-            $query->where('phone_number', $normalizedUserPhone)
-                ->orWhere('phone_number', $localUserPhone)
-                ->orWhere('phone_number', $userPhone);
-        })
+        $existingOtp = WhatsappOtp::whereIn('phone_number', array_values(array_unique([...$userPhoneVariants, $userPhone])))
             ->where('purpose', 'reset_password')
+            ->orderByDesc('last_sent_at')
             ->first();
 
         if ($existingOtp && $existingOtp->last_sent_at && $existingOtp->last_sent_at->diffInSeconds(now()) < self::OTP_COOLDOWN_SECONDS) {
@@ -474,6 +523,11 @@ class AuthController extends Controller
         }
 
         $otpCode = (string) random_int(1000, 9999);
+
+        WhatsappOtp::whereIn('phone_number', array_values(array_unique([...$userPhoneVariants, $userPhone])))
+            ->where('phone_number', '!=', $normalizedUserPhone)
+            ->where('purpose', 'reset_password')
+            ->delete();
 
         // Always store normalized phone in WhatsappOtp for consistency
         WhatsappOtp::updateOrCreate(
@@ -521,9 +575,11 @@ class AuthController extends Controller
         ]);
 
         $normalizedPhone = $whatsApp->normalizePhone($validated['phone_number']);
+        $phoneVariants = $this->phoneVariants($normalizedPhone);
 
-        $otpRecord = WhatsappOtp::where('phone_number', $normalizedPhone)
+        $otpRecord = WhatsappOtp::whereIn('phone_number', $phoneVariants ?: [$normalizedPhone])
             ->where('purpose', 'reset_password')
+            ->orderByDesc('last_sent_at')
             ->first();
 
         $this->validateOtpAttempt($otpRecord, $validated['otp']);
@@ -555,9 +611,11 @@ class AuthController extends Controller
         ]);
 
         $normalizedPhone = $whatsApp->normalizePhone($validated['phone_number']);
+        $phoneVariants = $this->phoneVariants($normalizedPhone);
 
-        $otpRecord = WhatsappOtp::where('phone_number', $normalizedPhone)
+        $otpRecord = WhatsappOtp::whereIn('phone_number', $phoneVariants ?: [$normalizedPhone])
             ->where('purpose', 'reset_password')
+            ->orderByDesc('last_sent_at')
             ->first();
 
         if (! $otpRecord) {
@@ -749,16 +807,37 @@ class AuthController extends Controller
         ]);
     }
 
+    private function phoneVariants(string $normalizedPhone): array
+    {
+        if ($normalizedPhone === '') {
+            return [];
+        }
+
+        $core = str_starts_with($normalizedPhone, '62')
+            ? substr($normalizedPhone, 2)
+            : ltrim($normalizedPhone, '0');
+
+        if ($core === '') {
+            return [$normalizedPhone];
+        }
+
+        return array_values(array_unique(array_filter([
+            $normalizedPhone,
+            '+'.$normalizedPhone,
+            '0'.$core,
+            $core,
+            '620'.$core,
+        ])));
+    }
+
     private function isPhoneTaken(string $normalizedPhone, ?int $ignoreUserId = null): bool
     {
-        $localFormat = str_starts_with($normalizedPhone, '62')
-            ? '0'.substr($normalizedPhone, 2)
-            : $normalizedPhone;
+        $variants = $this->phoneVariants($normalizedPhone);
+        if (empty($variants)) {
+            return false;
+        }
 
-        return User::where(function ($query) use ($normalizedPhone, $localFormat) {
-            $query->where('phone_number', $normalizedPhone)
-                ->orWhere('phone_number', $localFormat);
-        })
+        return User::whereIn('phone_number', $variants)
             ->when($ignoreUserId !== null, fn ($q) => $q->where('id', '!=', $ignoreUserId))
             ->exists();
     }

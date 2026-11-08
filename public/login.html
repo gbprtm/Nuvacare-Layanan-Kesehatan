@@ -273,6 +273,7 @@
                   <input type="tel" id="stagePhoneInput" name="phone_number" class="form-input form-input-with-pill"
                     required inputmode="tel" autocomplete="tel" placeholder="812-xxxx-xxxx">
                 </div>
+                <p id="stagePhoneError" class="form-help-text text-xs mt-1" style="display: none; color: #DC2626; font-weight: 500;" role="alert"></p>
                 <p class="form-help-text text-muted text-xs mt-1">Masukkan minimal 9 hingga 13 digit angka.</p>
               </div>
 
@@ -504,8 +505,31 @@
     // =========================================================================
     // VALIDASI REAKTIF TAHAP 2: NOMOR WHATSAPP
     // =========================================================================
+    let loginOtpTimerInterval = null;
+    let loginOtpExpirySeconds = 300;
+    let loginOtpResendSeconds = 60;
+
     function cleanPhoneNumber(val) {
-      return val.replace(/[^0-9]/g, '');
+      return (val || '').replace(/[^0-9]/g, '');
+    }
+
+    function normalizeIndoPhone(raw) {
+      let digits = cleanPhoneNumber(raw);
+      if (!digits) return '';
+      if (digits.startsWith('0062')) {
+        digits = '62' + digits.substring(4);
+      }
+      while (digits.startsWith('6262')) {
+        digits = '62' + digits.substring(4);
+      }
+      if (digits.startsWith('620')) {
+        digits = '62' + digits.substring(3);
+      } else if (digits.startsWith('0')) {
+        digits = '62' + digits.substring(1);
+      } else if (digits.startsWith('8')) {
+        digits = '62' + digits;
+      }
+      return digits;
     }
 
     function maskPhoneNumber(phone) {
@@ -524,10 +548,9 @@
       if (!phoneInput || !sendBtn) return;
 
       const raw = phoneInput.value.trim();
-      const digits = cleanPhoneNumber(raw);
+      const normalized = normalizeIndoPhone(raw);
 
-      // Nomor Indonesia: 9 sampai 14 digit angka
-      const isValid = digits.length >= 9 && digits.length <= 14;
+      const isValid = /^628[0-9]{7,13}$/.test(normalized);
       sendBtn.disabled = !isValid;
     }
 
@@ -551,18 +574,76 @@
       verifyBtn.disabled = (code.length !== 4);
     }
 
+    function startLoginOtpTimer(expiresInSeconds, resendInSeconds) {
+      loginOtpExpirySeconds = expiresInSeconds || 300;
+      loginOtpResendSeconds = resendInSeconds || 60;
+
+      if (loginOtpTimerInterval) {
+        clearInterval(loginOtpTimerInterval);
+      }
+
+      updateLoginOtpTimerDom();
+
+      loginOtpTimerInterval = setInterval(() => {
+        if (loginOtpExpirySeconds > 0) loginOtpExpirySeconds -= 1;
+        if (loginOtpResendSeconds > 0) loginOtpResendSeconds -= 1;
+
+        updateLoginOtpTimerDom();
+
+        if (loginOtpExpirySeconds <= 0 && loginOtpResendSeconds <= 0) {
+          clearInterval(loginOtpTimerInterval);
+          loginOtpTimerInterval = null;
+        }
+      }, 1000);
+    }
+
+    function updateLoginOtpTimerDom() {
+      const countdownEl = document.getElementById('stageOtpCountdownText');
+      const resendBtn = document.getElementById('stageOtpResendBtn');
+
+      if (countdownEl) {
+        if (loginOtpExpirySeconds > 0) {
+          const mins = String(Math.floor(loginOtpExpirySeconds / 60)).padStart(2, '0');
+          const secs = String(loginOtpExpirySeconds % 60).padStart(2, '0');
+          countdownEl.textContent = `Berlaku selama ${mins}:${secs}`;
+        } else {
+          countdownEl.textContent = 'Kode OTP kedaluwarsa. Silakan kirim ulang.';
+        }
+      }
+
+      if (resendBtn) {
+        if (loginOtpResendSeconds > 0) {
+          resendBtn.disabled = true;
+          resendBtn.textContent = `Kirim Ulang (${loginOtpResendSeconds}d)`;
+        } else {
+          resendBtn.disabled = false;
+          resendBtn.textContent = 'Kirim Ulang Kode OTP';
+        }
+      }
+    }
+
     // Integrasi Global dengan auth.js
-    window.unlockAndGoToStage = function (stageNum, phone, expiresIn, resendIn, debugOtp, whatsappUrl, sentViaGateway) {
-      if (phone) {
-        activeUserPhone = phone;
+    window.unlockAndGoToStage = function (stageNum, phone, expiresIn, resendIn, debugOtp, whatsappUrl, sentViaGateway, maskedDisplay) {
+      const unmaskedPhone = (phone && !String(phone).includes('•'))
+        ? normalizeIndoPhone(phone)
+        : ((typeof otpState !== 'undefined' && otpState.phoneNumber) ? normalizeIndoPhone(otpState.phoneNumber) : '');
+
+      if (unmaskedPhone) {
+        activeUserPhone = unmaskedPhone;
         const stagePhoneInput = document.getElementById('stagePhoneInput');
         if (stagePhoneInput) {
-          stagePhoneInput.value = phone.replace(/^\+?62/, '').replace(/^0/, '');
+          stagePhoneInput.value = unmaskedPhone.replace(/^62/, '');
           checkStagePhoneValidity();
         }
-        const displayEl = document.getElementById('stageOtpPhoneDisplay');
-        if (displayEl) displayEl.textContent = maskPhoneNumber(phone);
       }
+
+      if (unmaskedPhone || maskedDisplay || phone) {
+        const displayEl = document.getElementById('stageOtpPhoneDisplay');
+        if (displayEl) {
+          displayEl.textContent = maskedDisplay || maskPhoneNumber(unmaskedPhone || phone);
+        }
+      }
+
       const devNotice = document.getElementById('stageOtpDevNotice');
       if (devNotice) {
         if (debugOtp) {
@@ -577,6 +658,9 @@
       }
       unlockStage(stageNum);
       switchAuthStage(stageNum);
+      if (stageNum === 3) {
+        startLoginOtpTimer(expiresIn || 300, resendIn || 60);
+      }
     };
 
     document.addEventListener('DOMContentLoaded', function () {
@@ -600,7 +684,15 @@
       // Listener Input Tahap 2
       const stagePhoneInput = document.getElementById('stagePhoneInput');
       if (stagePhoneInput) {
-        stagePhoneInput.addEventListener('input', checkStagePhoneValidity);
+        stagePhoneInput.addEventListener('input', function () {
+          const errEl = document.getElementById('stagePhoneError');
+          if (errEl) {
+            errEl.style.display = 'none';
+            errEl.textContent = '';
+          }
+          stagePhoneInput.removeAttribute('aria-invalid');
+          checkStagePhoneValidity();
+        });
         stagePhoneInput.addEventListener('change', checkStagePhoneValidity);
       }
 
@@ -611,25 +703,36 @@
           e.preventDefault();
           const sendBtn = document.getElementById('btnSendStageOtp');
           const alertEl = document.getElementById('stagePhoneAlert');
+          const errEl = document.getElementById('stagePhoneError');
           if (alertEl) {
             alertEl.style.display = 'none';
             alertEl.textContent = '';
           }
+          if (errEl) {
+            errEl.style.display = 'none';
+            errEl.textContent = '';
+          }
+          if (stagePhoneInput) stagePhoneInput.removeAttribute('aria-invalid');
 
           const rawPhone = stagePhoneInput.value.trim();
-          let clean = cleanPhoneNumber(rawPhone);
-          if (clean.startsWith('0')) clean = clean.substring(1);
-          const fullPhone = '+62' + clean;
+          const fullPhone = normalizeIndoPhone(rawPhone);
 
           try {
             sendBtn.disabled = true;
             sendBtn.textContent = 'Mengirim OTP…';
+
+            let expiresIn = 300;
+            let resendIn = 60;
 
             if (typeof api !== 'undefined' && api.request) {
               const res = await api.request('/auth/phone/send-otp', {
                 method: 'POST',
                 body: JSON.stringify({ phone_number: fullPhone })
               });
+
+              activeUserPhone = res.data?.phone_number || fullPhone;
+              expiresIn = res.data?.expires_in || 300;
+              resendIn = res.data?.resend_in || 60;
 
               const devNotice = document.getElementById('stageOtpDevNotice');
               if (devNotice) {
@@ -643,20 +746,30 @@
                   devNotice.style.display = 'none';
                 }
               }
+            } else {
+              activeUserPhone = fullPhone;
             }
 
-            activeUserPhone = fullPhone;
             const displayEl = document.getElementById('stageOtpPhoneDisplay');
-            if (displayEl) displayEl.textContent = maskPhoneNumber(fullPhone);
+            if (displayEl) displayEl.textContent = maskPhoneNumber(activeUserPhone);
 
             // Tahap 2 Berhasil -> Buka & Masuk Tahap 3
             unlockStage(3);
             switchAuthStage(3);
+            startLoginOtpTimer(expiresIn, resendIn);
           } catch (err) {
+            const phoneErr = err.errors?.phone_number?.[0] || null;
+            const msg = phoneErr || err.message || 'Gagal mengirim kode OTP. Periksa nomor Anda.';
+            if (phoneErr && errEl) {
+              errEl.textContent = phoneErr;
+              errEl.style.display = 'block';
+              if (stagePhoneInput) stagePhoneInput.setAttribute('aria-invalid', 'true');
+            }
             if (alertEl) {
-              alertEl.textContent = err.errors?.phone_number?.[0] || err.message || 'Gagal mengirim kode OTP. Periksa nomor Anda.';
+              alertEl.textContent = msg;
               alertEl.style.display = 'block';
             }
+            if (stagePhoneInput) stagePhoneInput.focus();
           } finally {
             sendBtn.disabled = false;
             sendBtn.innerHTML = '<span>Kirim Kode OTP</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>';
@@ -678,7 +791,9 @@
 
         input.addEventListener('keydown', function (e) {
           if (e.key === 'Backspace' && !input.value && idx > 0) {
+            otpInputs[idx - 1].value = '';
             otpInputs[idx - 1].focus();
+            checkStageOtpValidity();
           }
         });
 
@@ -694,6 +809,51 @@
           checkStageOtpValidity();
         });
       });
+
+      // Handler Kirim Ulang OTP Tahap 3
+      const stageOtpResendBtn = document.getElementById('stageOtpResendBtn');
+      if (stageOtpResendBtn) {
+        stageOtpResendBtn.addEventListener('click', async function () {
+          const alertEl = document.getElementById('stageOtpAlert');
+          if (alertEl) {
+            alertEl.style.display = 'none';
+            alertEl.textContent = '';
+          }
+          const phoneToResend = activeUserPhone || normalizeIndoPhone(stagePhoneInput ? stagePhoneInput.value : '');
+          if (!phoneToResend) return;
+
+          try {
+            stageOtpResendBtn.disabled = true;
+            stageOtpResendBtn.textContent = 'Mengirim ulang…';
+
+            const res = await api.request('/auth/phone/send-otp', {
+              method: 'POST',
+              body: JSON.stringify({ phone_number: phoneToResend })
+            });
+
+            activeUserPhone = res.data?.phone_number || phoneToResend;
+            const devNotice = document.getElementById('stageOtpDevNotice');
+            if (devNotice) {
+              if (res.data?.debug_otp) {
+                devNotice.textContent = `Mode Uji/Lokal: Kode OTP Anda adalah ${res.data.debug_otp}`;
+                devNotice.style.display = 'block';
+              } else if (res.data?.whatsapp_url && res.data?.sent_via_gateway === false) {
+                devNotice.innerHTML = `Gateway WhatsApp belum terhubung. Anda dapat <a href="${res.data.whatsapp_url}" target="_blank" rel="noopener noreferrer" style="text-decoration: underline; font-weight: 600;">mengirim pesan verifikasi secara manual melalui tautan WhatsApp ini</a>.`;
+                devNotice.style.display = 'block';
+              } else {
+                devNotice.style.display = 'none';
+              }
+            }
+            startLoginOtpTimer(res.data?.expires_in || 300, res.data?.resend_in || 60);
+          } catch (err) {
+            if (alertEl) {
+              alertEl.textContent = err.errors?.phone_number?.[0] || err.message || 'Gagal mengirim ulang kode OTP.';
+              alertEl.style.display = 'block';
+            }
+            updateLoginOtpTimerDom();
+          }
+        });
+      }
 
       // Handler Submit Tahap 3
       const stageOtpForm = document.getElementById('stageOtpForm');
@@ -715,10 +875,11 @@
             verifyBtn.textContent = 'Memverifikasi…';
 
             if (typeof api !== 'undefined' && api.request) {
+              const phoneToVerify = activeUserPhone || normalizeIndoPhone(stagePhoneInput ? stagePhoneInput.value : '');
               const res = await api.request('/auth/phone/verify-otp', {
                 method: 'POST',
                 body: JSON.stringify({
-                  phone_number: activeUserPhone,
+                  phone_number: phoneToVerify,
                   otp: otpCode
                 })
               });
@@ -729,7 +890,7 @@
             window.location.href = (typeof getSafeNextUrl === 'function') ? getSafeNextUrl() : '/pasien/janji-temu.html';
           } catch (err) {
             if (alertEl) {
-              alertEl.textContent = err.errors?.otp?.[0] || err.message || 'Kode OTP tidak sesuai atau sudah kedaluwarsa.';
+              alertEl.textContent = err.errors?.otp?.[0] || err.errors?.phone_number?.[0] || err.message || 'Kode OTP tidak sesuai atau sudah kedaluwarsa.';
               alertEl.style.display = 'block';
             }
           } finally {

@@ -125,9 +125,25 @@ document.addEventListener('DOMContentLoaded', async () => {
       e.preventDefault();
       api.hideAlert('registerAlert');
 
+      const regPhoneInput = document.getElementById('regPhone');
+      const regEmailInput = document.getElementById('regEmail');
+      const regPhoneError = document.getElementById('regPhoneError');
+      const regEmailError = document.getElementById('regEmailError');
+
+      if (regPhoneError) {
+        regPhoneError.style.display = 'none';
+        regPhoneError.textContent = '';
+      }
+      if (regEmailError) {
+        regEmailError.style.display = 'none';
+        regEmailError.textContent = '';
+      }
+      if (regPhoneInput) regPhoneInput.removeAttribute('aria-invalid');
+      if (regEmailInput) regEmailInput.removeAttribute('aria-invalid');
+
       const name = document.getElementById('regName').value.trim();
-      const email = document.getElementById('regEmail').value.trim();
-      const phone_number = document.getElementById('regPhone').value.trim();
+      const email = regEmailInput.value.trim();
+      const phone_number = regPhoneInput.value.trim();
       const birth_date = document.getElementById('regBirthDate').value;
       const address = document.getElementById('regAddress').value.trim();
       const password = document.getElementById('regPassword').value;
@@ -182,15 +198,35 @@ document.addEventListener('DOMContentLoaded', async () => {
           res.data?.sent_via_gateway ?? true
         );
       } catch (err) {
+        const phoneErr = err.errors?.phone_number?.[0] || null;
+        const emailErr = err.errors?.email?.[0] || null;
+
+        if (phoneErr && regPhoneError) {
+          regPhoneError.textContent = phoneErr;
+          regPhoneError.style.display = 'block';
+          if (regPhoneInput) regPhoneInput.setAttribute('aria-invalid', 'true');
+        }
+        if (emailErr && regEmailError) {
+          regEmailError.textContent = emailErr;
+          regEmailError.style.display = 'block';
+          if (regEmailInput) regEmailInput.setAttribute('aria-invalid', 'true');
+        }
+
         const msg =
-          err.errors?.phone_number?.[0] ||
-          err.errors?.email?.[0] ||
+          phoneErr ||
+          emailErr ||
           err.errors?.password?.[0] ||
           err.errors?.birth_date?.[0] ||
           err.errors?.name?.[0] ||
           err.message ||
           'Gagal mengirim kode OTP. Periksa kembali isian formulirmu.';
         api.showAlert('registerAlert', msg, 'danger');
+
+        if (phoneErr && regPhoneInput) {
+          regPhoneInput.focus();
+        } else if (emailErr && regEmailInput) {
+          regEmailInput.focus();
+        }
       } finally {
         const textSpan = submitBtn.querySelector('span');
         if (textSpan) {
@@ -377,7 +413,7 @@ function initPasswordToggles() {
 }
 
 function initOtpInputs() {
-  const inputs = Array.from(document.querySelectorAll('.otp-digit-input'));
+  const inputs = Array.from(document.querySelectorAll('.otp-digit-input:not(.stage-otp-input)'));
   if (inputs.length === 0) return;
 
   inputs.forEach((input, idx) => {
@@ -444,9 +480,10 @@ function maskPhoneNumber(phone) {
 
 function openOtpVerifyModal(maskedPhone, expiresInSeconds = 300, resendInSeconds = 60, debugOtp = null, whatsappUrl = null, sentViaGateway = true) {
   const displayPhone = maskPhoneNumber(maskedPhone);
+  const actualPhone = otpState.phoneNumber || maskedPhone;
   if (typeof window.unlockAndGoToStage === 'function') {
     const targetStage = window.AUTH_OTP_STAGE || 3;
-    window.unlockAndGoToStage(targetStage, displayPhone, expiresInSeconds, resendInSeconds, debugOtp, whatsappUrl, sentViaGateway);
+    window.unlockAndGoToStage(targetStage, actualPhone, expiresInSeconds, resendInSeconds, debugOtp, whatsappUrl, sentViaGateway, displayPhone);
     return;
   }
 

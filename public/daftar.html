@@ -95,12 +95,12 @@
 
           <!-- Top Navigation & Stage Switcher (Tombol Kembali Utama Tunggal) -->
           <nav class="auth-canvas-top-nav" aria-label="Navigasi tahap">
-            <a href="/login.html" class="auth-top-back-btn" id="btnTopBack">
+            <a href="/index.html" class="auth-top-back-btn" id="btnTopBack">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <line x1="19" y1="12" x2="5" y2="12"></line>
                 <polyline points="12 19 5 12 12 5"></polyline>
               </svg>
-              <span>Kembali ke Login</span>
+              <span>Kembali</span>
             </a>
 
             <!-- Tab Pills 2 Tahap (Tahap Berikutnya Disabled sampai Tahap 1 Selesai) -->
@@ -155,6 +155,7 @@
                   </svg>
                   <input type="email" id="regEmail" name="email" class="form-input" required autocomplete="email" spellcheck="false" placeholder="nama@email.com">
                 </div>
+                <p id="regEmailError" class="form-help-text text-xs mt-1" style="display: none; color: #DC2626; font-weight: 500;" role="alert"></p>
               </div>
 
               <!-- Baris Grid 2: WhatsApp & Tanggal Lahir -->
@@ -169,6 +170,7 @@
                     </svg>
                     <input type="tel" id="regPhone" name="phone_number" class="form-input" required inputmode="tel" autocomplete="tel" placeholder="0812xxxxxxxx">
                   </div>
+                  <p id="regPhoneError" class="form-help-text text-xs mt-1" style="display: none; color: #DC2626; font-weight: 500;" role="alert"></p>
                 </div>
 
                 <div class="form-group">
@@ -559,12 +561,17 @@
     }
 
     // Integrasi Global dengan auth.js
-    window.unlockAndGoToStage = function (stageNum, phone, expiresIn, resendIn, debugOtp, whatsappUrl, sentViaGateway) {
+    window.unlockAndGoToStage = function (stageNum, phone, expiresIn, resendIn, debugOtp, whatsappUrl, sentViaGateway, maskedDisplay) {
       const targetStage = 2;
-      if (phone) {
-        activeUserPhone = phone;
-        const displayEl = document.getElementById('stageOtpPhoneDisplay');
-        if (displayEl) displayEl.textContent = maskPhoneNumber(phone);
+      const unmaskedPhone = (phone && !String(phone).includes('•'))
+        ? phone
+        : ((typeof otpState !== 'undefined' && otpState.phoneNumber) ? otpState.phoneNumber : (document.getElementById('regPhone')?.value?.trim() || ''));
+      if (unmaskedPhone) {
+        activeUserPhone = unmaskedPhone;
+      }
+      const displayEl = document.getElementById('stageOtpPhoneDisplay');
+      if (displayEl) {
+        displayEl.textContent = maskedDisplay || maskPhoneNumber(unmaskedPhone || phone);
       }
       const devNotice = document.getElementById('stageOtpDevNotice');
       if (devNotice) {
@@ -603,7 +610,24 @@
       registerInputs.forEach(function (id) {
         const el = document.getElementById(id);
         if (el) {
-          el.addEventListener('input', checkRegisterValidity);
+          el.addEventListener('input', function () {
+            if (id === 'regPhone') {
+              const errEl = document.getElementById('regPhoneError');
+              if (errEl) {
+                errEl.style.display = 'none';
+                errEl.textContent = '';
+              }
+              el.removeAttribute('aria-invalid');
+            } else if (id === 'regEmail') {
+              const errEl = document.getElementById('regEmailError');
+              if (errEl) {
+                errEl.style.display = 'none';
+                errEl.textContent = '';
+              }
+              el.removeAttribute('aria-invalid');
+            }
+            checkRegisterValidity();
+          });
           el.addEventListener('change', checkRegisterValidity);
         }
       });
@@ -621,7 +645,9 @@
 
         input.addEventListener('keydown', function (e) {
           if (e.key === 'Backspace' && !input.value && idx > 0) {
+            otpInputs[idx - 1].value = '';
             otpInputs[idx - 1].focus();
+            checkStageOtpValidity();
           }
         });
 

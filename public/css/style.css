@@ -21,6 +21,7 @@
   --space-2: 8px;
   --space-3: 12px;
   --space-4: 16px;
+  --space-5: 20px;
   --space-6: 24px;
   --space-8: 32px;
   --space-12: 48px;
@@ -1015,7 +1016,7 @@ tr:last-child td {
   gap: 6px;
   border-radius: 9999px;
   padding: 0 16px;
-  min-height: 40px;
+  min-height: var(--tap-min);
   font-size: 13px;
   font-weight: 600;
   color: #334155;
@@ -1051,7 +1052,7 @@ tr:last-child td {
   cursor: pointer;
   white-space: nowrap;
   transition: all 0.15s ease;
-  min-height: 36px;
+  min-height: var(--tap-min);
 }
 
 .auth-stage-tab:hover:not(.auth-stage-tab--active):not(:disabled) {
@@ -1424,13 +1425,13 @@ tr:last-child td {
 
   .auth-stepper-steps {
     flex-direction: row;
+    flex-wrap: wrap;
     gap: var(--space-3);
-    overflow-x: auto;
   }
 
   .auth-step-item {
-    flex: 1;
-    min-width: 140px;
+    flex: 1 1 140px;
+    min-width: 0;
   }
 
   .auth-step-detail {
@@ -1475,11 +1476,39 @@ tr:last-child td {
 
   .auth-canvas-top-nav {
     flex-direction: column;
-    align-items: stretch;
+    align-items: flex-start;
   }
 
   .auth-stage-tabs {
+    width: 100%;
+    display: flex;
     overflow-x: auto;
+  }
+
+  .auth-stage-tab {
+    flex: 1 1 auto;
+    text-align: center;
+    justify-content: center;
+  }
+
+  .auth-form-title {
+    font-size: clamp(22px, 5vw, 26px);
+  }
+
+  .input-with-icon .form-input,
+  .form-input,
+  .form-select,
+  .form-textarea {
+    font-size: 16px;
+  }
+
+  .auth-stage-actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .auth-stage-actions .btn {
+    width: 100%;
   }
 }
 
@@ -2082,7 +2111,7 @@ tr:last-child td {
 /* Poliklinik Cards */
 .poli-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
   gap: 24px;
 }
 
@@ -2432,7 +2461,7 @@ tr:last-child td {
   color: #475569;
   font-size: 14px;
   font-weight: 500;
-  min-height: 32px;
+  min-height: var(--tap-min);
   display: inline-flex;
   align-items: center;
   text-decoration: none;
@@ -2475,6 +2504,10 @@ tr:last-child td {
     left: 12px;
   }
 
+  .alur-steps-modern {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
   .benefit-card {
     grid-template-columns: 1fr;
     gap: 32px;
@@ -2496,6 +2529,10 @@ tr:last-child td {
 
   .hero-headline {
     font-size: 28px;
+  }
+
+  .hero-visual-img {
+    height: clamp(240px, 55vw, 360px);
   }
 
   .hero-trust-bar {
