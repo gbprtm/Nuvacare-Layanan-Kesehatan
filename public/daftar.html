@@ -1,17 +1,21 @@
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#FFFFFF">
   <title>Daftar Pasien Baru - Nuvacare Layanan Kesehatan</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <link rel="alternate icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="shortcut icon" href="/favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
   <link rel="stylesheet" href="/css/style.css" fetchpriority="high">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=Plus+Jakarta+Sans:ital,wght@0,500..800;1,500..800&display=swap">
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=Plus+Jakarta+Sans:ital,wght@0,500..800;1,500..800&display=swap">
   <script src="/js/api.js" defer fetchpriority="high"></script>
   <script src="/js/auth.js" defer></script>
   <script type="speculationrules">
@@ -23,6 +27,7 @@
   }
   </script>
 </head>
+
 <body class="auth-page-body">
   <a href="#main-content" class="skip-link">Langsung ke isi utama</a>
 
@@ -81,7 +86,8 @@
           <!-- Footer Panel Kiri: Informasi Keamanan (Bukan Tautan Navigasi) -->
           <footer class="auth-aside-footer">
             <div class="auth-aside-info-note">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
                 <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
               </svg>
@@ -99,7 +105,8 @@
           <!-- Top Navigation & Stage Switcher (Tombol Kembali Utama Tunggal) -->
           <nav class="auth-canvas-top-nav" aria-label="Navigasi tahap">
             <a href="/index.html" class="auth-top-back-btn" id="btnTopBack">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <line x1="19" y1="12" x2="5" y2="12"></line>
                 <polyline points="12 19 5 12 12 5"></polyline>
               </svg>
@@ -108,17 +115,20 @@
 
             <!-- Tab Pills 2 Tahap (Tahap Berikutnya Disabled sampai Tahap 1 Selesai) -->
             <div class="auth-stage-tabs" role="tablist" aria-label="Pilihan tahap pendaftaran">
-              <button type="button" role="tab" id="tabBtn1" class="auth-stage-tab auth-stage-tab--active" aria-selected="true" aria-controls="stagePanel1" onclick="switchRegisterStage(1)">
+              <button type="button" role="tab" id="tabBtn1" class="auth-stage-tab auth-stage-tab--active"
+                aria-selected="true" aria-controls="stagePanel1" onclick="switchRegisterStage(1)">
                 Tahap 1: Data Pasien
               </button>
-              <button type="button" role="tab" id="tabBtn2" class="auth-stage-tab" aria-selected="false" aria-controls="stagePanel2" disabled aria-disabled="true" onclick="switchRegisterStage(2)">
+              <button type="button" role="tab" id="tabBtn2" class="auth-stage-tab" aria-selected="false"
+                aria-controls="stagePanel2" disabled aria-disabled="true" onclick="switchRegisterStage(2)">
                 Tahap 2: Verifikasi OTP
               </button>
             </div>
           </nav>
 
           <!-- Konten Tahap 1: Formulir Pendaftaran Pasien (Default & Aktif) -->
-          <div class="auth-stage-container auth-stage-container--register" id="stagePanel1" role="tabpanel" aria-labelledby="tabBtn1">
+          <div class="auth-stage-container auth-stage-container--register" id="stagePanel1" role="tabpanel"
+            aria-labelledby="tabBtn1">
 
             <header class="auth-form-header">
               <div class="auth-brand-badge">
@@ -126,7 +136,8 @@
                 <p class="auth-brand-badge__sub">Website Layanan Kesehatan</p>
               </div>
               <h1 id="registerHeading" class="auth-form-title">Daftar Akun Pasien Baru</h1>
-              <p class="auth-form-subtitle">Lengkapi formulir pendaftaran untuk membuat akun rekam medis dan akses layanan Nuvacare.</p>
+              <p class="auth-form-subtitle">Lengkapi formulir pendaftaran untuk membuat akun rekam medis dan akses
+                layanan Nuvacare.</p>
             </header>
 
             <div id="registerAlert" class="alert alert-danger" role="alert" aria-live="polite"></div>
@@ -138,11 +149,14 @@
                   Nama Lengkap <span class="required-indicator" aria-hidden="true">*</span>
                 </label>
                 <div class="input-with-icon">
-                  <svg class="input-prefix-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <svg class="input-prefix-icon" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                    aria-hidden="true">
                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                     <circle cx="12" cy="7" r="4"></circle>
                   </svg>
-                  <input type="text" id="regName" name="name" class="form-input" required autocomplete="name" placeholder="Nama lengkap sesuai identitas">
+                  <input type="text" id="regName" name="name" class="form-input" required autocomplete="name"
+                    placeholder="Nama lengkap sesuai identitas">
                 </div>
               </div>
 
@@ -152,13 +166,17 @@
                   Alamat Email <span class="required-indicator" aria-hidden="true">*</span>
                 </label>
                 <div class="input-with-icon">
-                  <svg class="input-prefix-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <svg class="input-prefix-icon" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                    aria-hidden="true">
                     <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
                     <polyline points="22,6 12,13 2,6"></polyline>
                   </svg>
-                  <input type="email" id="regEmail" name="email" class="form-input" required autocomplete="email" spellcheck="false" placeholder="nama@email.com">
+                  <input type="email" id="regEmail" name="email" class="form-input" required autocomplete="email"
+                    spellcheck="false" placeholder="nama@email.com">
                 </div>
-                <p id="regEmailError" class="form-help-text text-xs mt-1" style="display: none; color: #DC2626; font-weight: 500;" role="alert"></p>
+                <p id="regEmailError" class="form-help-text text-xs mt-1"
+                  style="display: none; color: #DC2626; font-weight: 500;" role="alert"></p>
               </div>
 
               <!-- Baris Grid 2: WhatsApp & Tanggal Lahir -->
@@ -168,12 +186,14 @@
                     Nomor WhatsApp Aktif <span class="required-indicator" aria-hidden="true">*</span>
                   </label>
                   <div class="input-with-icon">
-                    <svg class="input-prefix-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
-                    </svg>
-                    <input type="tel" id="regPhone" name="phone_number" class="form-input" required inputmode="tel" autocomplete="tel" placeholder="0812xxxxxxxx">
+                    <div class="input-prefix-pill" aria-hidden="true">
+                      <span>🇮🇩</span> <span>+62</span>
+                    </div>
+                    <input type="tel" id="regPhone" name="phone_number" class="form-input form-input-with-pill" required
+                      inputmode="tel" autocomplete="tel" placeholder="812-xxxx-xxxx">
                   </div>
-                  <p id="regPhoneError" class="form-help-text text-xs mt-1" style="display: none; color: #DC2626; font-weight: 500;" role="alert"></p>
+                  <p id="regPhoneError" class="form-help-text text-xs mt-1"
+                    style="display: none; color: #DC2626; font-weight: 500;" role="alert"></p>
                 </div>
 
                 <div class="form-group">
@@ -181,7 +201,9 @@
                     Tanggal Lahir
                   </label>
                   <div class="input-with-icon">
-                    <svg class="input-prefix-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <svg class="input-prefix-icon" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                      aria-hidden="true">
                       <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
                       <line x1="16" y1="2" x2="16" y2="6"></line>
                       <line x1="8" y1="2" x2="8" y2="6"></line>
@@ -198,11 +220,14 @@
                   Alamat Domisili
                 </label>
                 <div class="input-with-icon">
-                  <svg class="input-prefix-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <svg class="input-prefix-icon" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                    aria-hidden="true">
                     <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
                     <circle cx="12" cy="10" r="3"></circle>
                   </svg>
-                  <input type="text" id="regAddress" name="address" class="form-input" autocomplete="street-address" placeholder="Nama jalan, nomor rumah, atau kota domisili">
+                  <input type="text" id="regAddress" name="address" class="form-input" autocomplete="street-address"
+                    placeholder="Nama jalan, nomor rumah, atau kota domisili">
                 </div>
               </div>
 
@@ -213,13 +238,18 @@
                     Kata Sandi <span class="required-indicator" aria-hidden="true">*</span>
                   </label>
                   <div class="input-with-icon input-password-wrap">
-                    <svg class="input-prefix-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <svg class="input-prefix-icon" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                      aria-hidden="true">
                       <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
                       <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
                     </svg>
-                    <input type="password" id="regPassword" name="password" class="form-input" required minlength="8" autocomplete="new-password" placeholder="Min. 8 karakter">
-                    <button type="button" class="password-toggle-btn" data-toggle-password="regPassword" aria-label="Tampilkan kata sandi" aria-pressed="false">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <input type="password" id="regPassword" name="password" class="form-input" required minlength="8"
+                      autocomplete="new-password" placeholder="Min. 8 karakter">
+                    <button type="button" class="password-toggle-btn" data-toggle-password="regPassword"
+                      aria-label="Tampilkan kata sandi" aria-pressed="false">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                         <circle cx="12" cy="12" r="3"></circle>
                       </svg>
@@ -232,13 +262,18 @@
                     Ulangi Kata Sandi <span class="required-indicator" aria-hidden="true">*</span>
                   </label>
                   <div class="input-with-icon input-password-wrap">
-                    <svg class="input-prefix-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <svg class="input-prefix-icon" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                      aria-hidden="true">
                       <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
                       <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
                     </svg>
-                    <input type="password" id="regPasswordConfirm" name="password_confirmation" class="form-input" required minlength="8" autocomplete="new-password" placeholder="Ulangi kata sandi">
-                    <button type="button" class="password-toggle-btn" data-toggle-password="regPasswordConfirm" aria-label="Tampilkan konfirmasi kata sandi" aria-pressed="false">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <input type="password" id="regPasswordConfirm" name="password_confirmation" class="form-input"
+                      required minlength="8" autocomplete="new-password" placeholder="Ulangi kata sandi">
+                    <button type="button" class="password-toggle-btn" data-toggle-password="regPasswordConfirm"
+                      aria-label="Tampilkan konfirmasi kata sandi" aria-pressed="false">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                         <circle cx="12" cy="12" r="3"></circle>
                       </svg>
@@ -250,7 +285,8 @@
               <!-- Tombol CTA Utama (Disabled sampai seluruh isian wajib terpenuhi) -->
               <button type="submit" id="regSubmitBtn" class="btn btn-primary btn-block btn-pill auth-cta-btn" disabled>
                 <span>Kirim OTP &amp; Lanjutkan</span>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                  stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                   <line x1="5" y1="12" x2="19" y2="12"></line>
                   <polyline points="12 5 19 12 12 19"></polyline>
                 </svg>
@@ -266,10 +302,14 @@
             <div class="auth-sso-wrap" id="googleSignInContainer">
               <button type="button" id="googleAuthBtn" class="btn btn-sso-pill">
                 <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-                  <path fill="#EA4335" d="M12 10.2v3.9h5.5c-.2 1.3-1.5 3.8-5.5 3.8-3.3 0-6-2.7-6-6s2.7-6 6-6c1.9 0 3.1.8 3.8 1.5l2.6-2.5C16.8 3.4 14.6 2.5 12 2.5 6.8 2.5 2.5 6.8 2.5 12s4.3 9.5 9.5 9.5c5.5 0 9.1-3.8 9.1-9.2 0-.6-.1-1.1-.2-1.6H12z"/>
-                  <path fill="#34A853" d="M3.6 7.4l3.2 2.4C7.7 7.8 9.7 6 12 6c1.9 0 3.1.8 3.8 1.5l2.6-2.5C16.8 3.4 14.6 2.5 12 2.5 8.3 2.5 5.1 4.6 3.6 7.4z"/>
-                  <path fill="#FBBC05" d="M12 21.5c2.5 0 4.7-.8 6.3-2.3l-2.9-2.4c-.8.6-1.9 1.1-3.4 1.1-3.9 0-5.2-2.5-5.5-3.8l-3.2 2.5c1.5 3 4.8 4.9 8.7 4.9z"/>
-                  <path fill="#4285F4" d="M21.1 12.3c0-.6-.1-1.1-.2-1.6H12v3.9h5.5c-.3 1.3-1.1 2.4-2.1 3.1l2.9 2.4c1.7-1.6 2.8-4 2.8-7.8z"/>
+                  <path fill="#EA4335"
+                    d="M12 10.2v3.9h5.5c-.2 1.3-1.5 3.8-5.5 3.8-3.3 0-6-2.7-6-6s2.7-6 6-6c1.9 0 3.1.8 3.8 1.5l2.6-2.5C16.8 3.4 14.6 2.5 12 2.5 6.8 2.5 2.5 6.8 2.5 12s4.3 9.5 9.5 9.5c5.5 0 9.1-3.8 9.1-9.2 0-.6-.1-1.1-.2-1.6H12z" />
+                  <path fill="#34A853"
+                    d="M3.6 7.4l3.2 2.4C7.7 7.8 9.7 6 12 6c1.9 0 3.1.8 3.8 1.5l2.6-2.5C16.8 3.4 14.6 2.5 12 2.5 8.3 2.5 5.1 4.6 3.6 7.4z" />
+                  <path fill="#FBBC05"
+                    d="M12 21.5c2.5 0 4.7-.8 6.3-2.3l-2.9-2.4c-.8.6-1.9 1.1-3.4 1.1-3.9 0-5.2-2.5-5.5-3.8l-3.2 2.5c1.5 3 4.8 4.9 8.7 4.9z" />
+                  <path fill="#4285F4"
+                    d="M21.1 12.3c0-.6-.1-1.1-.2-1.6H12v3.9h5.5c-.3 1.3-1.1 2.4-2.1 3.1l2.9 2.4c1.7-1.6 2.8-4 2.8-7.8z" />
                 </svg>
                 <span>Lanjutkan dengan Google</span>
               </button>
@@ -283,15 +323,18 @@
           </div>
 
           <!-- Konten Tahap 2: Verifikasi OTP WhatsApp (4 Digit) -->
-          <div class="auth-stage-container auth-stage-container--hidden" id="stagePanel2" role="tabpanel" aria-labelledby="tabBtn2">
+          <div class="auth-stage-container auth-stage-container--hidden" id="stagePanel2" role="tabpanel"
+            aria-labelledby="tabBtn2">
             <header class="auth-form-header">
               <div class="auth-stage-icon-badge" aria-hidden="true">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
                   <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
                 </svg>
               </div>
               <h2 class="auth-form-title">Verifikasi Kode OTP WhatsApp</h2>
-              <p class="auth-form-subtitle">Masukkan 4 digit kode keamanan yang dikirimkan ke nomor WhatsApp <strong id="stageOtpPhoneDisplay">+62 -</strong>.</p>
+              <p class="auth-form-subtitle">Masukkan 4 digit kode keamanan yang dikirimkan ke nomor WhatsApp <strong
+                  id="stageOtpPhoneDisplay">+62 -</strong>.</p>
             </header>
 
             <div id="stageOtpAlert" class="alert alert-danger" role="alert" aria-live="polite"></div>
@@ -299,22 +342,29 @@
 
             <form id="stageOtpForm" novalidate>
               <div class="stage-otp-row otp-digit-group" role="group" aria-label="4 digit kode OTP">
-                <input type="text" class="otp-digit-input stage-otp-input" inputmode="numeric" pattern="[0-9]*" maxlength="1" autocomplete="one-time-code" aria-label="Digit ke-1" data-index="0">
-                <input type="text" class="otp-digit-input stage-otp-input" inputmode="numeric" pattern="[0-9]*" maxlength="1" aria-label="Digit ke-2" data-index="1">
-                <input type="text" class="otp-digit-input stage-otp-input" inputmode="numeric" pattern="[0-9]*" maxlength="1" aria-label="Digit ke-3" data-index="2">
-                <input type="text" class="otp-digit-input stage-otp-input" inputmode="numeric" pattern="[0-9]*" maxlength="1" aria-label="Digit ke-4" data-index="3">
+                <input type="text" class="otp-digit-input stage-otp-input" inputmode="numeric" pattern="[0-9]*"
+                  maxlength="1" autocomplete="one-time-code" aria-label="Digit ke-1" data-index="0">
+                <input type="text" class="otp-digit-input stage-otp-input" inputmode="numeric" pattern="[0-9]*"
+                  maxlength="1" aria-label="Digit ke-2" data-index="1">
+                <input type="text" class="otp-digit-input stage-otp-input" inputmode="numeric" pattern="[0-9]*"
+                  maxlength="1" aria-label="Digit ke-3" data-index="2">
+                <input type="text" class="otp-digit-input stage-otp-input" inputmode="numeric" pattern="[0-9]*"
+                  maxlength="1" aria-label="Digit ke-4" data-index="3">
               </div>
 
               <div class="flex-between mb-4">
                 <span id="stageOtpCountdownText" class="text-sm text-muted">Berlaku selama 05:00</span>
-                <button type="button" id="stageOtpResendBtn" class="btn btn-secondary btn-sm" disabled>Kirim Ulang (60d)</button>
+                <button type="button" id="stageOtpResendBtn" class="btn btn-secondary btn-sm" disabled>Kirim Ulang
+                  (60d)</button>
               </div>
 
               <div class="auth-stage-actions">
-                <button type="button" class="btn btn-secondary btn-pill" id="btnBackToData" onclick="switchRegisterStage(1)">Ubah Data</button>
+                <button type="button" class="btn btn-secondary btn-pill" id="btnBackToData"
+                  onclick="switchRegisterStage(1)">Ubah Data</button>
                 <button type="submit" id="btnVerifyStageOtp" class="btn btn-primary btn-pill auth-cta-btn" disabled>
                   <span>Verifikasi &amp; Buat Akun</span>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <polyline points="20 6 9 17 4 12"></polyline>
                   </svg>
                 </button>
@@ -329,27 +379,32 @@
   </main>
 
   <!-- Modal Masuk dengan Akun Google (Pengujian lokal atau fallback) -->
-  <div id="googleAccountModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="googleAccountTitle">
+  <div id="googleAccountModal" class="modal-backdrop" role="dialog" aria-modal="true"
+    aria-labelledby="googleAccountTitle">
     <div class="modal-content">
       <h2 id="googleAccountTitle">Daftar dengan Akun Google</h2>
-      <p class="text-sm text-muted mb-4">Masukkan alamat Gmail dan nama tampilan Anda untuk melanjutkan pembuatan akun Google di Nuvacare.</p>
+      <p class="text-sm text-muted mb-4">Masukkan alamat Gmail dan nama tampilan Anda untuk melanjutkan pembuatan akun
+        Google di Nuvacare.</p>
 
       <div id="googleAccountAlert" class="alert alert-danger" role="alert" aria-live="polite"></div>
 
       <form id="googleAccountForm" novalidate>
         <div class="form-group">
           <label class="form-label" for="googleModalEmail">Alamat Email Google (Gmail)</label>
-          <input type="email" id="googleModalEmail" class="form-input" required autocomplete="email" placeholder="nama.anda@gmail.com">
+          <input type="email" id="googleModalEmail" class="form-input" required autocomplete="email"
+            placeholder="nama.anda@gmail.com">
         </div>
 
         <div class="form-group">
           <label class="form-label" for="googleModalName">Nama Lengkap Profil</label>
-          <input type="text" id="googleModalName" class="form-input" required autocomplete="name" placeholder="Nama lengkap sesuai akun Google">
+          <input type="text" id="googleModalName" class="form-input" required autocomplete="name"
+            placeholder="Nama lengkap sesuai akun Google">
         </div>
 
         <div style="display: flex; gap: var(--space-3); justify-content: flex-end; margin-top: var(--space-6);">
           <button type="button" id="closeGoogleAccountBtn" class="btn btn-secondary">Batal</button>
-          <button type="submit" id="submitGoogleAccountBtn" class="btn btn-primary btn-pill">Lanjutkan dengan Google</button>
+          <button type="submit" id="submitGoogleAccountBtn" class="btn btn-primary btn-pill">Lanjutkan dengan
+            Google</button>
         </div>
       </form>
     </div>
@@ -445,6 +500,37 @@
       return (phone || '').replace(/[^0-9]/g, '');
     }
 
+    function sanitizeIndoPhoneInput(raw) {
+      let val = String(raw || '').replace(/\D/g, '');
+      if (val.startsWith('0062')) val = val.substring(4);
+      while (val.startsWith('628') || val.startsWith('620') || val.startsWith('6262')) {
+        val = val.substring(2);
+      }
+      while (val.startsWith('0')) {
+        val = val.substring(1);
+      }
+      return val;
+    }
+
+    function normalizeIndoPhone(raw) {
+      let digits = cleanPhoneNumber(raw);
+      if (!digits) return '';
+      if (digits.startsWith('0062')) {
+        digits = '62' + digits.substring(4);
+      }
+      while (digits.startsWith('6262')) {
+        digits = '62' + digits.substring(4);
+      }
+      if (digits.startsWith('620')) {
+        digits = '62' + digits.substring(3);
+      } else if (digits.startsWith('0')) {
+        digits = '62' + digits.substring(1);
+      } else if (digits.startsWith('8')) {
+        digits = '62' + digits;
+      }
+      return digits;
+    }
+
     function maskPhoneNumber(phone) {
       if (!phone) return '+62 -';
       const clean = String(phone).replace(/\D/g, '');
@@ -472,13 +558,14 @@
 
       const name = nameInput.value.trim();
       const email = emailInput.value.trim();
-      const phone = cleanPhoneNumber(phoneInput.value.trim());
+      const rawPhone = phoneInput.value.trim();
+      const normalizedPhone = normalizeIndoPhone(rawPhone);
       const pass = passInput.value;
       const passConf = passConfInput.value;
 
       const isValidName = name.length >= 2;
       const isValidEmail = email.includes('@') && email.includes('.');
-      const isValidPhone = phone.length >= 9 && phone.length <= 14;
+      const isValidPhone = /^628[0-9]{7,13}$/.test(normalizedPhone);
       const isValidPass = pass.length >= 8;
       const isPassMatch = (pass === passConf && passConf.length >= 8);
 
@@ -567,8 +654,8 @@
     window.unlockAndGoToStage = function (stageNum, phone, expiresIn, resendIn, debugOtp, whatsappUrl, sentViaGateway, maskedDisplay) {
       const targetStage = 2;
       const unmaskedPhone = (phone && !String(phone).includes('•'))
-        ? phone
-        : ((typeof otpState !== 'undefined' && otpState.phoneNumber) ? otpState.phoneNumber : (document.getElementById('regPhone')?.value?.trim() || ''));
+        ? normalizeIndoPhone(phone)
+        : ((typeof otpState !== 'undefined' && otpState.phoneNumber) ? normalizeIndoPhone(otpState.phoneNumber) : normalizeIndoPhone(document.getElementById('regPhone')?.value?.trim() || ''));
       if (unmaskedPhone) {
         activeUserPhone = unmaskedPhone;
       }
@@ -599,6 +686,24 @@
       checkRegisterValidity();
       checkStageOtpValidity();
 
+      // Interceptor submit form pendaftaran (fase capture) untuk memastikan payload phone_number kanonikal 628xxxxxxxx
+      const registerForm = document.getElementById('registerForm');
+      if (registerForm) {
+        registerForm.addEventListener('submit', function () {
+          const regPhone = document.getElementById('regPhone');
+          if (regPhone && regPhone.value) {
+            const rawVal = regPhone.value;
+            const normalized = normalizeIndoPhone(rawVal);
+            regPhone.value = normalized;
+            setTimeout(function () {
+              if (regPhone.value === normalized) {
+                regPhone.value = sanitizeIndoPhoneInput(rawVal);
+              }
+            }, 0);
+          }
+        }, true);
+      }
+
       // Listener Input Tahap 1
       const registerInputs = [
         'regName',
@@ -615,6 +720,10 @@
         if (el) {
           el.addEventListener('input', function () {
             if (id === 'regPhone') {
+              let val = sanitizeIndoPhoneInput(el.value);
+              if (el.value !== val) {
+                el.value = val;
+              }
               const errEl = document.getElementById('regPhoneError');
               if (errEl) {
                 errEl.style.display = 'none';
@@ -632,6 +741,17 @@
             checkRegisterValidity();
           });
           el.addEventListener('change', checkRegisterValidity);
+          if (id === 'regPhone') {
+            el.addEventListener('paste', function () {
+              setTimeout(function () {
+                let val = sanitizeIndoPhoneInput(el.value);
+                if (el.value !== val) {
+                  el.value = val;
+                }
+                checkRegisterValidity();
+              }, 0);
+            });
+          }
         }
       });
 
@@ -692,7 +812,7 @@
                 ? '/auth/phone/verify-otp'
                 : '/auth/register/verify-otp';
 
-              const phoneToVerify = activeUserPhone || (typeof otpState !== 'undefined' ? otpState.phoneNumber : '');
+              const phoneToVerify = normalizeIndoPhone(activeUserPhone || (typeof otpState !== 'undefined' ? otpState.phoneNumber : '') || document.getElementById('regPhone')?.value?.trim() || '');
               const res = await api.request(endpoint, {
                 method: 'POST',
                 body: JSON.stringify({
@@ -738,20 +858,22 @@
             if (typeof otpState !== 'undefined' && otpState.purpose === 'verify_phone') {
               res = await api.request('/auth/phone/send-otp', {
                 method: 'POST',
-                body: JSON.stringify({ phone_number: activeUserPhone || otpState.phoneNumber })
+                body: JSON.stringify({ phone_number: normalizeIndoPhone(activeUserPhone || otpState.phoneNumber) })
               });
             } else {
               const payload = (typeof otpState !== 'undefined' && otpState.registerPayload)
-                ? otpState.registerPayload
+                ? Object.assign({}, otpState.registerPayload)
                 : {
-                    name: document.getElementById('regName').value.trim(),
-                    email: document.getElementById('regEmail').value.trim(),
-                    phone_number: document.getElementById('regPhone').value.trim(),
-                    birth_date: document.getElementById('regBirthDate').value || null,
-                    address: document.getElementById('regAddress').value.trim() || null,
-                    password: document.getElementById('regPassword').value,
-                    password_confirmation: document.getElementById('regPasswordConfirm').value
-                  };
+                  name: document.getElementById('regName').value.trim(),
+                  email: document.getElementById('regEmail').value.trim(),
+                  phone_number: normalizeIndoPhone(document.getElementById('regPhone').value.trim()),
+                  birth_date: document.getElementById('regBirthDate').value || null,
+                  address: document.getElementById('regAddress').value.trim() || null,
+                  password: document.getElementById('regPassword').value,
+                  password_confirmation: document.getElementById('regPasswordConfirm').value
+                };
+
+              payload.phone_number = normalizeIndoPhone(payload.phone_number || activeUserPhone || document.getElementById('regPhone')?.value?.trim() || '');
 
               res = await api.request('/auth/register/send-otp', {
                 method: 'POST',
@@ -780,4 +902,5 @@
     });
   </script>
 </body>
+
 </html>

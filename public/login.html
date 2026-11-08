@@ -6,9 +6,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#FFFFFF">
   <title>Masuk - Nuvacare Layanan Kesehatan</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <link rel="alternate icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="shortcut icon" href="/favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
   <link rel="stylesheet" href="/css/style.css" fetchpriority="high">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -688,6 +690,14 @@
       const stagePhoneInput = document.getElementById('stagePhoneInput');
       if (stagePhoneInput) {
         stagePhoneInput.addEventListener('input', function () {
+          // Auto-sanitize: bersihkan non-angka dan pangkas awalan 0 atau 62 agar langsung 8...
+          let val = this.value.replace(/\D/g, '');
+          if (val.startsWith('0062')) val = val.substring(4);
+          while (val.startsWith('62')) val = val.substring(2);
+          if (val.startsWith('0')) val = val.substring(1);
+          if (this.value !== val) {
+            this.value = val;
+          }
           const errEl = document.getElementById('stagePhoneError');
           if (errEl) {
             errEl.style.display = 'none';

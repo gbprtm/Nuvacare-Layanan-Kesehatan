@@ -143,7 +143,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       const name = document.getElementById('regName').value.trim();
       const email = regEmailInput.value.trim();
-      const phone_number = regPhoneInput.value.trim();
+      let rawPhone = regPhoneInput.value.trim().replace(/\D/g, '');
+      if (rawPhone.startsWith('0062')) rawPhone = rawPhone.substring(4);
+      while (rawPhone.startsWith('62')) rawPhone = rawPhone.substring(2);
+      if (rawPhone.startsWith('0')) rawPhone = rawPhone.substring(1);
+      const phone_number = rawPhone ? '62' + rawPhone : '';
       const birth_date = document.getElementById('regBirthDate').value;
       const address = document.getElementById('regAddress').value.trim();
       const password = document.getElementById('regPassword').value;
@@ -751,7 +755,7 @@ function initAuthModals() {
     cancelGooglePhoneBtn.addEventListener('click', async () => {
       try {
         await api.request('/logout', { method: 'POST', skipAuthRedirect: true });
-      } catch {}
+      } catch { }
       api.clearSession();
       closeGooglePhoneModal();
     });
@@ -1017,11 +1021,11 @@ function renderPublicPoliCards(polis, query, isLoggedInPatient) {
   const keyword = String(query || '').toLowerCase();
   const filtered = keyword
     ? polis.filter((p) => {
-        const nameMatch = String(p.name || '').toLowerCase().includes(keyword);
-        const descMatch = String(p.description || '').toLowerCase().includes(keyword);
-        const docMatch = Array.isArray(p.doctors) && p.doctors.some((d) => String(d.name || '').toLowerCase().includes(keyword));
-        return nameMatch || descMatch || docMatch;
-      })
+      const nameMatch = String(p.name || '').toLowerCase().includes(keyword);
+      const descMatch = String(p.description || '').toLowerCase().includes(keyword);
+      const docMatch = Array.isArray(p.doctors) && p.doctors.some((d) => String(d.name || '').toLowerCase().includes(keyword));
+      return nameMatch || descMatch || docMatch;
+    })
     : polis;
 
   if (filtered.length === 0) {
@@ -1075,9 +1079,9 @@ function renderPublicPoliCards(polis, query, isLoggedInPatient) {
             <span class="poli-card__doctors-label">Dokter Praktik Aktif (${doctors.length}):</span>
             <ul class="poli-card__doctors-list">
               ${doctors.length > 0
-                ? doctors.map((d) => `<li>${escapeHtml(d.name)}</li>`).join('')
-                : '<li>Jadwal dokter sedang diperbarui</li>'
-              }
+        ? doctors.map((d) => `<li>${escapeHtml(d.name)}</li>`).join('')
+        : '<li>Jadwal dokter sedang diperbarui</li>'
+      }
             </ul>
           </div>
         </div>

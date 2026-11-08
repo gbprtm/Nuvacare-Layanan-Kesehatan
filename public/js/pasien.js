@@ -24,6 +24,19 @@ document.addEventListener('DOMContentLoaded', () => {
       birthDateInput.max = new Date().toISOString().split('T')[0];
     }
 
+    const phoneInput = document.getElementById('phone_number');
+    if (phoneInput) {
+      phoneInput.addEventListener('input', function () {
+        let val = this.value.replace(/\D/g, '');
+        if (val.startsWith('0062')) val = val.substring(4);
+        while (val.startsWith('62')) val = val.substring(2);
+        if (val.startsWith('0')) val = val.substring(1);
+        if (this.value !== val) {
+          this.value = val;
+        }
+      });
+    }
+
     loadProfile();
 
     profileForm.addEventListener('submit', async (e) => {
@@ -33,7 +46,15 @@ document.addEventListener('DOMContentLoaded', () => {
       const submitBtn = profileForm.querySelector('button[type="submit"]');
       const nameInput = document.getElementById('name');
       const name = nameInput.value.trim();
-      const phone_number = document.getElementById('phone_number').value.trim();
+      const rawPhone = document.getElementById('phone_number').value.trim();
+      let phone_number = '';
+      if (rawPhone) {
+        let cleanDigits = rawPhone.replace(/\D/g, '');
+        if (cleanDigits.startsWith('0062')) cleanDigits = cleanDigits.substring(4);
+        while (cleanDigits.startsWith('62')) cleanDigits = cleanDigits.substring(2);
+        if (cleanDigits.startsWith('0')) cleanDigits = cleanDigits.substring(1);
+        phone_number = cleanDigits ? '62' + cleanDigits : '';
+      }
       const birth_date = document.getElementById('birth_date').value;
       const address = document.getElementById('address').value.trim();
       const passwordInput = document.getElementById('password');
@@ -117,7 +138,10 @@ async function loadProfile() {
 
     document.getElementById('email').value = user.email || '';
     document.getElementById('name').value = user.name || '';
-    document.getElementById('phone_number').value = user.phone_number || '';
+    let rawPhone = user.phone_number || '';
+    if (rawPhone.startsWith('62')) rawPhone = rawPhone.substring(2);
+    else if (rawPhone.startsWith('0')) rawPhone = rawPhone.substring(1);
+    document.getElementById('phone_number').value = rawPhone;
     document.getElementById('birth_date').value = user.birth_date || '';
     document.getElementById('address').value = user.address || '';
   } catch (err) {
