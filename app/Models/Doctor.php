@@ -27,6 +27,15 @@ class Doctor extends Model
         ];
     }
 
+    protected $appends = [
+        'schedule_label',
+    ];
+
+    public function getScheduleLabelAttribute(): string
+    {
+        return '09:00 - 17:00 WIB';
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');

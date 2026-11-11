@@ -1723,7 +1723,8 @@ tr:last-child td {
   }
 }
 
-.sr-only {
+.sr-only,
+.visually-hidden {
   position: absolute;
   left: 0;
   top: 0;
@@ -2088,7 +2089,7 @@ tr:last-child td {
   z-index: 1;
   max-width: 1200px;
   margin: 0 auto;
-  padding: calc(var(--header-height, 72px) + 64px) var(--space-6) 72px;
+  padding: 44px var(--space-6) 64px;
   display: flex;
   flex-direction: column;
 }
@@ -2556,7 +2557,7 @@ tr:last-child td {
   margin-top: 2px;
 }
 
-/* 7. Footer (4-Column) */
+/* 7. Footer (3-Column) */
 .site-footer {
   background-color: #FFFFFF;
   border-top: 1px solid #E2E8F0;
@@ -2568,8 +2569,8 @@ tr:last-child td {
   max-width: 1200px;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: 1.35fr 1fr 1fr 1fr;
-  gap: 28px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 32px;
   padding-bottom: 28px;
   border-bottom: 1px solid #E2E8F0;
 }
@@ -2670,7 +2671,7 @@ tr:last-child td {
   .hero-split__inner {
     grid-template-columns: 1fr;
     gap: 40px;
-    padding-top: calc(var(--header-height, 72px) + 48px);
+    padding-top: 32px;
     padding-bottom: 56px;
   }
 
@@ -2689,13 +2690,14 @@ tr:last-child td {
   }
 
   .site-footer__grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 24px;
   }
 }
 
 @media (max-width: 767px) {
   .hero-split__inner {
-    padding-top: calc(var(--header-height, 60px) + 20px);
+    padding-top: 20px;
     padding-left: var(--space-4);
     padding-right: var(--space-4);
     padding-bottom: 28px;
@@ -2913,9 +2915,11 @@ tr:last-child td {
 }
 
 .booking-container {
-  max-width: 1160px;
+  width: 100%;
+  max-width: 1200px;
   margin: var(--space-6) auto var(--space-12);
-  padding: 0 var(--space-4);
+  padding: 0 var(--space-6, 24px);
+  box-sizing: border-box;
 }
 
 .booking-page-header {
@@ -2952,6 +2956,32 @@ tr:last-child td {
 .breadcrumb-current {
   color: #0F172A;
   font-weight: 600;
+}
+
+/* Breadcrumb Dark Mode Support */
+:root[data-theme="dark"] .booking-breadcrumb,
+[data-theme="dark"] .booking-breadcrumb {
+  color: #94A3B8;
+}
+
+:root[data-theme="dark"] .booking-breadcrumb a,
+[data-theme="dark"] .booking-breadcrumb a {
+  color: #94A3B8;
+}
+
+:root[data-theme="dark"] .booking-breadcrumb a:hover,
+[data-theme="dark"] .booking-breadcrumb a:hover {
+  color: #60A5FA;
+}
+
+:root[data-theme="dark"] .breadcrumb-sep,
+[data-theme="dark"] .breadcrumb-sep {
+  color: #64748B;
+}
+
+:root[data-theme="dark"] .breadcrumb-current,
+[data-theme="dark"] .breadcrumb-current {
+  color: #F8FAFC;
 }
 
 .booking-page-header .page-title,
@@ -3978,17 +4008,16 @@ tr:last-child td {
 }
 
 .doctor-poli-badge {
-  display: inline-block;
-  padding: 2px 8px;
+  display: inline-flex;
+  align-items: center;
+  padding: 2.5px 8px;
   border-radius: var(--radius-full);
   background-color: #FFFFFF;
   border: 1px solid #CBD5E1;
   color: #0037B0;
-  font-size: var(--font-badge);
+  font-size: 11px;
   line-height: 14px;
   font-weight: 700;
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -7006,4 +7035,1554 @@ body.profile-page-body {
 .profile-btn-save:disabled {
   opacity: 0.65;
   cursor: not-allowed;
+}
+
+
+/* ==========================================================================
+   Design Specification: Nuvacare Riwayat Pemeriksaan, Navbar & Rekam Medis
+   ========================================================================== */
+
+:root {
+  --brand-blue: #003B95;
+  --brand-blue-soft: #EFF6FF;
+  --doctor-box-bg: #F4F6FB;
+  --badge-green-bg: #ECFDF5;
+  --badge-green-text: #059669;
+  --border-hairline: #E2E8F0;
+}
+
+/* Navbar Desktop 68px & Active Menu */
+.patient-navbar {
+  height: 68px;
+}
+
+.patient-nav-link.active,
+.patient-nav-link[aria-current="page"] {
+  color: var(--brand-blue) !important;
+  font-weight: 700 !important;
+}
+
+/* Main Container 1200px Centered (Presisi Sejajar Sumbu Vertikal dengan Navbar & Footer) */
+.medical-history-container {
+  width: 100%;
+  max-width: 1200px;
+  margin: var(--space-6) auto var(--space-12);
+  padding: 0 var(--space-6, 24px);
+  box-sizing: border-box;
+  flex: 1 0 auto;
+}
+
+.medical-history-container .booking-breadcrumb {
+  margin-bottom: 14px;
+}
+
+.medical-history-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0 0 6px 0;
+  line-height: 1.25;
+}
+
+.medical-history-sub {
+  font-size: 14px;
+  color: #64748B;
+  margin: 0 0 24px 0;
+  line-height: 1.5;
+}
+
+/* Search Bar & Filter Chips */
+.medical-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #FFFFFF;
+  border: 1px solid var(--border-hairline);
+  border-radius: 9999px;
+  padding: 6px 10px 6px 20px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.medical-search-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 240px;
+}
+
+.medical-search-icon {
+  color: #94A3B8;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.medical-search-input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  font-size: 13.5px;
+  color: #0F172A;
+  outline: none;
+  font-family: inherit;
+}
+
+.medical-search-input::placeholder {
+  color: #94A3B8;
+}
+
+.medical-filter-chips {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.medical-filter-chip {
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--border-hairline);
+  background: #F8FAFC;
+  color: #475569;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.medical-filter-chip:hover {
+  background: #EFF6FF;
+  color: var(--brand-blue);
+  border-color: #BFDBFE;
+}
+
+.medical-filter-chip.is-active {
+  background: var(--brand-blue);
+  color: #FFFFFF;
+  border-color: var(--brand-blue);
+}
+
+/* Modern Year Filter Dropdown */
+.medical-filter-dropdown-wrap {
+  flex-shrink: 0;
+}
+
+.medical-select-container {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.medical-select-icon-left {
+  position: absolute;
+  left: 14px;
+  color: var(--brand-blue, #0037B0);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  z-index: 1;
+}
+
+.medical-year-select {
+  height: 42px;
+  padding: 0 36px 0 38px;
+  border-radius: 9999px;
+  border: 1px solid var(--border-hairline, #E2E8F0);
+  background: #F8FAFC;
+  color: #1E293B;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+.medical-year-select:hover {
+  background: #EFF6FF;
+  border-color: #BFDBFE;
+  color: var(--brand-blue, #0037B0);
+}
+
+.medical-year-select:focus {
+  outline: none;
+  border-color: var(--brand-blue, #0037B0);
+  box-shadow: 0 0 0 3px rgba(0, 55, 176, 0.15);
+  background: #FFFFFF;
+}
+
+.medical-select-arrow {
+  position: absolute;
+  right: 14px;
+  color: #64748B;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  transition: transform 0.15s ease;
+}
+
+/* Responsive & Dark Mode for Year Dropdown */
+@media (max-width: 768px) {
+  .medical-search-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .medical-filter-dropdown-wrap,
+  .medical-select-container,
+  .medical-year-select {
+    width: 100%;
+  }
+}
+
+:root[data-theme="dark"] .medical-year-select,
+[data-theme="dark"] .medical-year-select {
+  background: #1E293B;
+  border-color: #334155;
+  color: #F1F5F9;
+  box-shadow: none;
+}
+
+:root[data-theme="dark"] .medical-select-icon-left,
+[data-theme="dark"] .medical-select-icon-left {
+  color: #60A5FA;
+}
+
+:root[data-theme="dark"] .medical-select-arrow,
+[data-theme="dark"] .medical-select-arrow {
+  color: #94A3B8;
+}
+
+:root[data-theme="dark"] .medical-year-select:hover,
+[data-theme="dark"] .medical-year-select:hover {
+  background: #0F172A;
+  border-color: #60A5FA;
+  color: #FFFFFF;
+}
+
+:root[data-theme="dark"] .medical-year-select:focus,
+[data-theme="dark"] .medical-year-select:focus {
+  background: #0F172A;
+  border-color: #60A5FA;
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.25);
+}
+
+/* Clinical Record Card */
+.medical-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Clinical Modern Record Card (Sesuai Desain Poli Minimalis & Modern) */
+.clinical-card,
+.medical-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 16px;
+  box-shadow: 0 2px 10px -2px rgba(15, 23, 42, 0.04);
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+  padding: 24px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.clinical-card:hover,
+.medical-card:hover {
+  border-color: #CBD5E1;
+  box-shadow: 0 8px 24px -4px rgba(15, 23, 42, 0.08);
+}
+
+/* Baris 1: Header Poliklinik & Tanggal/Status */
+.clinical-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.clinical-poli-info {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.clinical-poli-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  background: #EFF6FF;
+  border: 1px solid #DBEAFE;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--brand-blue, #0037B0);
+  flex-shrink: 0;
+}
+
+.clinical-poli-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0 0 4px 0;
+  line-height: 1.3;
+}
+
+.clinical-poli-location {
+  font-size: 13px;
+  color: #64748B;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+}
+
+.clinical-meta-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.clinical-datetime {
+  font-size: 13px;
+  color: #64748B;
+  font-weight: 500;
+}
+
+.clinical-badge-completed {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #059669;
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  box-shadow: none;
+}
+
+.clinical-status-dot {
+  font-size: 14px;
+  line-height: 1;
+  color: #059669;
+}
+
+/* Baris 2: Profil Dokter */
+.clinical-doctor-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.clinical-doctor-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 9999px;
+  background: var(--brand-blue, #0037B0);
+  color: #FFFFFF;
+  font-weight: 700;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0, 55, 176, 0.2);
+}
+
+.clinical-doctor-details {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.clinical-doctor-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.clinical-doctor-spec {
+  font-size: 13.5px;
+  color: #64748B;
+  margin: 0;
+}
+
+/* Baris 3: Kotak Ringkasan Klinis */
+.clinical-summary-box {
+  background: #F4F6FC;
+  border: 1px solid #E9EDF7;
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.clinical-summary-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--brand-blue, #0037B0);
+}
+
+.clinical-summary-text {
+  font-size: 13.5px;
+  color: #334155;
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* Baris 4: Footer Tombol Aksi */
+.clinical-actions-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 2px;
+}
+
+.clinical-actions-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.clinical-btn-qr {
+  height: 42px;
+  padding: 0 20px;
+  border-radius: 9999px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.15s ease;
+}
+
+.clinical-btn-qr:hover {
+  background: #EFF6FF;
+  border-color: #BFDBFE;
+  color: var(--brand-blue, #0037B0);
+}
+
+.clinical-btn-delete {
+  height: 42px;
+  padding: 0 16px;
+  border-radius: 9999px;
+  background: #FFF5F5;
+  border: 1px solid #FED7D7;
+  color: #C53030;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.clinical-btn-delete:hover {
+  background: #FEE2E2;
+  border-color: #FCA5A5;
+  color: #991B1B;
+}
+
+.clinical-btn-rebook {
+  height: 42px;
+  padding: 0 22px;
+  border-radius: 9999px;
+  background: var(--brand-blue, #0037B0);
+  border: none;
+  color: #FFFFFF;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  box-shadow: 0 2px 8px rgba(0, 55, 176, 0.25);
+  transition: all 0.15s ease;
+}
+
+.clinical-btn-rebook:hover {
+  background: #002D75;
+  color: #FFFFFF;
+  box-shadow: 0 4px 12px rgba(0, 55, 176, 0.35);
+}
+
+/* Responsive Mobile Breakpoint (< 768px) */
+@media (max-width: 768px) {
+  .clinical-card {
+    padding: 18px 18px;
+    gap: 16px;
+  }
+
+  .clinical-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .clinical-meta-right {
+    align-items: flex-start;
+    text-align: left;
+    width: 100%;
+    flex-direction: row;
+    justify-content: space-between;
+  }
+
+  .clinical-doctor-details {
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .clinical-actions-row {
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .clinical-actions-left {
+    width: 100%;
+    display: flex;
+    gap: 10px;
+  }
+
+  .clinical-btn-qr,
+  .clinical-btn-delete {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .clinical-btn-rebook {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Dark Mode Support */
+:root[data-theme="dark"] .clinical-card,
+[data-theme="dark"] .clinical-card {
+  background: #1E293B;
+  border-color: #334155;
+  box-shadow: 0 2px 10px -2px rgba(0, 0, 0, 0.4);
+}
+
+:root[data-theme="dark"] .clinical-card:hover,
+[data-theme="dark"] .clinical-card:hover {
+  border-color: #475569;
+}
+
+:root[data-theme="dark"] .clinical-poli-icon,
+[data-theme="dark"] .clinical-poli-icon {
+  background: rgba(30, 58, 138, 0.3);
+  border-color: rgba(59, 130, 246, 0.3);
+  color: #60A5FA;
+}
+
+:root[data-theme="dark"] .clinical-poli-title,
+[data-theme="dark"] .clinical-poli-title {
+  color: #F8FAFC;
+}
+
+:root[data-theme="dark"] .clinical-poli-location,
+[data-theme="dark"] .clinical-poli-location {
+  color: #94A3B8;
+}
+
+:root[data-theme="dark"] .clinical-datetime,
+[data-theme="dark"] .clinical-datetime {
+  color: #94A3B8;
+}
+
+:root[data-theme="dark"] .clinical-badge-completed,
+[data-theme="dark"] .clinical-badge-completed {
+  background: transparent;
+  color: #34D399;
+  border: none;
+  padding: 0;
+}
+
+:root[data-theme="dark"] .clinical-status-dot,
+[data-theme="dark"] .clinical-status-dot {
+  color: #34D399;
+}
+
+:root[data-theme="dark"] .clinical-doctor-name,
+[data-theme="dark"] .clinical-doctor-name {
+  color: #F8FAFC;
+}
+
+:root[data-theme="dark"] .clinical-doctor-spec,
+[data-theme="dark"] .clinical-doctor-spec {
+  color: #94A3B8;
+}
+
+:root[data-theme="dark"] .clinical-summary-box,
+[data-theme="dark"] .clinical-summary-box {
+  background: #0F172A;
+  border-color: #1E293B;
+}
+
+:root[data-theme="dark"] .clinical-summary-title,
+[data-theme="dark"] .clinical-summary-title {
+  color: #60A5FA;
+}
+
+:root[data-theme="dark"] .clinical-summary-text,
+[data-theme="dark"] .clinical-summary-text {
+  color: #CBD5E1;
+}
+
+:root[data-theme="dark"] .clinical-btn-qr,
+[data-theme="dark"] .clinical-btn-qr {
+  background: #0F172A;
+  border-color: #334155;
+  color: #E2E8F0;
+}
+
+:root[data-theme="dark"] .clinical-btn-delete,
+[data-theme="dark"] .clinical-btn-delete {
+  background: rgba(185, 28, 28, 0.2);
+  border-color: rgba(239, 68, 68, 0.35);
+  color: #F87171;
+}
+
+:root[data-theme="dark"] .clinical-btn-delete:hover,
+[data-theme="dark"] .clinical-btn-delete:hover {
+  background: rgba(185, 28, 28, 0.35);
+  color: #FCA5A5;
+}
+
+:root[data-theme="dark"] .clinical-btn-qr:hover,
+[data-theme="dark"] .clinical-btn-qr:hover {
+  background: #1E293B;
+  color: #60A5FA;
+}
+
+/* Load More Button */
+.medical-load-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 44px;
+  margin-top: 24px;
+  border-radius: 9999px;
+  background: #FFFFFF;
+  border: 1px solid var(--border-hairline);
+  color: #475569;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.medical-load-more:hover {
+  background: #F8FAFC;
+  color: #0F172A;
+  border-color: #CBD5E1;
+}
+
+/* Nuvacare Footer Full-Width */
+.nuvacare-footer {
+  width: 100%;
+  background: #FFFFFF;
+  border-top: 1px solid var(--border-hairline);
+  padding: 36px 24px;
+  margin-top: 56px;
+}
+
+.nuvacare-footer-inner {
+  max-width: 1060px;
+  margin: 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  font-size: 13px;
+  color: #64748B;
+}
+
+.nuvacare-footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 20px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.nuvacare-footer-link {
+  color: #64748B;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.nuvacare-footer-link:hover {
+  color: var(--brand-blue);
+}
+
+/* Modal Pop-up QR Medis */
+.medical-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.medical-modal-overlay.hidden {
+  display: none;
+}
+
+.medical-modal-dialog {
+  background: #FFFFFF;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  border: 1px solid var(--border-hairline);
+  animation: modalPop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modalPop {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.medical-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #F1F5F9;
+  background: #F8FAFC;
+}
+
+.medical-modal-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0;
+}
+
+.medical-modal-subtitle {
+  font-size: 12px;
+  color: #64748B;
+  margin: 2px 0 0 0;
+}
+
+.medical-modal-close {
+  width: 36px;
+  height: 36px;
+  border-radius: 9999px;
+  border: none;
+  background: transparent;
+  color: #64748B;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.medical-modal-close:hover {
+  background: #E2E8F0;
+  color: #0F172A;
+}
+
+.medical-modal-body {
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.medical-qr-container {
+  padding: 16px;
+  background: #FFFFFF;
+  border-radius: 16px;
+  border: 1px solid var(--border-hairline);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 200px;
+  min-height: 200px;
+}
+
+.medical-qr-container canvas,
+.medical-qr-container svg {
+  display: block;
+}
+
+.medical-modal-info {
+  background: #F8FAFC;
+  border-radius: 12px;
+  padding: 12px 16px;
+  width: 100%;
+  border: 1px solid var(--border-hairline);
+  margin-bottom: 16px;
+  text-align: left;
+}
+
+.medical-modal-info-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.medical-modal-info-row:last-child {
+  margin-bottom: 0;
+}
+
+.medical-modal-info-label {
+  color: #64748B;
+}
+
+.medical-modal-info-value {
+  font-weight: 600;
+  color: #0F172A;
+}
+
+/* Empty State Card */
+.medical-empty-card {
+  background: #FFFFFF;
+  border-radius: 16px;
+  border: 1px dashed #CBD5E1;
+  padding: 48px 24px;
+  text-align: center;
+  color: #64748B;
+}
+
+.medical-empty-icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 16px;
+  border-radius: 9999px;
+  background: #EFF6FF;
+  color: var(--brand-blue);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Mobile Responsiveness (< 768px) */
+@media (max-width: 767px) {
+  .medical-history-container {
+    padding: 24px 16px;
+  }
+
+  .medical-history-title {
+    font-size: 22px;
+  }
+
+  .medical-search-bar {
+    border-radius: 16px;
+    padding: 12px 14px;
+    gap: 12px;
+  }
+
+  .medical-filter-chips {
+    width: 100%;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+
+  .medical-card {
+    padding: 18px 16px;
+  }
+
+  .medical-card-top {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+  }
+
+  .medical-doctor-badge {
+    width: 100%;
+  }
+
+  .medical-card-footer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+  }
+
+  .medical-verified-note {
+    justify-content: center;
+  }
+
+  .medical-actions-group {
+    flex-direction: column;
+    width: 100%;
+    gap: 8px;
+  }
+
+  .medical-btn-qr,
+  .medical-btn-rebook {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .nuvacare-footer-inner {
+    flex-direction: column;
+    text-align: center;
+    gap: 14px;
+  }
+
+  .nuvacare-footer-links {
+    justify-content: center;
+  }
+}
+
+/* ==========================================================================
+   Tema Terang & Gelap (Dark & Light Theme Mode) - Nuvacare Patient Surface
+   ========================================================================== */
+
+/* Toggle Button Komponen */
+.patient-theme-toggle {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  border: 1px solid var(--color-line);
+  background: var(--color-surface);
+  color: var(--color-ink-2);
+  cursor: pointer;
+  transition: all 0.18s ease;
+  flex-shrink: 0;
+}
+
+.patient-theme-toggle:hover {
+  background: var(--color-primary-soft);
+  color: var(--brand-blue);
+  border-color: #BFDBFE;
+}
+
+.patient-theme-toggle:focus-visible {
+  outline: 2px solid var(--brand-blue);
+  outline-offset: 2px;
+}
+
+/* Tampilan Ikon Sun / Moon Berdasarkan Tema */
+:root .theme-icon--sun {
+  display: none;
+}
+:root .theme-icon--moon {
+  display: block;
+}
+
+:root[data-theme="dark"] .theme-icon--sun {
+  display: block;
+}
+:root[data-theme="dark"] .theme-icon--moon {
+  display: none;
+}
+
+/* Drawer Mobile Theme Row Button */
+.patient-drawer__theme-btn {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  width: 100% !important;
+  background: none !important;
+  border: none !important;
+  text-align: left !important;
+  cursor: pointer !important;
+  padding: 0 !important;
+}
+
+.patient-drawer__theme-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ==========================================================================
+   Aturan Selector Tema Gelap (:root[data-theme="dark"])
+   Memenuhi Kontras WCAG AA (Teks >= 4.5:1, Tepi Kontrol >= 3:1)
+   ========================================================================== */
+:root[data-theme="dark"] {
+  --color-bg: #0B1220;
+  --color-surface: #1E293B;
+  --color-line: #334155;
+  --color-line-strong: #94A3B8;
+  --color-ink: #F8FAFC;
+  --color-ink-2: #CBD5E1;
+  --color-primary: #3B82F6;
+  --color-primary-ink: #60A5FA;
+  --color-primary-soft: rgba(59, 130, 246, 0.15);
+  --color-disabled-bg: #1E293B;
+
+  --brand-blue: #3B82F6;
+  --brand-blue-soft: rgba(59, 130, 246, 0.15);
+  --doctor-box-bg: #141E30;
+  --badge-green-bg: #064E3B;
+  --badge-green-text: #34D399;
+  --border-hairline: #334155;
+}
+
+/* Base Body Dark */
+:root[data-theme="dark"] body,
+:root[data-theme="dark"] .booking-page-body,
+:root[data-theme="dark"] .profile-page-body {
+  background-color: #0B1220;
+  color: #F8FAFC;
+}
+
+/* Navbar & Frame */
+:root[data-theme="dark"] .patient-nav-frame {
+  background: #0F172A;
+  border-bottom: 1px solid #1E293B;
+}
+
+:root[data-theme="dark"] .patient-navbar {
+  background: #0F172A;
+}
+
+:root[data-theme="dark"] .patient-brand-text {
+  color: #F8FAFC;
+}
+
+:root[data-theme="dark"] .patient-nav-link {
+  color: #94A3B8;
+}
+
+:root[data-theme="dark"] .patient-nav-link:hover {
+  color: #60A5FA;
+}
+
+:root[data-theme="dark"] .patient-nav-link.active,
+:root[data-theme="dark"] .patient-nav-link[aria-current="page"] {
+  color: #60A5FA !important;
+}
+
+:root[data-theme="dark"] .patient-pill-cta {
+  background: #2563EB;
+  color: #FFFFFF;
+}
+
+:root[data-theme="dark"] .patient-pill-cta:hover {
+  background: #1D4ED8;
+}
+
+:root[data-theme="dark"] .patient-theme-toggle {
+  background: #1E293B;
+  border-color: #334155;
+  color: #F8FAFC;
+}
+
+:root[data-theme="dark"] .patient-theme-toggle:hover {
+  background: #334155;
+  border-color: #475569;
+  color: #60A5FA;
+}
+
+/* Drawer Mobile Dark */
+:root[data-theme="dark"] .patient-drawer {
+  background: #0F172A;
+  color: #F8FAFC;
+}
+
+:root[data-theme="dark"] .patient-drawer__top {
+  border-bottom: 1px solid #1E293B;
+}
+
+:root[data-theme="dark"] .patient-drawer__top .patient-brand {
+  color: #F8FAFC;
+}
+
+:root[data-theme="dark"] .patient-drawer__close-btn {
+  background: #1E293B;
+  border-color: #334155;
+  color: #E2E8F0;
+}
+
+:root[data-theme="dark"] .patient-drawer__item {
+  border-bottom: 1px solid #1E293B;
+}
+
+:root[data-theme="dark"] .patient-drawer__link {
+  color: #F1F5F9;
+}
+
+:root[data-theme="dark"] .patient-drawer__link.active {
+  color: #60A5FA;
+}
+
+:root[data-theme="dark"] .patient-drawer__stamp {
+  color: rgba(255, 255, 255, 0.03);
+}
+
+:root[data-theme="dark"] .patient-drawer__footer {
+  border-top: 1px solid #1E293B;
+  background: #0F172A;
+}
+
+:root[data-theme="dark"] .patient-drawer__pill-cta {
+  background: #2563EB;
+  color: #FFFFFF;
+}
+
+:root[data-theme="dark"] .patient-drawer-btn {
+  background: #1E293B;
+  border-color: #334155;
+  color: #F8FAFC;
+}
+
+/* Kartu Riwayat & Filter Dark */
+:root[data-theme="dark"] .medical-history-title {
+  color: #F8FAFC;
+}
+
+:root[data-theme="dark"] .medical-history-sub {
+  color: #94A3B8;
+}
+
+:root[data-theme="dark"] .medical-search-bar {
+  background: #1E293B;
+  border-color: #334155;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+
+:root[data-theme="dark"] .medical-search-input {
+  color: #F8FAFC;
+}
+
+:root[data-theme="dark"] .medical-search-input::placeholder {
+  color: #64748B;
+}
+
+:root[data-theme="dark"] .medical-filter-chip {
+  background: #0F172A;
+  border-color: #334155;
+  color: #CBD5E1;
+}
+
+:root[data-theme="dark"] .medical-filter-chip:hover {
+  background: #1E293B;
+  border-color: #475569;
+  color: #60A5FA;
+}
+
+:root[data-theme="dark"] .medical-filter-chip.is-active {
+  background: #2563EB;
+  border-color: #2563EB;
+  color: #FFFFFF;
+}
+
+:root[data-theme="dark"] .medical-card {
+  background: #1E293B;
+  border-color: #334155;
+  border-top-color: #3B82F6;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.4);
+}
+
+:root[data-theme="dark"] .medical-card:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+:root[data-theme="dark"] .medical-card-top {
+  border-bottom: 1px solid #334155;
+}
+
+:root[data-theme="dark"] .medical-badge-date {
+  background: #0F172A;
+  color: #CBD5E1;
+  border: 1px solid #334155;
+}
+
+:root[data-theme="dark"] .medical-badge-completed {
+  background: #064E3B;
+  border-color: #059669;
+  color: #6EE7B7;
+}
+
+:root[data-theme="dark"] .medical-poli-title {
+  color: #F8FAFC;
+}
+
+:root[data-theme="dark"] .medical-location-text {
+  color: #94A3B8;
+}
+
+:root[data-theme="dark"] .medical-doctor-badge {
+  background: #141E30;
+  border-color: #334155;
+}
+
+:root[data-theme="dark"] .medical-doctor-name {
+  color: #F8FAFC;
+}
+
+:root[data-theme="dark"] .medical-doctor-spec {
+  color: #94A3B8;
+}
+
+:root[data-theme="dark"] .medical-doctor-avatar {
+  background: #2563EB;
+}
+
+:root[data-theme="dark"] .medical-notes-box {
+  background: #141E30;
+  border-left-color: #3B82F6;
+}
+
+:root[data-theme="dark"] .medical-notes-label {
+  color: #60A5FA;
+}
+
+:root[data-theme="dark"] .medical-notes-content {
+  color: #CBD5E1;
+}
+
+:root[data-theme="dark"] .medical-card-footer {
+  border-top: 1px solid #334155;
+}
+
+:root[data-theme="dark"] .medical-verified-note {
+  color: #94A3B8;
+}
+
+:root[data-theme="dark"] .medical-btn-qr {
+  background: #0F172A;
+  border-color: #334155;
+  color: #E2E8F0;
+}
+
+:root[data-theme="dark"] .medical-btn-qr:hover {
+  background: #1E293B;
+  border-color: #60A5FA;
+  color: #60A5FA;
+}
+
+:root[data-theme="dark"] .medical-btn-rebook {
+  background: #2563EB;
+  color: #FFFFFF;
+}
+
+:root[data-theme="dark"] .medical-btn-rebook:hover {
+  background: #1D4ED8;
+}
+
+:root[data-theme="dark"] .medical-empty-card {
+  background: #1E293B;
+  border-color: #334155;
+  color: #94A3B8;
+}
+
+:root[data-theme="dark"] .medical-load-more {
+  background: #1E293B;
+  border-color: #334155;
+  color: #CBD5E1;
+}
+
+:root[data-theme="dark"] .medical-load-more:hover {
+  background: #334155;
+  color: #F8FAFC;
+}
+
+:root[data-theme="dark"] .nuvacare-footer {
+  background: #0F172A;
+  border-top-color: #1E293B;
+}
+
+:root[data-theme="dark"] .nuvacare-footer-inner,
+:root[data-theme="dark"] .nuvacare-footer-link {
+  color: #94A3B8;
+}
+
+:root[data-theme="dark"] .nuvacare-footer-link:hover {
+  color: #60A5FA;
+}
+
+/* Site Footer Dark Mode */
+:root[data-theme="dark"] .site-footer,
+[data-theme="dark"] .site-footer {
+  background-color: #0F172A;
+  border-top-color: #1E293B;
+}
+
+:root[data-theme="dark"] .site-footer__grid,
+[data-theme="dark"] .site-footer__grid {
+  border-bottom-color: #1E293B;
+}
+
+:root[data-theme="dark"] .footer-brand-title,
+[data-theme="dark"] .footer-brand-title,
+:root[data-theme="dark"] .footer-heading,
+[data-theme="dark"] .footer-heading {
+  color: #F8FAFC;
+}
+
+:root[data-theme="dark"] .footer-brand-desc,
+[data-theme="dark"] .footer-brand-desc,
+:root[data-theme="dark"] .footer-info-list,
+[data-theme="dark"] .footer-info-list,
+:root[data-theme="dark"] .site-footer__bottom,
+[data-theme="dark"] .site-footer__bottom {
+  color: #94A3B8;
+}
+
+:root[data-theme="dark"] .footer-accreditation,
+[data-theme="dark"] .footer-accreditation {
+  color: #60A5FA;
+  background-color: rgba(37, 99, 235, 0.15);
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+:root[data-theme="dark"] .site-footer__links a,
+[data-theme="dark"] .site-footer__links a,
+:root[data-theme="dark"] .site-footer__bottom a,
+[data-theme="dark"] .site-footer__bottom a {
+  color: #94A3B8;
+}
+
+:root[data-theme="dark"] .site-footer__links a:hover,
+[data-theme="dark"] .site-footer__links a:hover,
+:root[data-theme="dark"] .site-footer__bottom a:hover,
+[data-theme="dark"] .site-footer__bottom a:hover {
+  color: #60A5FA;
+}
+
+/* Modal Dark */
+:root[data-theme="dark"] .medical-modal-card {
+  background: #1E293B;
+  border: 1px solid #334155;
+  color: #F8FAFC;
+}
+
+:root[data-theme="dark"] .medical-modal-desc {
+  color: #94A3B8;
+}
+
+:root[data-theme="dark"] .medical-modal-code {
+  background: #0F172A;
+  border-color: #334155;
+  color: #60A5FA;
+}
+
+:root[data-theme="dark"] .medical-modal-info-block {
+  background: #141E30;
+  border-color: #334155;
+}
+
+:root[data-theme="dark"] .medical-modal-label {
+  color: #94A3B8;
+}
+
+:root[data-theme="dark"] .medical-modal-val {
+  color: #F8FAFC;
+}
+
+/* Halaman Booking (Janji Temu) Dark */
+:root[data-theme="dark"] .booking-hero-card,
+:root[data-theme="dark"] .booking-step-card,
+:root[data-theme="dark"] .booking-summary-card,
+:root[data-theme="dark"] .calendar-card {
+  background: #1E293B;
+  border: 1px solid #334155;
+  color: #F8FAFC;
+}
+
+:root[data-theme="dark"] .booking-step-card__title,
+:root[data-theme="dark"] .booking-section-title {
+  color: #F8FAFC;
+}
+
+:root[data-theme="dark"] .booking-step-card__sub,
+:root[data-theme="dark"] .booking-muted-text {
+  color: #94A3B8;
+}
+
+:root[data-theme="dark"] .doctor-card-item {
+  background: #141E30;
+  border: 1px solid #334155;
+  color: #F8FAFC;
+}
+
+:root[data-theme="dark"] .doctor-card-item:hover {
+  border-color: #3B82F6;
+  background: #1A263D;
+}
+
+:root[data-theme="dark"] .doctor-card-item.is-selected {
+  background: #1E2B45;
+  border-color: #3B82F6;
+}
+
+:root[data-theme="dark"] .doctor-card-item__name {
+  color: #F8FAFC;
+}
+
+:root[data-theme="dark"] .doctor-card-item__spec {
+  color: #94A3B8;
+}
+
+:root[data-theme="dark"] .doctor-poli-badge {
+  background-color: #0F172A;
+  border-color: #334155;
+  color: #60A5FA;
+}
+
+:root[data-theme="dark"] .doctor-card-name {
+  color: #F8FAFC;
+}
+
+:root[data-theme="dark"] .doctor-card-room {
+  color: #94A3B8;
+}
+
+:root[data-theme="dark"] .doctor-card-schedule {
+  color: #34D399;
+}
+
+:root[data-theme="dark"] .calendar-cell {
+  background: #0F172A;
+  border-color: #334155;
+  color: #E2E8F0;
+}
+
+:root[data-theme="dark"] .calendar-cell:hover:not(.disabled) {
+  background: #334155;
+}
+
+:root[data-theme="dark"] .calendar-cell.is-selected {
+  background: #2563EB;
+  color: #FFFFFF;
+  border-color: #2563EB;
+}
+
+:root[data-theme="dark"] .calendar-cell.disabled {
+  background: #141E30;
+  color: #475569;
+}
+
+:root[data-theme="dark"] .time-slot-btn {
+  background: #141E30;
+  border-color: #334155;
+  color: #E2E8F0;
+}
+
+:root[data-theme="dark"] .time-slot-btn:hover {
+  border-color: #3B82F6;
+  color: #60A5FA;
+}
+
+:root[data-theme="dark"] .time-slot-btn.is-selected {
+  background: #2563EB;
+  border-color: #2563EB;
+  color: #FFFFFF;
+}
+
+:root[data-theme="dark"] .booking-input,
+:root[data-theme="dark"] .booking-textarea,
+:root[data-theme="dark"] .profile-field-input,
+:root[data-theme="dark"] select.booking-input {
+  background: #141E30;
+  border: 1px solid #334155;
+  color: #F8FAFC;
+}
+
+:root[data-theme="dark"] .booking-input:focus,
+:root[data-theme="dark"] .booking-textarea:focus,
+:root[data-theme="dark"] .profile-field-input:focus {
+  border-color: #3B82F6;
+  outline: none;
+}
+
+/* Halaman Jadwal Kontrol Dark */
+:root[data-theme="dark"] .table-card,
+:root[data-theme="dark"] .card {
+  background: #1E293B;
+  border: 1px solid #334155;
+  color: #F8FAFC;
+}
+
+:root[data-theme="dark"] table.data-table th {
+  background: #141E30;
+  border-color: #334155;
+  color: #94A3B8;
+}
+
+:root[data-theme="dark"] table.data-table td {
+  border-color: #334155;
+  color: #E2E8F0;
+}
+
+/* Halaman Profil Dark */
+:root[data-theme="dark"] .profile-card,
+:root[data-theme="dark"] .profile-header-card {
+  background: #1E293B;
+  border: 1px solid #334155;
+  color: #F8FAFC;
+}
+
+:root[data-theme="dark"] .profile-title {
+  color: #F8FAFC;
+}
+
+:root[data-theme="dark"] .profile-field-label {
+  color: #CBD5E1;
+}
+
+:root[data-theme="dark"] .profile-field-readonly {
+  background: #0F172A;
+  border-color: #334155;
+  color: #94A3B8;
 }

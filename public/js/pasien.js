@@ -192,8 +192,38 @@ document.addEventListener('DOMContentLoaded', () => {
     initBookingPage();
   }
 
-  if (document.getElementById('historyTableBody')) {
+  if (document.getElementById('historyCardsContainer') || document.getElementById('historyTableBody')) {
     loadExaminationHistory();
+
+    const closeQrBtn = document.getElementById('closeModalQrBtn');
+    if (closeQrBtn) closeQrBtn.addEventListener('click', closeMedicalQrModal);
+    const closeQrBottomBtn = document.getElementById('closeModalQrBottomBtn');
+    if (closeQrBottomBtn) closeQrBottomBtn.addEventListener('click', closeMedicalQrModal);
+    const modalQrOverlay = document.getElementById('modalQrMedis');
+    if (modalQrOverlay) {
+      modalQrOverlay.addEventListener('click', (e) => {
+        if (e.target === modalQrOverlay) closeMedicalQrModal();
+      });
+    }
+
+    const searchInput = document.getElementById('medicalSearchInput');
+    if (searchInput) {
+      searchInput.addEventListener('input', () => filterAndRenderHistory());
+    }
+
+    const yearSelect = document.getElementById('medicalYearSelect');
+    if (yearSelect) {
+      yearSelect.addEventListener('change', () => filterAndRenderHistory());
+    }
+
+    const filterChips = document.querySelectorAll('.medical-filter-chip');
+    filterChips.forEach(chip => {
+      chip.addEventListener('click', () => {
+        filterChips.forEach(c => c.classList.remove('is-active'));
+        chip.classList.add('is-active');
+        filterAndRenderHistory();
+      });
+    });
   }
 
   if (document.getElementById('controlTableBody')) {
@@ -894,7 +924,9 @@ async function initBookingPage() {
     doctorCardsGrid.innerHTML = doctorEntries.map(({ doctor, polyclinic }) => {
       const isSelected = doctor.id === selectedDocId;
       const initials = getDoctorInitials(doctor.name);
-      const roomLabel = `Ruang ${100 + polyclinic.id}, Gedung Utama Lt. ${(polyclinic.id % 3) + 1}`;
+      const shortPoliName = polyclinic.short_name || polyclinic.name.replace(/^Poli\s+/i, '');
+      const roomLabel = polyclinic.room_label || `Lt. ${(polyclinic.id % 3) || 3} • Ruang ${100 + polyclinic.id}`;
+      const scheduleLabel = doctor.schedule_label || polyclinic.schedule_label || '09:00 - 17:00 WIB';
       return `
         <button
           type="button"
@@ -906,12 +938,12 @@ async function initBookingPage() {
           <div class="doctor-card-avatar" aria-hidden="true">${escapeHtml(initials)}</div>
           <div class="doctor-card-content">
             <div class="doctor-card-top">
-              <span class="doctor-poli-badge">${escapeHtml(polyclinic.name)}</span>
+              <span class="doctor-poli-badge">${escapeHtml(shortPoliName)}</span>
               <span class="doctor-select-indicator">${isSelected ? 'Terpilih &#10003;' : 'Tersedia'}</span>
             </div>
             <h3 class="doctor-card-name">${escapeHtml(doctor.name)}</h3>
             <p class="doctor-card-room">${escapeHtml(roomLabel)}</p>
-            <div class="doctor-card-schedule">Praktik Pagi, Siang &amp; Sore (09:00 - 17:00 WIB)</div>
+            <div class="doctor-card-schedule">Praktik: ${escapeHtml(scheduleLabel)}</div>
           </div>
         </button>
       `;
@@ -1121,10 +1153,20 @@ async function initBookingPage() {
 
     renderPoliPillsAndDoctorCards();
 
-    const requestedPoliId = new URLSearchParams(window.location.search).get('poli');
+    const urlParams = new URLSearchParams(window.location.search);
+    const requestedPoliId = urlParams.get('polyclinic_id') || urlParams.get('poli');
+    const requestedDoctorId = urlParams.get('doctor_id');
+
     if (requestedPoliId && poliData.some((p) => String(p.id) === String(requestedPoliId))) {
       poliSelect.value = String(requestedPoliId);
-      poliSelect.dispatchEvent(new Event('change'));
+      populateDoctorSelectOptions(parseInt(requestedPoliId, 10));
+
+      if (requestedDoctorId) {
+        doctorSelect.value = String(requestedDoctorId);
+      }
+      renderPoliPillsAndDoctorCards();
+      updateBookingSummary();
+      refreshAvailableSlots();
     }
 
     const bookingForm = document.getElementById('bookingForm');
@@ -1254,30 +1296,351 @@ async function loadPatientAppointments() {
   }
 }
 
+let examinationHistoryData = [];
+
+function getDoctorInitials(name) {
+  if (!name) return 'DR';
+  const clean = name.replace(/^(dr\.|drg\.|prof\.|dr\s+|drg\s+)/i, '').trim();
+  const parts = clean.split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  } else if (parts.length === 1 && parts[0].length >= 2) {
+    return parts[0].substring(0, 2).toUpperCase();
+  }
+  return 'DR';
+}
+
+function openMedicalQrModal(id) {
+  if (!Array.isArray(examinationHistoryData)) return;
+  const item = examinationHistoryData.find(x => String(x.id) === String(id));
+  if (!item) return;
+
+  const modal = document.getElementById('modalQrMedis');
+  const qrBox = document.getElementById('medicalQrCanvasBox');
+  const poliEl = document.getElementById('qrModalPoli');
+  const doctorEl = document.getElementById('qrModalDoctor');
+  const dateEl = document.getElementById('qrModalDate');
+
+  if (poliEl) poliEl.textContent = item.polyclinic?.name || '-';
+  if (doctorEl) doctorEl.textContent = item.doctor?.name || '-';
+  if (dateEl) dateEl.textContent = api.formatDate(item.appointment_date);
+
+  const verificationPayload = `NUVACARE-MEDREC-${item.id}-${item.appointment_date}-${item.user_id || 'PATIENT'}`;
+
+  if (qrBox) {
+    if (typeof QRCode !== 'undefined' && typeof QRCode.generateSvg === 'function') {
+      qrBox.innerHTML = QRCode.generateSvg(verificationPayload, { cellSize: 5, margin: 1 });
+    } else {
+      qrBox.innerHTML = `<span style="font-size: 13px; font-weight: 700; color: #0037B0;">${verificationPayload}</span>`;
+    }
+  }
+
+  if (modal) {
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  }
+}
+
+function closeMedicalQrModal() {
+  const modal = document.getElementById('modalQrMedis');
+  if (modal) {
+    modal.classList.add('hidden');
+    document.body.style.overflow = '';
+  }
+}
+
+window.openMedicalQrModal = openMedicalQrModal;
+window.closeMedicalQrModal = closeMedicalQrModal;
+
+function renderHistoryCards(items) {
+  const cardsContainer = document.getElementById('historyCardsContainer');
+  if (!cardsContainer) return;
+
+  const loadMoreBtn = document.getElementById('loadMoreHistoryBtn');
+  if (loadMoreBtn) {
+    loadMoreBtn.style.display = items.length >= 10 ? 'flex' : 'none';
+  }
+
+  if (items.length === 0) {
+    cardsContainer.innerHTML = `
+      <div class="medical-empty-card">
+        <div class="medical-empty-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+            <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+          </svg>
+        </div>
+        <h3 style="font-size: 16px; font-weight: 700; color: #0F172A; margin: 0 0 4px 0;">Tidak Ada Riwayat Pemeriksaan</h3>
+        <p style="font-size: 13.5px; color: #64748B; margin: 0 0 16px 0;">Tidak ditemukan catatan rekam medis yang sesuai dengan pencarian Anda.</p>
+        <a href="/pasien/janji-temu.html" class="medical-btn-rebook" style="display: inline-flex;">Buat Janji Baru</a>
+      </div>
+    `;
+    return;
+  }
+
+  cardsContainer.innerHTML = items.map(a => `
+    <article class="clinical-card">
+      <!-- Baris 1: Header Poliklinik & Tanggal/Status -->
+      <div class="clinical-card-header">
+        <div class="clinical-poli-info">
+          <div class="clinical-poli-icon" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="4" width="20" height="16" rx="4"></rect>
+              <path d="M6 12h3l2-3 3 6 2-3h3"></path>
+            </svg>
+          </div>
+          <div>
+            <h2 class="clinical-poli-title">${escapeHtml(a.polyclinic?.name || 'Poliklinik')}</h2>
+            <p class="clinical-poli-location">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                <circle cx="12" cy="10" r="3"></circle>
+              </svg>
+              <span>${escapeHtml(a.polyclinic?.room || 'Gedung B Spesialis, Lantai 3 • Ruang K-304')}</span>
+            </p>
+          </div>
+        </div>
+
+        <div class="clinical-meta-right">
+          <span class="clinical-datetime">${escapeHtml(api.formatDate(a.appointment_date))} &bull; ${escapeHtml(a.appointment_time || '09:40')} WIB</span>
+          <span class="clinical-badge-completed">
+            <span class="clinical-status-dot" aria-hidden="true">&bull;</span>
+            <span>Kunjungan Selesai</span>
+          </span>
+        </div>
+      </div>
+
+      <!-- Baris 2: Profil Dokter -->
+      <div class="clinical-doctor-row">
+        <div class="clinical-doctor-avatar">${escapeHtml(getDoctorInitials(a.doctor?.name))}</div>
+        <div class="clinical-doctor-details">
+          <h3 class="clinical-doctor-name">${escapeHtml(a.doctor?.name || 'dr. Dokter Spesialis')}</h3>
+          <p class="clinical-doctor-spec">&bull; ${escapeHtml(a.doctor?.specialization || 'Spesialis Medis')}</p>
+        </div>
+      </div>
+
+      <!-- Baris 3: Kotak Ringkasan Klinis -->
+      <div class="clinical-summary-box">
+        <div class="clinical-summary-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+            <polyline points="10 9 9 9 8 9"></polyline>
+          </svg>
+          <span>Ringkasan Klinis</span>
+        </div>
+        <p class="clinical-summary-text">
+          ${escapeHtml(a.complaint || 'Evaluasi rutin kondisi kesehatan pasien.')}
+          ${a.doctor_notes ? ` ${escapeHtml(a.doctor_notes)}` : ''}
+        </p>
+      </div>
+
+      <!-- Baris 4: Footer Tombol Aksi -->
+      <div class="clinical-actions-row">
+        <div class="clinical-actions-left">
+          <button type="button" class="clinical-btn-qr" onclick="openMedicalQrModal('${a.id}')">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3" y="3" width="7" height="7"></rect>
+              <rect x="14" y="3" width="7" height="7"></rect>
+              <rect x="14" y="14" width="7" height="7"></rect>
+              <rect x="3" y="14" width="7" height="7"></rect>
+            </svg>
+            <span>QR Medis</span>
+          </button>
+          <button type="button" class="clinical-btn-delete" onclick="confirmDeleteHistory('${a.id}')" title="Hapus riwayat pemeriksaan ini dari tampilan">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+            <span>Hapus</span>
+          </button>
+        </div>
+
+        <a href="/pasien/janji-temu.html?polyclinic_id=${a.polyclinic_id || a.polyclinic?.id || ''}&doctor_id=${a.doctor_id || a.doctor?.id || ''}" class="clinical-btn-rebook">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="16" y1="2" x2="16" y2="6"></line>
+            <line x1="8" y1="2" x2="8" y2="6"></line>
+            <line x1="3" y1="10" x2="21" y2="10"></line>
+            <line x1="12" y1="14" x2="12" y2="18"></line>
+            <line x1="10" y1="16" x2="14" y2="16"></line>
+          </svg>
+          <span>Buat Jadwal Kontrol</span>
+        </a>
+      </div>
+    </article>
+  `).join('');
+}
+
+let pendingDeleteHistoryId = null;
+
+function getDeletedHistoryIds() {
+  try {
+    const raw = localStorage.getItem('nuvacare_deleted_records');
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveDeletedHistoryId(id) {
+  try {
+    const list = getDeletedHistoryIds();
+    if (!list.includes(String(id))) {
+      list.push(String(id));
+      localStorage.setItem('nuvacare_deleted_records', JSON.stringify(list));
+    }
+  } catch {}
+}
+
+function confirmDeleteHistory(id) {
+  pendingDeleteHistoryId = id;
+  const modal = document.getElementById('modalConfirmDeleteHistory');
+  if (modal) {
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  }
+}
+
+function closeDeleteHistoryModal() {
+  pendingDeleteHistoryId = null;
+  const modal = document.getElementById('modalConfirmDeleteHistory');
+  if (modal) {
+    modal.classList.add('hidden');
+    document.body.style.overflow = '';
+  }
+}
+
+function executeDeleteHistory() {
+  if (!pendingDeleteHistoryId) return;
+  saveDeletedHistoryId(pendingDeleteHistoryId);
+
+  examinationHistoryData = examinationHistoryData.filter(x => String(x.id) !== String(pendingDeleteHistoryId));
+  closeDeleteHistoryModal();
+
+  populateYearDropdown(examinationHistoryData);
+  filterAndRenderHistory();
+}
+
+window.confirmDeleteHistory = confirmDeleteHistory;
+window.closeDeleteHistoryModal = closeDeleteHistoryModal;
+window.executeDeleteHistory = executeDeleteHistory;
+
+function populateYearDropdown(items) {
+  const yearSelect = document.getElementById('medicalYearSelect');
+  if (!yearSelect) return;
+
+  const currentVal = yearSelect.value || 'all';
+  const yearsSet = new Set();
+  
+  if (Array.isArray(items)) {
+    items.forEach(item => {
+      const year = (item.appointment_date || '').split('-')[0];
+      if (year && /^\d{4}$/.test(year)) {
+        yearsSet.add(year);
+      }
+    });
+  }
+
+  // Fallback setidaknya tahun berjalan jika data kosong
+  const currentYear = new Date().getFullYear().toString();
+  if (yearsSet.size === 0) {
+    yearsSet.add(currentYear);
+    yearsSet.add((parseInt(currentYear, 10) - 1).toString());
+  }
+
+  const sortedYears = Array.from(yearsSet).sort((a, b) => parseInt(b, 10) - parseInt(a, 10));
+
+  let optionsHtml = '<option value="all">Semua Tahun</option>';
+
+  sortedYears.forEach(yr => {
+    optionsHtml += `<option value="${escapeHtml(yr)}">Tahun ${escapeHtml(yr)}</option>`;
+  });
+
+  yearSelect.innerHTML = optionsHtml;
+  if (sortedYears.includes(currentVal) || currentVal === 'all') {
+    yearSelect.value = currentVal;
+  } else {
+    yearSelect.value = 'all';
+  }
+}
+
+function filterAndRenderHistory() {
+  const query = (document.getElementById('medicalSearchInput')?.value || '').toLowerCase().trim();
+  const yearSelect = document.getElementById('medicalYearSelect');
+  const activeChip = document.querySelector('.medical-filter-chip.is-active');
+  const filterYear = yearSelect ? yearSelect.value : (activeChip ? activeChip.dataset.filter : 'all');
+
+  const filtered = examinationHistoryData.filter(item => {
+    if (filterYear !== 'all') {
+      const apptYear = (item.appointment_date || '').split('-')[0];
+      if (apptYear !== filterYear) return false;
+    }
+    if (!query) return true;
+    const doctorName = (item.doctor?.name || '').toLowerCase();
+    const poliName = (item.polyclinic?.name || '').toLowerCase();
+    const complaint = (item.complaint || '').toLowerCase();
+    const doctorNotes = (item.doctor_notes || '').toLowerCase();
+    return doctorName.includes(query) || poliName.includes(query) || complaint.includes(query) || doctorNotes.includes(query);
+  });
+
+  renderHistoryCards(filtered);
+}
+
+window.renderHistoryCards = renderHistoryCards;
+window.filterAndRenderHistory = filterAndRenderHistory;
+window.populateYearDropdown = populateYearDropdown;
+
 async function loadExaminationHistory() {
+  const cardsContainer = document.getElementById('historyCardsContainer');
   const tableBody = document.getElementById('historyTableBody');
-  if (!tableBody) return;
+  if (!cardsContainer && !tableBody) return;
 
   try {
     const res = await api.request('/riwayat-pemeriksaan', { priority: 'high' });
-    const items = res.data || [];
+    const rawItems = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
+    const deletedIds = getDeletedHistoryIds();
+    const items = rawItems.filter(it => !deletedIds.includes(String(it.id)));
+    examinationHistoryData = items;
 
-    if (items.length === 0) {
-      tableBody.innerHTML = '<tr><td colspan="5" class="text-muted text-center" style="padding: var(--space-6);">Belum ada pemeriksaan yang selesai.</td></tr>';
-      return;
+    const countEl = document.getElementById('totalRecordsCount');
+    if (countEl) countEl.textContent = items.length;
+
+    populateYearDropdown(items);
+
+    if (cardsContainer) {
+      renderHistoryCards(items);
     }
 
-    tableBody.innerHTML = items.map(a => `
-      <tr>
-        <td><strong>${escapeHtml(api.formatDate(a.appointment_date))}</strong></td>
-        <td>${escapeHtml(a.polyclinic?.name || '-')}</td>
-        <td>${escapeHtml(a.doctor?.name || '-')}</td>
-        <td>${escapeHtml(a.complaint || '-')}</td>
-        <td>${escapeHtml(a.doctor_notes || 'Tidak ada catatan khusus dari dokter.')}</td>
-      </tr>
-    `).join('');
+    if (tableBody) {
+      if (items.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="5" class="text-muted text-center" style="padding: var(--space-6);">Belum ada pemeriksaan yang selesai.</td></tr>';
+      } else {
+        tableBody.innerHTML = items.map(a => `
+          <tr>
+            <td><strong>${escapeHtml(api.formatDate(a.appointment_date))}</strong></td>
+            <td>${escapeHtml(a.polyclinic?.name || '-')}</td>
+            <td>${escapeHtml(a.doctor?.name || '-')}</td>
+            <td>${escapeHtml(a.complaint || '-')}</td>
+            <td>${escapeHtml(a.doctor_notes || 'Tidak ada catatan khusus dari dokter.')}</td>
+          </tr>
+        `).join('');
+      }
+    }
   } catch {
-    tableBody.innerHTML = '<tr><td colspan="5" class="text-center" style="color: var(--color-danger-ink); padding: var(--space-6);">Gagal memuat data. Coba muat ulang halaman.</td></tr>';
+    if (cardsContainer) {
+      cardsContainer.innerHTML = `
+        <div class="medical-empty-card" style="border-color: #FCA5A5; background: #FEF2F2;">
+          <p style="color: #991B1B; font-weight: 600; margin: 0 0 8px 0;">Gagal memuat riwayat pemeriksaan.</p>
+          <button type="button" class="profile-btn-cancel" onclick="loadExaminationHistory()">Coba Lagi</button>
+        </div>
+      `;
+    }
+    if (tableBody) {
+      tableBody.innerHTML = '<tr><td colspan="5" class="text-center" style="color: var(--color-danger-ink); padding: var(--space-6);">Gagal memuat data. Coba muat ulang halaman.</td></tr>';
+    }
   }
 }
 

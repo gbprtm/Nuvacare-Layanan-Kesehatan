@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#F8FAFC">
   <title>Nuvacare - Layanan Janji Temu Poliklinik Rawat Jalan</title>
+  <script src="/js/theme.js"></script>
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
@@ -60,6 +61,15 @@
         </nav>
 
         <div id="navAuthAction" class="patient-nav-auth">
+          <button type="button" class="patient-theme-toggle" data-theme-toggle aria-label="Ganti ke tema gelap" title="Ganti tema">
+            <svg class="theme-icon theme-icon--sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="4"></circle>
+              <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
+            </svg>
+            <svg class="theme-icon theme-icon--moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+          </button>
           <a href="/login.html" id="navAuthSecondary" class="patient-nav-link">MASUK</a>
           <a href="/daftar.html" id="navAuthPrimary" class="patient-pill-cta">
             <span>DAFTAR</span>
@@ -109,6 +119,23 @@
         <li class="patient-drawer__item">
           <div class="patient-drawer__row">
             <a href="/daftar.html" id="drawerProfileLink" class="patient-drawer__link">DAFTAR BARU</a>
+          </div>
+        </li>
+        <li class="patient-drawer__item">
+          <div class="patient-drawer__row">
+            <button type="button" class="patient-drawer__link patient-drawer__theme-btn" data-theme-toggle aria-label="Ganti tema">
+              <span class="patient-drawer__theme-left">
+                <svg class="theme-icon theme-icon--sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="4"></circle>
+                  <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
+                </svg>
+                <svg class="theme-icon theme-icon--moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                </svg>
+                <span data-theme-label>TEMA GELAP</span>
+              </span>
+              <span class="patient-arrow" aria-hidden="true">&#x2197;</span>
+            </button>
           </div>
         </li>
       </ul>
@@ -344,17 +371,9 @@
     </div>
   </main>
 
-  <!-- Footer (4-Column Warm Professional) -->
+  <!-- Footer (3-Column Warm Professional) -->
   <footer class="site-footer">
     <div class="site-footer__grid">
-      <div class="footer-col-brand">
-        <div class="footer-brand-title" translate="no">Nuvacare</div>
-        <p class="footer-brand-desc">
-          Layanan janji temu poliklinik rawat jalan berbasis teknologi terintegrasi untuk kenyamanan dan ketepatan medis
-          keluarga Anda.
-        </p>
-      </div>
-
       <div>
         <div class="footer-heading">Kontak &amp; Alamat</div>
         <ul class="footer-info-list">
@@ -385,7 +404,7 @@
     </div>
 
     <div class="site-footer__bottom">
-      <span>&copy; 2026 <span translate="no">Nuvacare</span>. Seluruh hak cipta dilindungi.</span>
+      <span>&copy; 2026 <span translate="no">Nuvacare</span>.</span>
     </div>
   </footer>
 </body>
