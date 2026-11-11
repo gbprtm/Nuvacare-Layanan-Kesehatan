@@ -16,6 +16,9 @@ $serveHtml = static function (string $surfaceRelativePath, ?string $legacyPublic
 
     return response()->file($surfacePath, [
         'Content-Type' => 'text/html; charset=UTF-8',
+        'Cache-Control' => 'no-cache, no-store, must-revalidate',
+        'Pragma' => 'no-cache',
+        'Expires' => '0',
     ]);
 };
 
