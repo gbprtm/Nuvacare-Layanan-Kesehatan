@@ -41,7 +41,6 @@
     }
   ],
   "env": {
-    "APP_SURFACE": "pasien",
     "APP_ENV": "production",
     "APP_DEBUG": "false",
     "APP_CONFIG_CACHE": "/tmp/config.php",
