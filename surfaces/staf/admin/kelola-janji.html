@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#F7F9FB">
+  <title>Kelola Janji - Admin Nuvacare</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="shortcut icon" href="/favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="stylesheet" href="/css/style.css" fetchpriority="high">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400..800;1,400..800&display=swap">
+  <script src="/js/api.js" defer fetchpriority="high"></script>
+  <script src="/js/admin.js" defer></script>
+  <script type="speculationrules">
+  {
+    "prefetch": [{
+      "where": { "href_matches": "/admin/*.html" },
+      "eagerness": "conservative"
+    }]
+  }
+  </script>
+</head>
+<body data-surface="staf" style="background-color: var(--color-bg);">
+  <a href="#main-content" class="skip-link">Langsung ke isi utama</a>
+
+  <header class="site-header">
+    <nav class="navbar" aria-label="Navigasi utama">
+      <a href="/admin/kelola-janji.html" class="brand" translate="no">
+        <span class="brand-text">Nuvacare</span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="/admin/kelola-janji.html" class="active" aria-current="page">Kelola Janji</a></li>
+        <li><a href="/admin/master-data.html">Master Data</a></li>
+        <li class="nav-user">
+          <span id="navAdminName" class="nav-user-name"></span>
+          <button type="button" id="logoutBtn" class="btn btn-secondary btn-sm btn-touch" style="border-radius: 8px;">Keluar</button>
+        </li>
+      </ul>
+    </nav>
+  </header>
+
+  <main id="main-content" class="container">
+    <div class="mb-4">
+      <h1 class="page-title">Kelola Janji Temu</h1>
+      <p class="text-sm text-muted">Periksa daftar kunjungan per tanggal, selesaikan pemeriksaan dengan catatan dokter, tindak pengajuan pembatalan dokter, atau jadwalkan kontrol rutin.</p>
+    </div>
+
+    <div class="portal-tabs" role="tablist" aria-label="Menu Kelola Janji Admin">
+      <button type="button" role="tab" id="adminTabBtnAppointments" class="portal-tab-btn is-active"
+        aria-selected="true" aria-controls="adminTabAppointments">
+        Kelola Janji
+      </button>
+      <button type="button" role="tab" id="adminTabBtnRequests" class="portal-tab-btn"
+        aria-selected="false" aria-controls="adminTabRequests">
+        <span>Pengajuan Dokter</span>
+        <span id="adminPendingReqBadge" class="nav-count-badge" style="display: none;">0</span>
+      </button>
+    </div>
+
+    <div id="adminTabAppointments" role="tabpanel" aria-labelledby="adminTabBtnAppointments">
+      <section class="card" aria-labelledby="appointmentListTitle" style="border-radius: 12px;">
+        <div class="flex-between mb-4" style="flex-wrap: wrap;">
+          <h2 id="appointmentListTitle" class="card-title" style="margin-bottom: 0;">Daftar Janji &amp; Kontrol</h2>
+          <div style="display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap;">
+            <input type="date" id="filterDate" name="date" class="form-input" style="width: auto; min-height: 44px; border-radius: 8px; padding: var(--space-2) var(--space-3);" aria-label="Filter tanggal kunjungan">
+            <select id="filterType" name="type" class="form-select" style="width: auto; min-height: 44px; border-radius: 8px; padding: var(--space-2) var(--space-3);" aria-label="Filter jenis kunjungan">
+              <option value="">Semua Tipe</option>
+              <option value="janji_baru">Janji baru</option>
+              <option value="kontrol_rutin">Kontrol rutin</option>
+            </select>
+            <select id="filterStatus" name="status" class="form-select" style="width: auto; min-height: 44px; border-radius: 8px; padding: var(--space-2) var(--space-3);" aria-label="Filter status kunjungan">
+              <option value="">Semua Status</option>
+              <option value="terjadwal">Terjadwal</option>
+              <option value="selesai">Selesai</option>
+              <option value="dibatalkan">Dibatalkan</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="adminListAlert" class="alert" role="status" aria-live="polite"></div>
+
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>Pasien</th>
+                <th>Poli &amp; Dokter</th>
+                <th>Tanggal &amp; Jam</th>
+                <th>Tipe</th>
+                <th>Status</th>
+                <th>Keluhan &amp; Catatan</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="adminAppointmentTableBody" aria-live="polite">
+              <tr>
+                <td colspan="7" class="text-muted text-center" style="padding: var(--space-6);">
+                  Memuat daftar janji temu…
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div id="adminAppointmentCards" class="mobile-card-list mt-4" aria-live="polite"></div>
+      </section>
+
+      <section class="card" id="controlFormSection" aria-labelledby="scheduleControlTitle" style="border-radius: 12px;">
+        <h2 id="scheduleControlTitle" class="card-title">Buat Jadwal Kontrol</h2>
+        <div id="controlAlert" class="alert" role="status" aria-live="polite"></div>
+        <form id="scheduleControlForm" class="grid-2" novalidate>
+          <div class="form-group">
+            <label class="form-label" for="controlPatientId">Pasien</label>
+            <select id="controlPatientId" name="user_id" class="form-select" style="border-radius: 8px;" required autocomplete="off">
+              <option value="">Memuat daftar pasien…</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="controlPoliId">Poliklinik</label>
+            <select id="controlPoliId" name="polyclinic_id" class="form-select" style="border-radius: 8px;" required autocomplete="off">
+              <option value="">Memuat daftar poli…</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="controlDoctorId">Dokter</label>
+            <select id="controlDoctorId" name="doctor_id" class="form-select" style="border-radius: 8px;" required disabled autocomplete="off">
+              <option value="">Pilih poliklinik terlebih dahulu…</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="controlDate">Tanggal Kontrol</label>
+            <input type="date" id="controlDate" name="appointment_date" class="form-input" style="border-radius: 8px;" required autocomplete="off">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="controlTime">Jam Kontrol</label>
+            <select id="controlTime" name="appointment_time" class="form-select" style="border-radius: 8px;" required autocomplete="off">
+              <option value="08:00">08:00 WIB</option>
+              <option value="09:00" selected>09:00 WIB</option>
+              <option value="10:00">10:00 WIB</option>
+              <option value="11:00">11:00 WIB</option>
+              <option value="13:00">13:00 WIB</option>
+              <option value="14:00">14:00 WIB</option>
+              <option value="15:00">15:00 WIB</option>
+              <option value="16:00">16:00 WIB</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="controlNotes">Arahan / Catatan Kontrol</label>
+            <input type="text" id="controlNotes" name="doctor_notes" class="form-input" style="border-radius: 8px;" autocomplete="off" placeholder="Contoh: Evaluasi tekanan darah dan hasil laboratorium…">
+          </div>
+          <div style="grid-column: 1 / -1;">
+            <button type="submit" class="btn btn-primary" style="border-radius: 8px;">Buat jadwal kontrol</button>
+          </div>
+        </form>
+      </section>
+    </div>
+
+    <section id="adminTabRequests" class="card" role="tabpanel" aria-labelledby="adminTabBtnRequests" style="display: none; border-radius: 12px;">
+      <div class="portal-toolbar">
+        <h2 id="adminRequestsTitle" class="card-title" style="margin-bottom: 0;">Inbox Pengajuan Dokter</h2>
+        <button type="button" id="reqRefreshBtn" class="btn btn-secondary btn-touch" style="border-radius: 8px;">Muat ulang</button>
+      </div>
+
+      <div class="portal-filter-bar">
+        <div class="form-group">
+          <label class="form-label" for="reqFilterStatus">Status Pengajuan</label>
+          <select id="reqFilterStatus" name="status" class="form-select" style="border-radius: 8px;">
+            <option value="diajukan" selected>Menunggu (Diajukan)</option>
+            <option value="">Semua Status</option>
+            <option value="disetujui">Disetujui</option>
+            <option value="dijadwalkan_ulang">Dijadwalkan Ulang</option>
+            <option value="ditolak">Ditolak</option>
+            <option value="ditarik">Ditarik</option>
+            <option value="gugur">Gugur</option>
+            <option value="kedaluwarsa">Kedaluwarsa</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="reqFilterDoctor">Dokter</label>
+          <select id="reqFilterDoctor" name="doctor_id" class="form-select" style="border-radius: 8px;">
+            <option value="">Semua Dokter</option>
+          </select>
+        </div>
+        <label class="checkbox-inline" for="reqFilterOverdue" style="min-height: 44px; display: inline-flex; align-items: center; gap: var(--space-2);">
+          <input type="checkbox" id="reqFilterOverdue" name="overdue" class="form-checkbox">
+          <span>Lewat SLA</span>
+        </label>
+      </div>
+
+      <div id="adminRequestAlert" class="alert" role="status" aria-live="polite"></div>
+      <div id="adminRequestState" class="text-sm text-muted mb-4" role="status" aria-live="polite">
+        Memuat daftar pengajuan pembatalan dokter...
+      </div>
+
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>Batas SLA</th>
+              <th>Dokter</th>
+              <th>Pasien &amp; Jadwal</th>
+              <th>Kategori &amp; Alasan</th>
+              <th>Status</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="adminRequestTableBody" aria-live="polite"></tbody>
+        </table>
+      </div>
+
+      <div id="adminRequestsCards" class="mobile-card-list mt-4" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <div id="updateModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-content" style="border-radius: 16px;">
+      <div class="flex-between mb-4">
+        <h2 id="modalTitle" class="card-title" style="margin-bottom: 0;">Perbarui Janji Temu</h2>
+        <button type="button" class="btn btn-secondary btn-sm btn-touch" onclick="closeUpdateModal()" aria-label="Tutup dialog" style="min-width: 44px; border-radius: 8px;">Tutup</button>
+      </div>
+
+      <div id="modalAlert" class="alert" role="alert" aria-live="polite"></div>
+
+      <form id="updateForm" novalidate>
+        <input type="hidden" id="modalAppointmentId" name="id">
+
+        <div class="form-group">
+          <label class="form-label" for="modalStatus">Status Kunjungan</label>
+          <select id="modalStatus" name="status" class="form-select" style="border-radius: 8px;">
+            <option value="terjadwal">Terjadwal</option>
+            <option value="selesai">Selesai</option>
+            <option value="dibatalkan">Dibatalkan</option>
+          </select>
+        </div>
+
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label" for="modalDate">Tanggal Kunjungan</label>
+            <input type="date" id="modalDate" name="appointment_date" class="form-input" style="border-radius: 8px;" autocomplete="off">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="modalTime">Jam Kunjungan</label>
+            <select id="modalTime" name="appointment_time" class="form-select" style="border-radius: 8px;" autocomplete="off">
+              <option value="08:00">08:00 WIB</option>
+              <option value="09:00">09:00 WIB</option>
+              <option value="10:00">10:00 WIB</option>
+              <option value="11:00">11:00 WIB</option>
+              <option value="13:00">13:00 WIB</option>
+              <option value="14:00">14:00 WIB</option>
+              <option value="15:00">15:00 WIB</option>
+              <option value="16:00">16:00 WIB</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="modalNotes">Catatan Dokter / Alasan Perubahan Jadwal</label>
+          <textarea id="modalNotes" name="doctor_notes" class="form-textarea" style="border-radius: 8px;" placeholder="Isi ringkasan hasil pemeriksaan, atau saran dokter pengganti bila jadwal bentrok…"></textarea>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-6);">
+          <button type="button" class="btn btn-secondary btn-touch" onclick="closeUpdateModal()" style="border-radius: 8px;">Batal</button>
+          <button type="submit" id="modalSubmitBtn" class="btn btn-secondary btn-touch" style="border-radius: 8px;">Simpan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="adminApproveModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="approveModalTitle">
+    <div class="modal-content" style="border-radius: 16px;">
+      <div class="flex-between mb-4">
+        <h2 id="approveModalTitle" class="card-title" style="margin-bottom: 0;">Setujui Pembatalan Janji Temu</h2>
+        <button type="button" id="closeApproveModalBtn" class="btn btn-secondary btn-sm btn-touch"
+          data-close-modal="adminApproveModal" aria-label="Tutup dialog"
+          style="min-width: 44px; border-radius: 8px;">Tutup</button>
+      </div>
+
+      <div id="approveAlert" class="alert" role="alert" aria-live="polite"></div>
+      <div id="approveSummary" class="text-sm mb-4"></div>
+
+      <form id="adminApproveForm" novalidate>
+        <input type="hidden" id="approveRequestId" name="request_id">
+
+        <div class="form-group">
+          <label class="form-label" for="approveAdminNote">Catatan Admin (Opsional, maks. 500 karakter)</label>
+          <textarea id="approveAdminNote" name="admin_note" class="form-textarea" maxlength="500"
+            style="border-radius: 8px;" placeholder="Catatan keputusan untuk dokter dan dokumentasi pembatalan..."></textarea>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-6); flex-wrap: wrap;">
+          <button type="button" class="btn btn-secondary btn-touch" data-close-modal="adminApproveModal"
+            style="border-radius: 8px;">Batal</button>
+          <button type="submit" id="approveSubmitBtn" class="btn btn-danger btn-touch"
+            style="border-radius: 8px;">Batalkan Janji</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="adminRescheduleModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="reschedModalTitle">
+    <div class="modal-content" style="border-radius: 16px;">
+      <div class="flex-between mb-4">
+        <h2 id="reschedModalTitle" class="card-title" style="margin-bottom: 0;">Jadwalkan Ulang Janji Temu</h2>
+        <button type="button" id="closeReschedModalBtn" class="btn btn-secondary btn-sm btn-touch"
+          data-close-modal="adminRescheduleModal" aria-label="Tutup dialog"
+          style="min-width: 44px; border-radius: 8px;">Tutup</button>
+      </div>
+
+      <div id="reschedAlert" class="alert" role="alert" aria-live="polite"></div>
+      <div id="reschedSummary" class="text-sm mb-4"></div>
+
+      <form id="adminRescheduleForm" novalidate>
+        <input type="hidden" id="reschedRequestId" name="request_id">
+
+        <div class="form-group">
+          <label class="form-label" for="reschedDoctorId">Dokter Tujuan (Satu Poliklinik Aktif)</label>
+          <select id="reschedDoctorId" name="doctor_id" class="form-select" style="border-radius: 8px;">
+            <option value="">Memuat daftar dokter...</option>
+          </select>
+        </div>
+
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label" for="reschedDate">Tanggal Baru</label>
+            <input type="date" id="reschedDate" name="appointment_date" class="form-input" style="border-radius: 8px;" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="reschedTime">Jam Baru</label>
+            <select id="reschedTime" name="appointment_time" class="form-select" style="border-radius: 8px;" required>
+              <option value="08:00">08:00 WIB</option>
+              <option value="09:00">09:00 WIB</option>
+              <option value="10:00">10:00 WIB</option>
+              <option value="11:00">11:00 WIB</option>
+              <option value="13:00">13:00 WIB</option>
+              <option value="14:00">14:00 WIB</option>
+              <option value="15:00">15:00 WIB</option>
+              <option value="16:00">16:00 WIB</option>
+            </select>
+          </div>
+        </div>
+
+        <p id="reschedSlotHint" class="text-sm text-muted mb-2" aria-live="polite">
+          Pilih dokter dan tanggal untuk memeriksa slot jam yang tersedia.
+        </p>
+        <div id="rescheduleSlotsGrid" class="mb-4" style="display: flex; flex-wrap: wrap; gap: var(--space-2);"></div>
+
+        <div class="form-group">
+          <label class="form-label" for="reschedAdminNote">Catatan Admin (Opsional, maks. 500 karakter)</label>
+          <textarea id="reschedAdminNote" name="admin_note" class="form-textarea" maxlength="500"
+            style="border-radius: 8px;" placeholder="Catatan penjadwalan ulang untuk pasien dan dokter..."></textarea>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-6); flex-wrap: wrap;">
+          <button type="button" class="btn btn-secondary btn-touch" data-close-modal="adminRescheduleModal"
+            style="border-radius: 8px;">Batal</button>
+          <button type="submit" id="reschedSubmitBtn" class="btn btn-primary btn-touch"
+            style="border-radius: 8px;">Simpan Jadwal Baru</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="adminRejectModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="rejectModalTitle">
+    <div class="modal-content" style="border-radius: 16px;">
+      <div class="flex-between mb-4">
+        <h2 id="rejectModalTitle" class="card-title" style="margin-bottom: 0;">Tolak Pengajuan Pembatalan</h2>
+        <button type="button" id="closeRejectModalBtn" class="btn btn-secondary btn-sm btn-touch"
+          data-close-modal="adminRejectModal" aria-label="Tutup dialog"
+          style="min-width: 44px; border-radius: 8px;">Tutup</button>
+      </div>
+
+      <div id="rejectAlert" class="alert" role="alert" aria-live="polite"></div>
+      <div id="rejectSummary" class="text-sm mb-4"></div>
+
+      <form id="adminRejectForm" novalidate>
+        <input type="hidden" id="rejectRequestId" name="request_id">
+
+        <div class="form-group">
+          <label class="form-label" for="rejectAdminNote">Alasan Penolakan (Wajib, 5 s.d. 500 karakter)</label>
+          <textarea id="rejectAdminNote" name="admin_note" class="form-textarea" minlength="5" maxlength="500" required
+            style="border-radius: 8px;" placeholder="Jelaskan alasan penolakan pengajuan kepada dokter..."></textarea>
+          <div class="char-counter-row">
+            <span>Minimal 5 karakter</span>
+            <span id="rejectAdminNoteCount">0/500</span>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-6); flex-wrap: wrap;">
+          <button type="button" class="btn btn-secondary btn-touch" data-close-modal="adminRejectModal"
+            style="border-radius: 8px;">Batal</button>
+          <button type="submit" id="rejectSubmitBtn" class="btn btn-danger btn-touch"
+            style="border-radius: 8px;">Tolak Pengajuan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="adminAuditLogModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="auditLogTitle">
+    <div class="modal-content" style="border-radius: 16px; max-width: 640px;">
+      <div class="flex-between mb-4">
+        <h2 id="auditLogTitle" class="card-title" style="margin-bottom: 0;">Riwayat Perubahan Status</h2>
+        <button type="button" id="closeAuditLogModalBtn" class="btn btn-secondary btn-sm btn-touch"
+          data-close-modal="adminAuditLogModal" aria-label="Tutup dialog"
+          style="min-width: 44px; border-radius: 8px;">Tutup</button>
+      </div>
+
+      <div id="auditLogSummary" class="text-sm text-muted mb-3"></div>
+      <div id="auditLogAlert" class="alert" role="alert" aria-live="polite"></div>
+      <div id="auditLogBody" aria-live="polite">
+        <p class="text-sm text-muted">Memuat riwayat perubahan status...</p>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; margin-top: var(--space-6);">
+        <button type="button" class="btn btn-secondary btn-touch" data-close-modal="adminAuditLogModal"
+          style="border-radius: 8px;">Tutup</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

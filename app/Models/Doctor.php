@@ -14,6 +14,7 @@ class Doctor extends Model
     protected $table = 'doctors';
 
     protected $fillable = [
+        'user_id',
         'polyclinic_id',
         'name',
         'is_active',
@@ -26,6 +27,11 @@ class Doctor extends Model
         ];
     }
 
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
     public function polyclinic(): BelongsTo
     {
         return $this->belongsTo(Polyclinic::class, 'polyclinic_id');
@@ -34,5 +40,10 @@ class Doctor extends Model
     public function appointments(): HasMany
     {
         return $this->hasMany(Appointment::class, 'doctor_id');
+    }
+
+    public function cancellationRequests(): HasMany
+    {
+        return $this->hasMany(CancellationRequest::class, 'doctor_id');
     }
 }

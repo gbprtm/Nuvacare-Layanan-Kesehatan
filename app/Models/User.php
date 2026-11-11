@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Notifications\ResetPasswordNotification;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -21,6 +22,7 @@ class User extends Authenticatable
         'google_id',
         'password',
         'role',
+        'disabled_at',
         'phone_number',
         'phone_verified_at',
         'birth_date',
@@ -36,6 +38,7 @@ class User extends Authenticatable
     {
         return [
             'password' => 'hashed',
+            'disabled_at' => 'datetime',
             'phone_verified_at' => 'datetime',
             'birth_date' => 'date:Y-m-d',
             'created_at' => 'datetime',
@@ -46,6 +49,21 @@ class User extends Authenticatable
     public function hasVerifiedPhone(): bool
     {
         return ! empty($this->phone_number) && $this->phone_verified_at !== null;
+    }
+
+    public function isDisabled(): bool
+    {
+        return $this->disabled_at !== null;
+    }
+
+    public function isStaff(): bool
+    {
+        return in_array($this->role, ['admin', 'dokter'], true);
+    }
+
+    public function doctor(): HasOne
+    {
+        return $this->hasOne(Doctor::class, 'user_id');
     }
 
     public function appointments(): HasMany

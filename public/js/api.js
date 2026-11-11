@@ -28,6 +28,25 @@ const api = {
     localStorage.removeItem('klinik_user');
   },
 
+  getLoginPath(expectedRole = null) {
+    const path = window.location.pathname || '';
+    const surface = document.body?.dataset?.surface || '';
+    const roles = Array.isArray(expectedRole)
+      ? expectedRole
+      : (expectedRole ? [expectedRole] : []);
+    const isStaffRole = roles.includes('admin') || roles.includes('dokter');
+    const isStaffPath =
+      path.startsWith('/admin/') ||
+      path.startsWith('/dokter/') ||
+      path.startsWith('/staf/') ||
+      path === '/staf';
+
+    if (surface === 'staf' || isStaffPath || isStaffRole) {
+      return '/staf/login.html';
+    }
+    return '/login.html';
+  },
+
   async request(endpoint, options = {}) {
     const token = this.getToken();
     const { skipAuthRedirect, priority, headers: customHeaders, ...fetchOptions } = options;
@@ -53,8 +72,9 @@ const api = {
 
     if (response.status === 401 && !skipAuthRedirect) {
       this.clearSession();
+      const loginPath = this.getLoginPath();
       if (!window.location.pathname.endsWith('/login.html')) {
-        window.location.href = '/login.html?reason=expired';
+        window.location.href = `${loginPath}?reason=expired`;
       }
       throw new Error('Sesi berakhir. Silakan masuk lagi.');
     }
@@ -65,41 +85,52 @@ const api = {
       const error = new Error(data.message || 'Gagal memuat data. Coba muat ulang halaman.');
       error.status = response.status;
       error.errors = data.errors || {};
+      error.data = data;
       throw error;
     }
 
     return data;
   },
 
-  requireAuth(expectedRole = null) {
+  requireAuth(expectedRoleOrRoles = null) {
     const token = this.getToken();
     const user = this.getUser();
 
     if (!token || !user) {
-      window.location.href = '/login.html';
+      window.location.href = this.getLoginPath(expectedRoleOrRoles);
       return false;
     }
 
-    if (expectedRole && user.role !== expectedRole) {
-      if (user.role === 'admin') {
-        window.location.href = '/admin/kelola-janji.html';
-      } else {
-        window.location.href = '/pasien/janji-temu.html';
+    if (expectedRoleOrRoles) {
+      const allowedRoles = Array.isArray(expectedRoleOrRoles)
+        ? expectedRoleOrRoles
+        : [expectedRoleOrRoles];
+
+      if (!allowedRoles.includes(user.role)) {
+        if (user.role === 'admin') {
+          window.location.href = '/admin/kelola-janji.html';
+        } else if (user.role === 'dokter') {
+          window.location.href = '/dokter/janji-temu.html';
+        } else {
+          window.location.href = '/pasien/janji-temu.html';
+        }
+        return false;
       }
-      return false;
     }
 
     return true;
   },
 
   async logout() {
+    const currentRole = this.getUser()?.role || null;
+    const loginPath = this.getLoginPath(currentRole);
     try {
-      await this.request('/logout', { method: 'POST', priority: 'low' });
+      await this.request('/logout', { method: 'POST', priority: 'low', skipAuthRedirect: true });
     } catch {
       // Clear local session even if server token was already invalidated
     } finally {
       this.clearSession();
-      window.location.href = '/login.html';
+      window.location.href = loginPath;
     }
   },
 

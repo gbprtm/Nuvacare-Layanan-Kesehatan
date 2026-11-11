@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#F7F9FB">
+  <title>Portal Dokter - Jadwal Janji Temu - Nuvacare</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="shortcut icon" href="/favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="stylesheet" href="/css/style.css" fetchpriority="high">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400..800;1,400..800&display=swap">
+  <script src="/js/api.js" defer fetchpriority="high"></script>
+  <script src="/js/dokter.js" defer></script>
+</head>
+
+<body class="booking-page-body" data-surface="staf" style="background-color: var(--color-bg);">
+  <a href="#main-content" class="skip-link">Langsung ke isi utama</a>
+
+  <header class="site-header">
+    <nav class="navbar" aria-label="Navigasi Portal Dokter">
+      <a href="/dokter/janji-temu.html" class="brand" translate="no">
+        <span class="brand-text">Nuvacare</span>
+      </a>
+      <ul class="nav-links">
+        <li role="tablist" aria-label="Tampilan Portal Dokter" style="display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center;">
+          <button type="button" role="tab" id="tabBtnAppointments" class="portal-tab-btn is-active"
+            data-view="appointments" aria-selected="true" aria-controls="viewAppointments">
+            Janji Saya
+          </button>
+          <button type="button" role="tab" id="tabBtnRequests" class="portal-tab-btn"
+            data-view="requests" aria-selected="false" aria-controls="viewRequests">
+            <span>Pengajuan Saya</span>
+            <span id="openRequestNavCount" class="nav-count-badge" style="display: none;">0</span>
+          </button>
+        </li>
+        <li class="nav-user">
+          <div style="display: flex; flex-direction: column;">
+            <span id="navDoctorName" class="nav-user-name"></span>
+            <span id="navDoctorPoli" class="text-sm text-muted" style="font-size: 12px; line-height: 16px;"></span>
+          </div>
+          <button type="button" id="logoutBtn" class="btn btn-secondary btn-sm btn-touch" style="border-radius: 8px;">Keluar</button>
+        </li>
+      </ul>
+    </nav>
+  </header>
+
+  <main id="main-content" class="container booking-container">
+    <div class="booking-page-header portal-toolbar" style="align-items: flex-start;">
+      <div class="booking-header-copy">
+        <h1 class="page-title">Jadwal Janji Temu Saya</h1>
+        <p class="booking-page-subtitle">Pantau jadwal pasien Anda. Dokter hanya dapat membaca jadwal dan mengajukan pembatalan untuk ditinjau admin.</p>
+      </div>
+      <div>
+        <button type="button" id="openBatchCancelBtn" class="btn btn-secondary btn-touch" style="border-radius: 8px;">Ajukan Cuti (Rentang Tanggal)</button>
+      </div>
+    </div>
+
+    <div id="doctorPortalAlert" class="alert" role="status" aria-live="polite"></div>
+
+    <section id="viewAppointments" role="tabpanel" aria-labelledby="tabBtnAppointments">
+      <div class="card mb-4" style="border-radius: 12px;">
+        <div class="portal-filter-bar" style="margin-bottom: 0;">
+          <div class="form-group">
+            <label class="form-label" for="filterDocDateFrom">Dari Tanggal</label>
+            <input type="date" id="filterDocDateFrom" name="date_from" class="form-input" style="border-radius: 8px;">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="filterDocDateTo">Sampai Tanggal</label>
+            <input type="date" id="filterDocDateTo" name="date_to" class="form-input" style="border-radius: 8px;">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="filterDocStatus">Status Janji</label>
+            <select id="filterDocStatus" name="status" class="form-select" style="border-radius: 8px;">
+              <option value="">Semua Status</option>
+              <option value="terjadwal">Terjadwal</option>
+              <option value="selesai">Selesai</option>
+              <option value="dibatalkan">Dibatalkan</option>
+            </select>
+          </div>
+          <button type="button" id="refreshDocAppointmentsBtn" class="btn btn-secondary btn-touch" style="border-radius: 8px;">Muat ulang</button>
+        </div>
+      </div>
+
+      <div class="doctor-workspace-grid">
+        <div class="card" style="border-radius: 12px;">
+          <h2 class="card-title">Daftar Jadwal Pasien</h2>
+          <div id="doctorAppointmentsState" class="text-sm text-muted mb-4" role="status" aria-live="polite">
+            Memuat jadwal janji temu...
+          </div>
+
+          <div id="doctorAppointmentsTableWrap" class="table-responsive">
+            <table>
+              <thead>
+                <tr>
+                  <th>Jam &amp; Tanggal</th>
+                  <th>Pasien</th>
+                  <th>Poli &amp; Jenis</th>
+                  <th>Status</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="doctorAppointmentsBody" aria-live="polite"></tbody>
+            </table>
+          </div>
+
+          <div id="doctorAppointmentsCards" class="mobile-card-list" aria-live="polite"></div>
+        </div>
+
+        <aside id="appointmentDetailPanel" class="card" aria-labelledby="detailPanelTitle" style="border-radius: 12px;">
+          <h2 id="detailPanelTitle" class="card-title">Rincian Janji Temu</h2>
+
+          <div id="detailPlaceholder" class="text-sm text-muted">
+            Pilih salah satu janji temu untuk melihat rincian.
+          </div>
+
+          <div id="detailContent" hidden>
+            <dl class="detail-kv-list">
+              <div class="detail-kv-row">
+                <dt class="detail-kv-label">Nama Pasien</dt>
+                <dd id="detailPatientName" class="detail-kv-value">-</dd>
+              </div>
+              <div class="detail-kv-row">
+                <dt class="detail-kv-label">Kontak (Tersamar)</dt>
+                <dd id="detailPatientPhone" class="detail-kv-value">-</dd>
+              </div>
+              <div class="detail-kv-row">
+                <dt class="detail-kv-label">Tanggal &amp; Jam</dt>
+                <dd id="detailDateTime" class="detail-kv-value">-</dd>
+              </div>
+              <div class="detail-kv-row">
+                <dt class="detail-kv-label">Poliklinik</dt>
+                <dd id="detailPoli" class="detail-kv-value">-</dd>
+              </div>
+              <div class="detail-kv-row">
+                <dt class="detail-kv-label">Jenis Kunjungan</dt>
+                <dd id="detailType" class="detail-kv-value">-</dd>
+              </div>
+              <div class="detail-kv-row">
+                <dt class="detail-kv-label">Status Janji</dt>
+                <dd id="detailStatus" class="detail-kv-value">-</dd>
+              </div>
+            </dl>
+
+            <div id="detailOpenRequestBox" class="detail-open-request-box" hidden></div>
+            <p id="detailEligibilityHint" class="text-sm text-muted mb-4"></p>
+
+            <button type="button" id="detailRequestCancelBtn" class="btn btn-primary btn-block btn-touch" style="border-radius: 8px;">
+              Ajukan pembatalan
+            </button>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section id="viewRequests" role="tabpanel" aria-labelledby="tabBtnRequests" hidden>
+      <div class="card" style="border-radius: 12px;">
+        <div class="portal-toolbar">
+          <h2 class="card-title" style="margin-bottom: 0;">Daftar Pengajuan Pembatalan</h2>
+          <div style="display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: flex-end;">
+            <div>
+              <label class="form-label" for="filterReqStatus">Status Pengajuan</label>
+              <select id="filterReqStatus" name="status" class="form-select" style="width: auto; border-radius: 8px;">
+                <option value="">Semua Status</option>
+                <option value="diajukan">Menunggu (Diajukan)</option>
+                <option value="disetujui">Disetujui</option>
+                <option value="dijadwalkan_ulang">Dijadwalkan Ulang</option>
+                <option value="ditolak">Ditolak</option>
+                <option value="ditarik">Ditarik</option>
+                <option value="gugur">Gugur</option>
+                <option value="kedaluwarsa">Kedaluwarsa</option>
+              </select>
+            </div>
+            <button type="button" id="refreshDocRequestsBtn" class="btn btn-secondary btn-touch" style="border-radius: 8px;">Muat ulang</button>
+          </div>
+        </div>
+
+        <div id="doctorRequestsState" class="text-sm text-muted mb-4" role="status" aria-live="polite">
+          Memuat daftar pengajuan pembatalan...
+        </div>
+
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>Janji Temu</th>
+                <th>Kategori &amp; Alasan</th>
+                <th>Status Pengajuan</th>
+                <th>Catatan Admin</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="doctorRequestsBody" aria-live="polite"></tbody>
+          </table>
+        </div>
+
+        <div id="doctorRequestsCards" class="mobile-card-list mt-4" aria-live="polite"></div>
+      </div>
+    </section>
+  </main>
+
+  <div id="singleCancelModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="singleCancelTitle">
+    <div class="modal-content" style="border-radius: 16px;">
+      <div class="flex-between mb-4">
+        <h2 id="singleCancelTitle" class="card-title" style="margin-bottom: 0;">Ajukan Pembatalan Janji Temu</h2>
+        <button type="button" id="closeSingleCancelModalBtn" class="btn btn-secondary btn-sm btn-touch"
+          data-close-modal="singleCancelModal" aria-label="Tutup dialog"
+          style="min-width: 44px; border-radius: 8px;">Tutup</button>
+      </div>
+
+      <div id="singleCancelAlert" class="alert" role="alert" aria-live="polite"></div>
+      <div id="singleCancelSummary" class="text-sm mb-4"></div>
+
+      <form id="singleCancelForm" novalidate>
+        <input type="hidden" id="singleCancelAppointmentId" name="appointment_id">
+
+        <fieldset class="form-group" style="border: none; padding: 0;">
+          <legend class="form-label">Kategori Alasan Pembatalan</legend>
+          <div class="reason-radio-grid">
+            <label for="singleReasonCuti" class="reason-radio-option">
+              <input type="radio" id="singleReasonCuti" name="reason_category" value="cuti_mendadak" required>
+              <span>Cuti Mendadak</span>
+            </label>
+            <label for="singleReasonSakit" class="reason-radio-option">
+              <input type="radio" id="singleReasonSakit" name="reason_category" value="sakit">
+              <span>Sakit</span>
+            </label>
+            <label for="singleReasonDarurat" class="reason-radio-option">
+              <input type="radio" id="singleReasonDarurat" name="reason_category" value="tugas_darurat">
+              <span>Tugas Darurat</span>
+            </label>
+            <label for="singleReasonBentrok" class="reason-radio-option">
+              <input type="radio" id="singleReasonBentrok" name="reason_category" value="bentrok_jadwal">
+              <span>Bentrok Jadwal</span>
+            </label>
+            <label for="singleReasonLainnya" class="reason-radio-option">
+              <input type="radio" id="singleReasonLainnya" name="reason_category" value="lainnya">
+              <span>Lainnya</span>
+            </label>
+          </div>
+        </fieldset>
+
+        <div class="form-group">
+          <label class="form-label" for="singleCancelReason">Alasan Tertulis (10 s.d. 500 karakter)</label>
+          <textarea id="singleCancelReason" name="reason" class="form-textarea" minlength="10" maxlength="500" required
+            style="border-radius: 8px;" placeholder="Jelaskan alasan pengajuan pembatalan untuk ditinjau admin..."></textarea>
+          <div class="char-counter-row">
+            <span>Minimal 10 karakter</span>
+            <span id="singleCancelCharCount">0/500</span>
+          </div>
+        </div>
+
+        <p class="mb-4" style="padding: var(--space-3) var(--space-4); border-radius: 8px; background-color: #EFF6FF; border: 1px solid #BFDBFE; color: #1E40AF; font-size: 13px; line-height: 20px;">
+          Admin akan meninjau pengajuan ini. Janji tetap berjalan sampai admin memutuskan.
+        </p>
+
+        <div style="display: flex; justify-content: flex-end; gap: var(--space-2); flex-wrap: wrap;">
+          <button type="button" id="cancelSingleCancelBtn" class="btn btn-secondary btn-touch" data-close-modal="singleCancelModal" style="border-radius: 8px;">Batal</button>
+          <button type="submit" id="singleCancelSubmitBtn" class="btn btn-primary btn-touch" style="border-radius: 8px;">Kirim Pengajuan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="batchCancelModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="batchCancelTitle">
+    <div class="modal-content" style="border-radius: 16px;">
+      <div class="flex-between mb-4">
+        <h2 id="batchCancelTitle" class="card-title" style="margin-bottom: 0;">Ajukan Cuti (Rentang Tanggal)</h2>
+        <button type="button" id="closeBatchCancelModalBtn" class="btn btn-secondary btn-sm btn-touch"
+          data-close-modal="batchCancelModal" aria-label="Tutup dialog"
+          style="min-width: 44px; border-radius: 8px;">Tutup</button>
+      </div>
+
+      <div id="batchCancelAlert" class="alert" role="alert" aria-live="polite"></div>
+
+      <form id="batchCancelForm" novalidate>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label" for="batchDateFrom">Dari Tanggal</label>
+            <input type="date" id="batchDateFrom" name="date_from" class="form-input" style="border-radius: 8px;" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="batchDateTo">Sampai Tanggal (Maks. 14 Hari)</label>
+            <input type="date" id="batchDateTo" name="date_to" class="form-input" style="border-radius: 8px;" required>
+          </div>
+        </div>
+
+        <div id="batchAffectedPreview" class="text-sm text-muted mb-4" aria-live="polite">
+          Pilih rentang tanggal untuk melihat janji terjadwal yang terdampak.
+        </div>
+
+        <fieldset class="form-group" style="border: none; padding: 0;">
+          <legend class="form-label">Kategori Alasan Cuti</legend>
+          <div class="reason-radio-grid">
+            <label for="batchReasonCuti" class="reason-radio-option">
+              <input type="radio" id="batchReasonCuti" name="batch_reason_category" value="cuti_mendadak" required>
+              <span>Cuti Mendadak</span>
+            </label>
+            <label for="batchReasonSakit" class="reason-radio-option">
+              <input type="radio" id="batchReasonSakit" name="batch_reason_category" value="sakit">
+              <span>Sakit</span>
+            </label>
+            <label for="batchReasonDarurat" class="reason-radio-option">
+              <input type="radio" id="batchReasonDarurat" name="batch_reason_category" value="tugas_darurat">
+              <span>Tugas Darurat</span>
+            </label>
+            <label for="batchReasonBentrok" class="reason-radio-option">
+              <input type="radio" id="batchReasonBentrok" name="batch_reason_category" value="bentrok_jadwal">
+              <span>Bentrok Jadwal</span>
+            </label>
+            <label for="batchReasonLainnya" class="reason-radio-option">
+              <input type="radio" id="batchReasonLainnya" name="batch_reason_category" value="lainnya">
+              <span>Lainnya</span>
+            </label>
+          </div>
+        </fieldset>
+
+        <div class="form-group">
+          <label class="form-label" for="batchCancelReason">Alasan Tertulis (10 s.d. 500 karakter)</label>
+          <textarea id="batchCancelReason" name="reason" class="form-textarea" minlength="10" maxlength="500" required
+            style="border-radius: 8px;" placeholder="Jelaskan alasan pengajuan cuti untuk ditinjau admin..."></textarea>
+          <div class="char-counter-row">
+            <span>Minimal 10 karakter</span>
+            <span id="batchCancelCharCount">0/500</span>
+          </div>
+        </div>
+
+        <div id="batchResultBox" class="mb-4" aria-live="polite" hidden></div>
+
+        <div style="display: flex; justify-content: flex-end; gap: var(--space-2); flex-wrap: wrap;">
+          <button type="button" id="cancelBatchCancelBtn" class="btn btn-secondary btn-touch" data-close-modal="batchCancelModal" style="border-radius: 8px;">Batal</button>
+          <button type="submit" id="batchCancelSubmitBtn" class="btn btn-primary btn-touch" style="border-radius: 8px;">Kirim Pengajuan Cuti</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="withdrawConfirmModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="withdrawModalTitle">
+    <div class="modal-content" style="border-radius: 16px;">
+      <div class="flex-between mb-4">
+        <h2 id="withdrawModalTitle" class="card-title" style="margin-bottom: 0;">Tarik Pengajuan Pembatalan</h2>
+        <button type="button" id="closeWithdrawModalBtn" class="btn btn-secondary btn-sm btn-touch"
+          data-close-modal="withdrawConfirmModal" aria-label="Tutup dialog"
+          style="min-width: 44px; border-radius: 8px;">Tutup</button>
+      </div>
+
+      <div id="withdrawAlert" class="alert" role="alert" aria-live="polite"></div>
+      <div id="withdrawSummary" class="text-sm mb-4"></div>
+      <input type="hidden" id="withdrawRequestId" name="request_id">
+
+      <div style="display: flex; justify-content: flex-end; gap: var(--space-2); flex-wrap: wrap;">
+        <button type="button" id="cancelWithdrawBtn" class="btn btn-secondary btn-touch" data-close-modal="withdrawConfirmModal" style="border-radius: 8px;">Batal</button>
+        <button type="button" id="confirmWithdrawBtn" class="btn btn-danger btn-touch" style="border-radius: 8px;">Ya, Tarik Pengajuan</button>
+      </div>
+    </div>
+  </div>
+</body>
+
+</html>

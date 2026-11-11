@@ -16,16 +16,24 @@
       "dest": "/api/index.php"
     },
     {
-      "src": "/(css|js|images|pasien|admin)/(.*)",
+      "src": "/(css|js|images)/(.*)",
       "dest": "/public/$1/$2"
     },
     {
-      "src": "/(.*)\\.(html|ico|css|js|png|jpg|jpeg|svg|gif|txt|webp|woff|woff2|ttf)$",
+      "src": "/(favicon.*|apple-touch-icon\\.png|robots\\.txt)",
+      "dest": "/public/$1"
+    },
+    {
+      "src": "/(.*)\\.(ico|css|js|png|jpg|jpeg|svg|gif|txt|webp|woff|woff2|ttf)$",
       "dest": "/public/$1.$2"
     },
     {
       "src": "/",
-      "dest": "/public/index.html"
+      "dest": "/api/index.php"
+    },
+    {
+      "src": "/(.*)\\.html",
+      "dest": "/api/index.php"
     },
     {
       "src": "/(.*)",
@@ -33,6 +41,7 @@
     }
   ],
   "env": {
+    "APP_SURFACE": "pasien",
     "APP_ENV": "production",
     "APP_DEBUG": "false",
     "APP_CONFIG_CACHE": "/tmp/config.php",
@@ -48,4 +57,3 @@
     "DB_CONNECTION": "pgsql"
   }
 }
-

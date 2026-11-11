@@ -18,8 +18,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   const user = api.getUser();
   const path = window.location.pathname;
   const params = new URLSearchParams(window.location.search);
+  const isStaffLoginPage = path.endsWith('/staf/login.html') || Boolean(document.getElementById('staffLoginForm'));
 
-  if (path.endsWith('/login.html')) {
+  if (isStaffLoginPage) {
+    const reason = params.get('reason');
+    if (reason === 'expired') {
+      api.showAlert('staffLoginAlert', 'Sesi berakhir. Silakan masuk lagi.', 'danger');
+    } else if (reason === 'forbidden') {
+      api.showAlert('staffLoginAlert', 'Halaman ini khusus untuk akun staf klinik yang berwenang.', 'danger');
+    }
+  } else if (path.endsWith('/login.html')) {
     const reason = params.get('reason');
     if (reason === 'expired') {
       api.showAlert('loginAlert', 'Sesi berakhir. Silakan masuk lagi.', 'danger');
@@ -31,7 +39,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const isAuthPage =
     path.endsWith('/login.html') ||
     path.endsWith('/daftar.html') ||
-    path.endsWith('/lupa-password.html');
+    path.endsWith('/lupa-password.html') ||
+    isStaffLoginPage;
 
   if (token && user && isAuthPage) {
     try {
@@ -39,12 +48,23 @@ document.addEventListener('DOMContentLoaded', async () => {
       const verifiedUser = verify.data || user;
       api.setUser(verifiedUser);
 
+      if (verifiedUser.role === 'admin') {
+        window.location.href = '/admin/kelola-janji.html';
+        return;
+      }
+
+      if (verifiedUser.role === 'dokter') {
+        window.location.href = '/dokter/janji-temu.html';
+        return;
+      }
+
       const isPhoneVerified = Boolean(verifiedUser.phone_verified || verifiedUser.phone_verified_at);
-      if (verifiedUser.role === 'pasien' && !isPhoneVerified && (document.getElementById('googlePhoneModal') || typeof window.unlockAndGoToStage === 'function')) {
+      if (isStaffLoginPage) {
+        api.clearSession();
+      } else if (verifiedUser.role === 'pasien' && !isPhoneVerified && (document.getElementById('googlePhoneModal') || typeof window.unlockAndGoToStage === 'function')) {
         openGooglePhoneModal(verifiedUser.phone_number || '');
       } else {
-        window.location.href =
-          verifiedUser.role === 'admin' ? '/admin/kelola-janji.html' : getSafeNextUrl();
+        window.location.href = getSafeNextUrl();
         return;
       }
     } catch {
@@ -56,9 +76,62 @@ document.addEventListener('DOMContentLoaded', async () => {
     loadPublicHomepage();
   }
 
-  if (path.endsWith('/login.html') || path.endsWith('/daftar.html')) {
+  if (!isStaffLoginPage && (path.endsWith('/login.html') || path.endsWith('/daftar.html'))) {
     preserveNextParamOnAuthLinks();
     setupGoogleSignIn();
+  }
+
+  const staffLoginForm = document.getElementById('staffLoginForm');
+  if (staffLoginForm) {
+    staffLoginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      api.hideAlert('staffLoginAlert');
+
+      const emailInput = document.getElementById('staffEmail');
+      const passwordInput = document.getElementById('staffPassword');
+      const email = emailInput ? emailInput.value.trim() : '';
+      const password = passwordInput ? passwordInput.value : '';
+      const submitBtn = document.getElementById('staffSubmitBtn') || staffLoginForm.querySelector('button[type="submit"]');
+
+      if (!email || !password) {
+        api.showAlert('staffLoginAlert', 'Masukkan email staf dan kata sandi terlebih dahulu.', 'danger');
+        if (!email && emailInput) emailInput.focus();
+        else if (passwordInput) passwordInput.focus();
+        return;
+      }
+
+      const btnLabelEl = submitBtn ? (submitBtn.querySelector('span') || submitBtn) : null;
+      const originalLabel = btnLabelEl ? btnLabelEl.textContent : 'Masuk';
+
+      try {
+        if (submitBtn) submitBtn.disabled = true;
+        if (btnLabelEl) btnLabelEl.textContent = 'Memproses…';
+
+        const res = await api.request('/login', {
+          method: 'POST',
+          skipAuthRedirect: true,
+          body: JSON.stringify({ email, password })
+        });
+
+        handlePostLoginSuccess(res);
+      } catch (err) {
+        let msg = err.errors?.email?.[0] || err.errors?.password?.[0] || err.message;
+        if (!msg) {
+          msg = err.status === 403
+            ? 'Akses ditolak. Akun ini tidak aktif atau tidak memiliki izin staf.'
+            : 'Gagal masuk. Periksa kembali email dan kata sandi staf.';
+        }
+        api.showAlert('staffLoginAlert', msg, 'danger');
+        if (err.status === 422 && err.errors?.password && passwordInput) {
+          passwordInput.focus();
+        } else if (emailInput) {
+          emailInput.focus();
+        }
+      } finally {
+        if (submitBtn) submitBtn.disabled = false;
+        if (btnLabelEl) btnLabelEl.textContent = originalLabel;
+      }
+    });
   }
 
   const loginForm = document.getElementById('loginForm');
@@ -383,8 +456,13 @@ function handlePostLoginSuccess(res) {
   api.setToken(res.token);
   api.setUser(res.user);
 
-  if (res.user.role === 'admin') {
+  if (res.user?.role === 'admin') {
     window.location.href = '/admin/kelola-janji.html';
+    return;
+  }
+
+  if (res.user?.role === 'dokter') {
+    window.location.href = '/dokter/janji-temu.html';
     return;
   }
 
@@ -980,7 +1058,7 @@ async function loadPublicHomepage() {
         highlightActionLink.textContent = 'Buat Janji Sekarang';
       }
     } else {
-      const dashboardUrl = '/admin/kelola-janji.html';
+      const dashboardUrl = user.role === 'dokter' ? '/dokter/janji-temu.html' : '/admin/kelola-janji.html';
       navAction.innerHTML = `
         <span class="nav-user-name">${escapeHtml(user.name)}</span>
         <a href="${dashboardUrl}" class="btn btn-pill-dark">Buka Dashboard</a>
@@ -991,11 +1069,11 @@ async function loadPublicHomepage() {
       }
       if (heroBookingCta) {
         heroBookingCta.setAttribute('href', dashboardUrl);
-        heroBookingCta.textContent = 'Kelola Janji';
+        heroBookingCta.textContent = user.role === 'dokter' ? 'Buka Portal Dokter' : 'Kelola Janji';
       }
       if (highlightActionLink) {
         highlightActionLink.setAttribute('href', dashboardUrl);
-        highlightActionLink.textContent = 'Buat Janji Sekarang';
+        highlightActionLink.textContent = user.role === 'dokter' ? 'Buka Portal Dokter' : 'Buat Janji Sekarang';
       }
     }
   }

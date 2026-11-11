@@ -14,20 +14,20 @@
   <link rel="stylesheet" href="/css/style.css" fetchpriority="high">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=Fira+Code:wght@400;500;600&family=Plus+Jakarta+Sans:ital,wght@0,500..800;1,500..800&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400..800;1,400..800&display=swap">
   <script src="/js/api.js" defer fetchpriority="high"></script>
   <script src="/js/pasien.js" defer></script>
   <script type="speculationrules">
   {
     "prefetch": [{
-      "where": { "href_matches": "/pasien/*.html" },
+      "where": { "href_matches": ["/index.html", "/pasien/*.html"] },
       "eagerness": "conservative"
     }]
   }
   </script>
 </head>
 
-<body>
+<body data-surface="pasien">
   <a href="#main-content" class="skip-link">Langsung ke isi utama</a>
 
   <header class="site-header">

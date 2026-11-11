@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#F7F9FB">
+  <title>Masuk Portal Staf - Nuvacare</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="shortcut icon" href="/favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="stylesheet" href="/css/style.css" fetchpriority="high">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400..800;1,400..800&display=swap">
+  <script src="/js/api.js" defer fetchpriority="high"></script>
+  <script src="/js/auth.js" defer></script>
+</head>
+
+<body class="auth-page-body" data-surface="staf" style="background-color: var(--color-bg);">
+  <a href="#main-content" class="skip-link">Langsung ke isi utama</a>
+
+  <main id="main-content" class="staff-login-shell">
+    <section class="staff-login-card" aria-labelledby="staffLoginHeading">
+      <header class="auth-form-header">
+        <div class="auth-brand-badge">
+          <span class="brand auth-brand-logo" translate="no"><span class="brand-text">Nuvacare</span></span>
+          <p class="auth-brand-badge__sub">Portal Staf Klinik (Admin &amp; Dokter)</p>
+        </div>
+        <h1 id="staffLoginHeading" class="auth-form-title">Masuk Portal Staf</h1>
+        <p class="auth-form-subtitle">Gunakan akun staf klinik yang telah didaftarkan oleh admin untuk mengakses layanan internal.</p>
+      </header>
+
+      <div id="staffLoginAlert" class="alert alert-danger" role="alert" aria-live="polite"></div>
+
+      <form id="staffLoginForm" novalidate>
+        <div class="form-group">
+          <label class="form-label" for="staffEmail">
+            Email Staf <span class="required-indicator" aria-hidden="true">*</span>
+          </label>
+          <div class="input-with-icon">
+            <svg class="input-prefix-icon" width="18" height="18" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+              aria-hidden="true">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+              <polyline points="22,6 12,13 2,6"></polyline>
+            </svg>
+            <input type="email" id="staffEmail" name="email" class="form-input" style="border-radius: 8px;" required autocomplete="username" spellcheck="false" placeholder="staf@klinik.local">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="staffPassword">
+            Kata Sandi <span class="required-indicator" aria-hidden="true">*</span>
+          </label>
+          <div class="input-with-icon input-password-wrap">
+            <svg class="input-prefix-icon" width="18" height="18" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+              aria-hidden="true">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+            <input type="password" id="staffPassword" name="password" class="form-input" style="border-radius: 8px;" required autocomplete="current-password" placeholder="Masukkan kata sandi">
+            <button type="button" class="password-toggle-btn" data-toggle-password="staffPassword"
+              aria-label="Tampilkan kata sandi" aria-pressed="false">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <button type="submit" id="staffSubmitBtn" class="btn btn-primary btn-block auth-cta-btn" style="border-radius: 8px;">
+          <span>Masuk ke Portal Staf</span>
+        </button>
+      </form>
+
+      <footer class="auth-form-footer">
+        <p>Akun staf dibuat oleh Admin Klinik. Hubungi admin apabila mengalami kendala masuk.</p>
+      </footer>
+    </section>
+  </main>
+</body>
+
+</html>

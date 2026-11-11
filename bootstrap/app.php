@@ -1,6 +1,12 @@
 <?php
 
+use App\Http\Middleware\EnsureActiveDoctorMiddleware;
+use App\Http\Middleware\FeatureFlagMiddleware;
 use App\Http\Middleware\RoleMiddleware;
+use App\Http\Middleware\StaffIpAllowlistMiddleware;
+use App\Http\Middleware\SurfaceRouteMiddleware;
+use App\Http\Middleware\SurfaceTokenMiddleware;
+use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -16,7 +22,16 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'role' => RoleMiddleware::class,
+            'surface.route' => SurfaceRouteMiddleware::class,
+            'surface.token' => SurfaceTokenMiddleware::class,
+            'feature' => FeatureFlagMiddleware::class,
+            'doctor.account' => EnsureActiveDoctorMiddleware::class,
+            'staff.ip' => StaffIpAllowlistMiddleware::class,
         ]);
+
+        $middleware->prependToPriorityList(AuthenticatesRequests::class, SurfaceRouteMiddleware::class);
+        $middleware->prependToPriorityList(AuthenticatesRequests::class, FeatureFlagMiddleware::class);
+        $middleware->prependToPriorityList(AuthenticatesRequests::class, StaffIpAllowlistMiddleware::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

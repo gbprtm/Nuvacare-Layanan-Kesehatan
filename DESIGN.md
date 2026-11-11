@@ -359,4 +359,28 @@ Interaksi harus sederhana dan memberikan feedback yang jelas.
 5. Landing page dan dashboard harus menggunakan identitas visual yang sama, tetapi boleh memiliki skala tipografi berbeda.
 6. Perubahan desain harus mempertahankan konsistensi ant halaman.
 
-**Prinsip akhir:** Nuvicare harus terlihat profesional dan modern tanpa membuat elemen visual mendominasi informasi. Prioritaskan fungsi, keterbacaan, dan konsistensi.
+**Prinsip akhir:** Nuvicare harus terlihat profesional dan modern tanpa membuat elemen visual mendominasi informasi. Prioritaskan fungsi, keterbacaan, dan konsistensi.
+
+## 10. Pola Antarmuka Staf (Portal Dokter, Login Staf, & Inbox Admin)
+
+Area staf (`surfaces/staf/`) menggunakan sistem visual yang sama dengan area pasien tanpa menambah token palet baru di luar standar WCAG AA.
+
+### Token & Aksesibilitas Staf
+- **Warna inti:** `#1D4ED8` dan `#0037B0` untuk tombol CTA utama, tautan, tab aktif, dan fokus keyboard; `#FFFFFF` untuk permukaan kartu, modal, dan panel; `#F7F9FB` untuk latar dashboard staf.
+- **Status badge WCAG AA (wajib disertai label teks):**
+  - Menunggu / peringatan (`diajukan`, mendekati batas SLA): teks `#92400E` pada latar `#FEF3C7`.
+  - Selesai / disetujui (`selesai`, `disetujui`, `dijadwalkan_ulang`): teks `#14532D` pada latar `#E7F6EC`.
+  - Ditolak / lewat SLA / dibatalkan (`ditolak`, lewat `due_at`, `dibatalkan`, `gugur`, `kedaluwarsa`): teks `#991B1B` pada latar `#FDECEC`.
+  - Terjadwal (`terjadwal`): teks `#1D4ED8` pada latar `#E6EEFF`.
+- **Tipografi & kontrol:** Font `Plus Jakarta Sans` sesuai skala dashboard pada §3, target sentuh seluruh tombol, tab, tautan aksi, dan input minimal `44x44px`, navigasi keyboard lengkap (`Tab`, `Enter`, `Escape` pada modal) dengan cincin fokus terlihat.
+- **Kebersihan teks & data:** Bahasa Indonesia konsisten, tanpa karakter em dash, tanpa data atau angka statistik palsu, dan tidak menyalin data sensitif ke klien.
+
+### Pola Layar Utama
+- **Login Staf (`staf/login.html`):** Satu kartu terpusat dengan satu fokus formulir email dan kata sandi staf. Tanpa tautan daftar akun pasien, tombol Google, maupun alur OTP pasien. Menampilkan umpan balik jelas saat akun tidak aktif, bukan akun staf, atau dokter belum terhubung ke profil dokter.
+- **Portal Dokter (`dokter/janji-temu.html`):** Dua tab (`Janji saya` dan `Pengajuan saya`), filter rentang tanggal (default hari ini s.d. +7 hari) dan status, serta satu tombol sekunder `Ajukan cuti (rentang tanggal)` untuk pengajuan massal dengan pratinjau jumlah janji terdampak. Baris janji menampilkan jam slot, nama pasien, poli, jenis, status janji, dan lencana status pengajuan tanpa kontrol ubah jadwal. Panel detail samping hanya memuat data minimal dan kontak pasien tersamar (tanpa `complaint` maupun `doctor_notes`), dengan satu tombol aksi utama `Ajukan pembatalan` (atau `Tarik pengajuan` saat status `diajukan`). Modal pengajuan memakai pilihan kategori radio, textarea alasan dengan penghitung 10 s.d. 500 karakter, serta catatan bahwa janji tetap berjalan sampai admin memutuskan.
+- **Inbox Pengajuan Admin (`admin/kelola-janji.html` tab `Pengajuan Dokter`) & Akun Dokter (`admin/master-data.html`):** Menampilkan lencana jumlah pengajuan `diajukan`, urutan `due_at` terdekat, penanda merah untuk item lewat SLA, serta pengelompokan `batch_id` untuk cuti. Setiap item memiliki tiga aksi jelas: `Batalkan janji` (konfirmasi), `Jadwalkan ulang` (menggunakan pemilih slot yang sudah ada), dan `Tolak` (catatan admin wajib 5 s.d. 500 karakter). Halaman `admin/master-data.html` menyediakan kontrol buat akun login dokter dan sakelar aktif/nonaktif akses dokter.
+
+### Tiga State Wajib & Penanganan Galat
+- **Memuat:** Indikator pemuatan jelas pada daftar janji dokter, daftar pengajuan, inbox admin, dan riwayat log.
+- **Kosong:** Teks jujur tanpa angka fiktif, misalnya `"Belum ada janji pada rentang ini."` untuk dokter dan `"Tidak ada pengajuan yang menunggu."` untuk inbox admin.
+- **Gagal & Konflik:** Pesan ringkas disertai tombol `Coba lagi` untuk galat jaringan (`"Gagal memuat data. Coba lagi."`), pesan konflik 409 (`"Pengajuan ini sudah ditindak oleh admin lain. Muat ulang untuk melihat hasilnya."`), serta pesan batas waktu 422 (`"Batas pengajuan sudah lewat. Hubungi admin secara langsung."`).

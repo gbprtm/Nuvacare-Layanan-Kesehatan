@@ -69,6 +69,20 @@ class DatabaseSeeder extends Seeder
             ['is_active' => true]
         );
 
+        $dokterUser = User::firstOrCreate(
+            ['email' => 'dokter1@klinik.local'],
+            [
+                'name' => 'dr. Andi Pratama',
+                'password' => Hash::make('DokterKlinik2026!'),
+                'role' => 'dokter',
+                'phone_number' => '081211112222',
+            ]
+        );
+
+        if ($dokter1->user_id === null && ! Doctor::where('user_id', $dokterUser->id)->exists()) {
+            $dokter1->update(['user_id' => $dokterUser->id]);
+        }
+
         Doctor::firstOrCreate(
             ['name' => 'dr. Maya Indah', 'polyclinic_id' => $poliUmum->id],
             ['is_active' => true]

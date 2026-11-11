@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#F7F9FB">
+  <title>Master Data - Admin Nuvacare</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="shortcut icon" href="/favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="stylesheet" href="/css/style.css" fetchpriority="high">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400..800;1,400..800&display=swap">
+  <script src="/js/api.js" defer fetchpriority="high"></script>
+  <script src="/js/admin.js" defer></script>
+  <script type="speculationrules">
+  {
+    "prefetch": [{
+      "where": { "href_matches": "/admin/*.html" },
+      "eagerness": "conservative"
+    }]
+  }
+  </script>
+</head>
+<body data-surface="staf" style="background-color: var(--color-bg);">
+  <a href="#main-content" class="skip-link">Langsung ke isi utama</a>
+
+  <header class="site-header">
+    <nav class="navbar" aria-label="Navigasi utama">
+      <a href="/admin/kelola-janji.html" class="brand" translate="no">
+        <span class="brand-text">Nuvacare</span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="/admin/kelola-janji.html">Kelola Janji</a></li>
+        <li><a href="/admin/master-data.html" class="active" aria-current="page">Master Data</a></li>
+        <li class="nav-user">
+          <span id="navAdminName" class="nav-user-name"></span>
+          <button type="button" id="logoutBtn" class="btn btn-secondary btn-sm btn-touch" style="border-radius: 8px;">Keluar</button>
+        </li>
+      </ul>
+    </nav>
+  </header>
+
+  <main id="main-content" class="container">
+    <div class="mb-4">
+      <h1 class="page-title">Master Data</h1>
+      <p class="text-sm text-muted">Tambah poliklinik baru, daftarkan dokter, kelola akun portal dokter, dan atur status ketersediaan praktik dokter.</p>
+    </div>
+
+    <div class="grid-2">
+      <section class="card" aria-labelledby="addPoliTitle" style="border-radius: 12px;">
+        <h2 id="addPoliTitle" class="card-title">Tambah Poliklinik</h2>
+        <div id="poliAlert" class="alert" role="status" aria-live="polite"></div>
+        <form id="poliForm" novalidate>
+          <div class="form-group">
+            <label class="form-label" for="poliName">Nama Poliklinik</label>
+            <input type="text" id="poliName" name="name" class="form-input" style="border-radius: 8px;" required autocomplete="off" placeholder="Contoh: Poli Mata…">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="poliDesc">Deskripsi Layanan</label>
+            <textarea id="poliDesc" name="description" class="form-textarea" style="border-radius: 8px;" autocomplete="off" placeholder="Ringkasan layanan pemeriksaan poliklinik…"></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary" style="border-radius: 8px;">Tambah poli</button>
+        </form>
+      </section>
+
+      <section class="card" aria-labelledby="addDoctorTitle" style="border-radius: 12px;">
+        <h2 id="addDoctorTitle" class="card-title">Tambah Dokter</h2>
+        <div id="doctorAlert" class="alert" role="status" aria-live="polite"></div>
+        <form id="doctorForm" novalidate>
+          <div class="form-group">
+            <label class="form-label" for="docPoliId">Poliklinik</label>
+            <select id="docPoliId" name="polyclinic_id" class="form-select" style="border-radius: 8px;" required autocomplete="off">
+              <option value="">Memuat daftar poliklinik…</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="docName">Nama Lengkap &amp; Gelar Dokter</label>
+            <input type="text" id="docName" name="name" class="form-input" style="border-radius: 8px;" required autocomplete="off" placeholder="Contoh: dr. Ahmad Fauzi, Sp.M…">
+          </div>
+          <button type="submit" class="btn btn-secondary" style="border-radius: 8px;">Tambah dokter</button>
+        </form>
+      </section>
+    </div>
+
+    <section class="card" aria-labelledby="listMasterTitle" style="border-radius: 12px;">
+      <h2 id="listMasterTitle" class="card-title">Daftar Poliklinik &amp; Dokter</h2>
+      <div id="masterListAlert" class="alert" role="status" aria-live="polite"></div>
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>Poliklinik</th>
+              <th>Deskripsi</th>
+              <th>Dokter &amp; Status Praktik</th>
+            </tr>
+          </thead>
+          <tbody id="poliTableBody" aria-live="polite">
+            <tr>
+              <td colspan="3" class="text-muted text-center" style="padding: var(--space-6);">Memuat daftar poliklinik dan dokter…</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <div id="doctorAccountModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="docAccModalTitle">
+    <div class="modal-content" style="border-radius: 16px;">
+      <div class="flex-between mb-4">
+        <h2 id="docAccModalTitle" class="card-title" style="margin-bottom: 0;">Buat Akun Login Dokter</h2>
+        <button type="button" id="closeDocAccModalBtn" class="btn btn-secondary btn-sm btn-touch"
+          data-close-modal="doctorAccountModal" aria-label="Tutup dialog"
+          style="min-width: 44px; border-radius: 8px;">Tutup</button>
+      </div>
+
+      <div id="docAccAlert" class="alert" role="alert" aria-live="polite"></div>
+
+      <form id="docAccForm" novalidate>
+        <input type="hidden" id="docAccDoctorId" name="doctor_id">
+        <p id="docAccDoctorLabel" class="text-sm mb-4" style="font-weight: 600;"></p>
+
+        <div class="form-group">
+          <label class="form-label" for="docAccEmail">Email Login Dokter</label>
+          <input type="email" id="docAccEmail" name="email" class="form-input"
+            style="border-radius: 8px;" required autocomplete="off" spellcheck="false"
+            placeholder="dokter@klinik.local">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="docAccPhone">Nomor WhatsApp Dokter (Opsional)</label>
+          <input type="tel" id="docAccPhone" name="phone_number" class="form-input"
+            style="border-radius: 8px;" inputmode="tel" autocomplete="off"
+            placeholder="0812xxxxxxxx">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="docAccPassword">Kata Sandi Awal (Min. 8 karakter)</label>
+          <input type="password" id="docAccPassword" name="password" class="form-input"
+            style="border-radius: 8px;" required minlength="8" autocomplete="new-password"
+            placeholder="Minimal 8 karakter">
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-6); flex-wrap: wrap;">
+          <button type="button" class="btn btn-secondary btn-touch" data-close-modal="doctorAccountModal"
+            style="border-radius: 8px;">Batal</button>
+          <button type="submit" id="docAccSubmitBtn" class="btn btn-primary btn-touch"
+            style="border-radius: 8px;">Buat Akun Dokter</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</body>
+</html>

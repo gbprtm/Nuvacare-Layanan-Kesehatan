@@ -11,6 +11,7 @@ use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Password;
@@ -26,6 +27,20 @@ class AuthController extends Controller
     private const OTP_COOLDOWN_SECONDS = 60;
 
     private const OTP_MAX_ATTEMPTS = 5;
+
+    private const STAFF_ABILITIES = [
+        'janji.lihat_semua',
+        'janji.ubah',
+        'janji.buat_kontrol',
+        'poli.kelola',
+        'dokter.kelola',
+        'pengajuan.putuskan',
+        'audit.lihat',
+        'janji.lihat_milik',
+        'pengajuan.ajukan',
+        'pengajuan.lihat_milik',
+        'pengajuan.tarik_milik',
+    ];
 
     public function publicInfo(): JsonResponse
     {
@@ -193,7 +208,7 @@ class AuthController extends Controller
 
         $otpRecord->delete();
 
-        $token = $user->createToken('auth-token')->plainTextToken;
+        $token = $user->createToken('auth-token', ['surface:pasien'])->plainTextToken;
 
         return response()->json([
             'message' => 'Nomor WhatsApp terverifikasi dan pendaftaran akun berhasil.',
@@ -251,7 +266,7 @@ class AuthController extends Controller
             'address' => $validated['address'] ?? null,
         ]);
 
-        $token = $user->createToken('auth-token')->plainTextToken;
+        $token = $user->createToken('auth-token', ['surface:pasien'])->plainTextToken;
 
         return response()->json([
             'message' => 'Pendaftaran akun berhasil',
@@ -276,7 +291,46 @@ class AuthController extends Controller
             ]);
         }
 
-        $token = $user->createToken('auth-token')->plainTextToken;
+        if ($user->isDisabled()) {
+            $user->tokens()->delete();
+
+            return response()->json([
+                'message' => 'Akun Anda dinonaktifkan. Hubungi admin klinik.',
+            ], 403);
+        }
+
+        $surfaceMode = config('surface.mode', 'combined') ?: 'combined';
+
+        if ($surfaceMode === 'staf' && $user->role === 'pasien') {
+            return response()->json([
+                'message' => 'Portal staf hanya untuk akun admin dan dokter.',
+            ], 403);
+        }
+
+        if ($surfaceMode === 'pasien' && $user->role !== 'pasien') {
+            return response()->json([
+                'message' => 'Akun staf silakan masuk melalui portal staf Nuvacare.',
+            ], 403);
+        }
+
+        if ($user->role === 'dokter') {
+            $user->loadMissing('doctor.polyclinic');
+
+            if ($user->doctor === null) {
+                return response()->json([
+                    'message' => 'Akun dokter belum terhubung dengan data dokter klinik.',
+                ], 403);
+            }
+
+            if (! $user->doctor->is_active) {
+                return response()->json([
+                    'message' => 'Data dokter sedang tidak aktif.',
+                ], 403);
+            }
+        }
+
+        $surfaceAbility = $user->role === 'pasien' ? 'surface:pasien' : 'surface:staf';
+        $token = $user->createToken('auth-token', [$surfaceAbility])->plainTextToken;
 
         return response()->json([
             'token' => $token,
@@ -300,7 +354,25 @@ class AuthController extends Controller
             ->orWhere('email', $googleProfile['email'])
             ->first();
 
-        if (! $user) {
+        if ($user) {
+            if ($user->isDisabled()) {
+                $user->tokens()->delete();
+
+                return response()->json([
+                    'message' => 'Akun Anda dinonaktifkan. Hubungi admin klinik.',
+                ], 403);
+            }
+
+            if ($user->role !== 'pasien') {
+                return response()->json([
+                    'message' => 'Akun staf silakan masuk melalui portal staf Nuvacare.',
+                ], 403);
+            }
+
+            if (empty($user->google_id)) {
+                $user->update(['google_id' => $googleProfile['google_id']]);
+            }
+        } else {
             $user = User::create([
                 'name' => $googleProfile['name'],
                 'email' => $googleProfile['email'],
@@ -310,11 +382,9 @@ class AuthController extends Controller
                 'phone_number' => null,
                 'phone_verified_at' => null,
             ]);
-        } elseif (empty($user->google_id)) {
-            $user->update(['google_id' => $googleProfile['google_id']]);
         }
 
-        $token = $user->createToken('google-auth-token')->plainTextToken;
+        $token = $user->createToken('google-auth-token', ['surface:pasien'])->plainTextToken;
         $requiresPhone = $user->role === 'pasien' && ! $user->hasVerifiedPhone();
 
         return response()->json([
@@ -452,6 +522,13 @@ class AuthController extends Controller
             'message' => 'Nomor WhatsApp berhasil diverifikasi dan disimpan.',
             'requires_phone_verification' => false,
             'user' => $this->formatUserPayload($user->fresh()),
+        ]);
+    }
+
+    public function me(Request $request): JsonResponse
+    {
+        return response()->json([
+            'data' => $this->formatUserPayload($request->user()),
         ]);
     }
 
@@ -865,14 +942,44 @@ class AuthController extends Controller
 
     private function formatUserPayload(User $user): array
     {
-        return [
+        if ($user->role === 'dokter') {
+            $user->loadMissing('doctor.polyclinic');
+        }
+
+        $permissions = $user->isStaff()
+            ? array_values(array_filter(
+                self::STAFF_ABILITIES,
+                fn (string $ability): bool => Gate::forUser($user)->allows($ability),
+            ))
+            : [];
+
+        $payload = [
             'id' => $user->id,
             'name' => $user->name,
             'email' => $user->email,
             'role' => $user->role,
+            'surface' => $user->role === 'pasien' ? 'pasien' : 'staf',
             'phone_number' => $user->phone_number,
             'phone_verified' => $user->hasVerifiedPhone(),
+            'birth_date' => $user->birth_date?->format('Y-m-d'),
+            'address' => $user->address,
+            'has_google' => ! empty($user->google_id),
+            'permissions' => $permissions,
         ];
+
+        if ($user->role === 'dokter' && $user->doctor !== null) {
+            $payload['doctor'] = [
+                'id' => $user->doctor->id,
+                'name' => $user->doctor->name,
+                'polyclinic_id' => $user->doctor->polyclinic_id,
+                'polyclinic' => $user->doctor->polyclinic ? [
+                    'id' => $user->doctor->polyclinic->id,
+                    'name' => $user->doctor->polyclinic->name,
+                ] : null,
+            ];
+        }
+
+        return $payload;
     }
 
     private function translatePasswordStatus(string $status): string
