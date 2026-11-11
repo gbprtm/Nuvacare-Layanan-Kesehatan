@@ -36,6 +36,8 @@
     syncControls(theme);
   }
 
+  window.syncThemeControls = () => syncControls(root.getAttribute('data-theme'));
+
   apply(storedTheme() || systemTheme());
 
   if (media) {
@@ -46,19 +48,20 @@
     else if (media.addListener) media.addListener(onSystemChange);
   }
 
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-theme-toggle]');
+    if (!btn) return;
+    const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    try {
+      localStorage.setItem(STORAGE_KEY, next);
+    } catch {
+      // Penyimpanan diblokir: tema tetap berganti untuk sesi ini.
+    }
+    apply(next);
+  });
+
   document.addEventListener('DOMContentLoaded', () => {
     syncControls(root.getAttribute('data-theme'));
-    document.querySelectorAll('[data-theme-toggle]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-        try {
-          localStorage.setItem(STORAGE_KEY, next);
-        } catch {
-          // Penyimpanan diblokir: tema tetap berganti untuk sesi ini.
-        }
-        apply(next);
-      });
-    });
   });
 })();
 

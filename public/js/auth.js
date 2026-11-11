@@ -1035,6 +1035,15 @@ async function loadPublicHomepage() {
       }
 
       navAction.innerHTML = `
+        <button type="button" class="patient-theme-toggle" data-theme-toggle aria-label="Ganti ke tema gelap" title="Ganti tema">
+          <svg class="theme-icon theme-icon--sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="4"></circle>
+            <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
+          </svg>
+          <svg class="theme-icon theme-icon--moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+        </button>
         <button type="button" id="homeLogoutBtn" class="patient-nav-link" style="background:none;border:none;cursor:pointer;">KELUAR</button>
         <a href="/pasien/profil.html" id="navAuthPrimary" class="patient-pill-cta" title="Profil Pasien">
           <span id="navUserName">${escapeHtml(user.name)}</span>
@@ -1042,6 +1051,8 @@ async function loadPublicHomepage() {
           <span class="patient-arrow" aria-hidden="true">&#x2197;</span>
         </a>
       `;
+
+      if (window.syncThemeControls) window.syncThemeControls();
 
       const homeLogoutBtn = document.getElementById('homeLogoutBtn');
       if (homeLogoutBtn) {
@@ -1096,7 +1107,21 @@ async function loadPublicHomepage() {
               <span class="patient-arrow" aria-hidden="true">&#x2197;</span>
             </div>
           </li>
+          <li class="patient-drawer__item">
+            <div class="patient-drawer__row">
+              <button type="button" class="patient-drawer__link patient-drawer__theme-btn" data-theme-toggle aria-label="Ganti tema">
+                <span class="patient-drawer__theme-left">
+                  <svg class="theme-icon theme-icon--sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path></svg>
+                  <svg class="theme-icon theme-icon--moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                  <span data-theme-label>TEMA GELAP</span>
+                </span>
+                <span class="patient-drawer__pill-state"></span>
+              </button>
+            </div>
+          </li>
         `;
+
+        if (window.syncThemeControls) window.syncThemeControls();
 
         const expandBtn = document.getElementById('drawerExpandBtn');
         const subInfo = document.getElementById('drawerSubInfo');
