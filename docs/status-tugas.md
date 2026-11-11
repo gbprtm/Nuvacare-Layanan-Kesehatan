@@ -13,8 +13,8 @@ hanya bila kriteria selesai terbukti di `docs/bukti/Tn.md`.
 | T3 | Profil pengguna | done | - | `docs/bukti/T3.md` | GET/PATCH /api/profil, pasien/profil.html, ProfileApiTest passed. |
 | T4 | Janji temu & panel admin | done | - | `docs/bukti/T4.md` | janji-temu.html, kelola-janji.html, master-data.html, AppointmentAndAdminApiTest passed. |
 | T5 | Riwayat & jadwal kontrol | done | - | `docs/bukti/T5.md` | riwayat.html, jadwal-kontrol.html, HistoryAndControlApiTest passed. |
-| T6 | Arsitektur dua permukaan & RBAC staf | done | - | `docs/bukti/T6.md` | Pemisahan host pasien dan staf (Opsi B), surface middleware, Gate/Policy. |
-| T7 | Portal dokter, pengajuan pembatalan & audit log | done | - | `docs/bukti/T7.md` | Migrasi aditif, API dokter & inbox admin, status_change_logs, notifikasi WA, UI dokter & admin. |
+| T6 | Arsitektur dua permukaan & RBAC staf | done | `78f15fa` | `docs/bukti/T6.md` | Pemisahan host pasien dan staf (Opsi B), surface middleware, Gate/Policy. |
+| T7 | Portal dokter, pengajuan pembatalan & audit log | done | `78f15fa` | `docs/bukti/T7.md` | Migrasi aditif, API dokter & inbox admin, status_change_logs, notifikasi WA, UI dokter & admin. |
 
 Riwayat tugas L01–L08 (implementasi Blade sebelumnya) tersimpan di commit
 `8244b04` dan tidak lagi menjadi target.
