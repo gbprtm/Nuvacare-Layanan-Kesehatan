@@ -222,6 +222,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (rawPhone.startsWith('0')) rawPhone = rawPhone.substring(1);
       const phone_number = rawPhone ? '62' + rawPhone : '';
       const birth_date = document.getElementById('regBirthDate').value;
+      const gender = document.getElementById('regGender')?.value || null;
       const address = document.getElementById('regAddress').value.trim();
       const password = document.getElementById('regPassword').value;
       const password_confirmation = document.getElementById('regPasswordConfirm').value;
@@ -243,6 +244,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         email,
         phone_number,
         birth_date: birth_date || null,
+        gender: gender || null,
         address: address || null,
         password,
         password_confirmation
@@ -1025,19 +1027,20 @@ async function loadPublicHomepage() {
     if (user.role === 'pasien') {
       if (navLinks) {
         navLinks.innerHTML = `
-          <li><a href="/index.html" class="active" aria-current="page">Beranda</a></li>
-          <li><a href="/pasien/janji-temu.html" id="navBookingLink">Janji Temu</a></li>
-          <li><a href="/pasien/jadwal-kontrol.html">Jadwal Kontrol</a></li>
-          <li><a href="/pasien/riwayat.html">Riwayat Pemeriksaan</a></li>
+          <li><a href="/index.html" class="patient-nav-link active" aria-current="page">BERANDA</a></li>
+          <li><a href="/pasien/janji-temu.html" id="navBookingLink" class="patient-nav-link">JANJI TEMU</a></li>
+          <li><a href="/pasien/jadwal-kontrol.html" class="patient-nav-link">JADWAL KONTROL</a></li>
+          <li><a href="/pasien/riwayat.html" class="patient-nav-link">RIWAYAT</a></li>
         `;
       }
 
       navAction.innerHTML = `
-        <a href="/pasien/profil.html" class="btn btn-pill-outline nav-profile-pill" title="Profil Pasien">
-          <span class="nav-user-name">${escapeHtml(user.name)}</span>
+        <button type="button" id="homeLogoutBtn" class="patient-nav-link" style="background:none;border:none;cursor:pointer;">KELUAR</button>
+        <a href="/pasien/profil.html" id="navAuthPrimary" class="patient-pill-cta" title="Profil Pasien">
+          <span id="navUserName">${escapeHtml(user.name)}</span>
           <span>· Profil</span>
+          <span class="patient-arrow" aria-hidden="true">&#x2197;</span>
         </a>
-        <button type="button" id="homeLogoutBtn" class="btn btn-pill-primary">Keluar</button>
       `;
 
       const homeLogoutBtn = document.getElementById('homeLogoutBtn');
@@ -1047,6 +1050,80 @@ async function loadPublicHomepage() {
             api.logout();
           }
         });
+      }
+
+      // Update mobile drawer items for logged in patient to match navbar items
+      const drawerList = document.querySelector('.patient-drawer__list');
+      if (drawerList) {
+        drawerList.innerHTML = `
+          <li class="patient-drawer__item">
+            <div class="patient-drawer__row">
+              <a href="/index.html" class="patient-drawer__link active" aria-current="page">BERANDA</a>
+              <span class="patient-arrow" aria-hidden="true">&#x2197;</span>
+            </div>
+          </li>
+          <li class="patient-drawer__item">
+            <div class="patient-drawer__row">
+              <a href="/pasien/janji-temu.html" class="patient-drawer__link">JANJI TEMU</a>
+              <span class="patient-arrow" aria-hidden="true">&#x2197;</span>
+            </div>
+          </li>
+          <li class="patient-drawer__item patient-drawer__item--expandable" id="drawerRowJadwalKontrol">
+            <div class="patient-drawer__row">
+              <a href="/pasien/jadwal-kontrol.html" class="patient-drawer__link">JADWAL KONTROL</a>
+              <button type="button" id="drawerExpandBtn" class="patient-drawer__toggle-expand" aria-expanded="false" aria-controls="drawerSubInfo" aria-label="Rincian informasi jadwal kontrol">+</button>
+            </div>
+            <div id="drawerSubInfo" class="patient-drawer__subinfo" hidden>
+              <p class="patient-drawer__subtext">Kunjungan ulang terjadwal dari dokter Anda.</p>
+              <a href="/pasien/jadwal-kontrol.html" class="patient-drawer__sublink">Buka Jadwal Kontrol &#x2197;</a>
+            </div>
+          </li>
+          <li class="patient-drawer__item">
+            <div class="patient-drawer__row">
+              <a href="/pasien/riwayat.html" class="patient-drawer__link">RIWAYAT PEMERIKSAAN</a>
+              <span class="patient-arrow" aria-hidden="true">&#x2197;</span>
+            </div>
+          </li>
+          <li class="patient-drawer__item">
+            <div class="patient-drawer__row">
+              <a href="/pasien/profil.html" class="patient-drawer__link">PROFIL SAYA</a>
+              <span class="patient-arrow" aria-hidden="true">&#x2197;</span>
+            </div>
+          </li>
+          <li class="patient-drawer__item">
+            <div class="patient-drawer__row">
+              <button type="button" id="drawerLogoutBtn" class="patient-drawer__link" style="background:none;border:none;text-align:left;width:100%;cursor:pointer;">KELUAR</button>
+              <span class="patient-arrow" aria-hidden="true">&#x2197;</span>
+            </div>
+          </li>
+        `;
+
+        const expandBtn = document.getElementById('drawerExpandBtn');
+        const subInfo = document.getElementById('drawerSubInfo');
+        if (expandBtn && subInfo) {
+          expandBtn.addEventListener('click', () => {
+            const isHidden = subInfo.hidden;
+            subInfo.hidden = !isHidden;
+            expandBtn.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
+            expandBtn.textContent = isHidden ? '−' : '+';
+          });
+        }
+
+        const drawerLogoutBtn = document.getElementById('drawerLogoutBtn');
+        if (drawerLogoutBtn) {
+          drawerLogoutBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (confirm('Keluar dari akunmu sekarang?')) {
+              api.logout();
+            }
+          });
+        }
+      }
+
+      const drawerCtaBtn = document.getElementById('drawerCtaBtn');
+      if (drawerCtaBtn) {
+        drawerCtaBtn.setAttribute('href', '/pasien/profil.html');
+        drawerCtaBtn.innerHTML = `<span>PROFIL (${escapeHtml(user.name)})</span><span class="patient-arrow" aria-hidden="true">&#x2197;</span>`;
       }
 
       if (heroBookingCta) {
@@ -1060,9 +1137,18 @@ async function loadPublicHomepage() {
     } else {
       const dashboardUrl = user.role === 'dokter' ? '/dokter/janji-temu.html' : '/admin/kelola-janji.html';
       navAction.innerHTML = `
-        <span class="nav-user-name">${escapeHtml(user.name)}</span>
-        <a href="${dashboardUrl}" class="btn btn-pill-dark">Buka Dashboard</a>
+        <span class="patient-nav-link">${escapeHtml(user.name)}</span>
+        <a href="${dashboardUrl}" class="patient-pill-cta">
+          <span>PORTAL STAF</span>
+          <span class="patient-arrow" aria-hidden="true">&#x2197;</span>
+        </a>
       `;
+
+      const drawerCtaBtn = document.getElementById('drawerCtaBtn');
+      if (drawerCtaBtn) {
+        drawerCtaBtn.setAttribute('href', dashboardUrl);
+        drawerCtaBtn.innerHTML = `<span>DASHBOARD</span><span class="patient-arrow" aria-hidden="true">&#x2197;</span>`;
+      }
 
       if (navBookingLink) {
         navBookingLink.setAttribute('href', dashboardUrl);
@@ -1212,19 +1298,69 @@ function renderPublicPoliCards(polis, query, isLoggedInPatient) {
 
 function initHomeMobileMenu() {
   const menuBtn = document.getElementById('mobileMenuBtn');
-  const menuPanel = document.getElementById('navbarMenuPanel');
-  if (!menuBtn || !menuPanel) return;
+  const overlay = document.getElementById('patientDrawerOverlay') || document.getElementById('navbarMenuPanel');
+  const closeBtn = document.getElementById('closeDrawerBtn');
+  const expandBtn = document.getElementById('drawerExpandBtn');
+  const subInfo = document.getElementById('drawerSubInfo');
+
+  if (!menuBtn || !overlay) return;
+
+  const openDrawer = () => {
+    overlay.classList.add('is-open');
+    overlay.setAttribute('aria-hidden', 'false');
+    menuBtn.setAttribute('aria-expanded', 'true');
+    document.body.style.overflow = 'hidden';
+    if (closeBtn) closeBtn.focus();
+  };
+
+  const closeDrawer = () => {
+    overlay.classList.remove('is-open');
+    overlay.setAttribute('aria-hidden', 'true');
+    menuBtn.setAttribute('aria-expanded', 'false');
+    document.body.style.overflow = '';
+    menuBtn.focus();
+  };
 
   menuBtn.addEventListener('click', () => {
-    const isOpen = menuPanel.classList.toggle('is-open');
-    menuBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    if (overlay.classList.contains('is-open')) {
+      closeDrawer();
+    } else {
+      openDrawer();
+    }
+  });
+
+  if (closeBtn) {
+    closeBtn.addEventListener('click', closeDrawer);
+  }
+
+  // Close when clicking outside drawer panel (peek area / backdrop)
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) {
+      closeDrawer();
+    }
+  });
+
+  // Toggle drawer subinfo accordion
+  if (expandBtn && subInfo) {
+    expandBtn.addEventListener('click', () => {
+      const isExpanded = expandBtn.getAttribute('aria-expanded') === 'true';
+      expandBtn.setAttribute('aria-expanded', !isExpanded ? 'true' : 'false');
+      expandBtn.textContent = !isExpanded ? '−' : '+';
+      subInfo.hidden = isExpanded;
+    });
+  }
+
+  // Close drawer when an internal anchor link is clicked
+  const drawerLinks = overlay.querySelectorAll('a[href^="#"]');
+  drawerLinks.forEach((link) => {
+    link.addEventListener('click', () => {
+      closeDrawer();
+    });
   });
 
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && menuPanel.classList.contains('is-open')) {
-      menuPanel.classList.remove('is-open');
-      menuBtn.setAttribute('aria-expanded', 'false');
-      menuBtn.focus();
+    if (e.key === 'Escape' && overlay.classList.contains('is-open')) {
+      closeDrawer();
     }
   });
 }

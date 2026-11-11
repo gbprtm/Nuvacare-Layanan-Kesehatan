@@ -116,23 +116,24 @@
                   style="display: none; color: #DC2626; font-weight: 500;" role="alert"></p>
               </div>
 
-              <!-- Baris Grid 2: WhatsApp & Tanggal Lahir -->
-              <div class="form-grid-2">
-                <div class="form-group">
-                  <label class="form-label" for="regPhone">
-                    Nomor WhatsApp Aktif <span class="required-indicator" aria-hidden="true">*</span>
-                  </label>
-                  <div class="input-with-icon">
-                    <div class="input-prefix-pill" aria-hidden="true">
-                      <span>🇮🇩</span> <span>+62</span>
-                    </div>
-                    <input type="tel" id="regPhone" name="phone_number" class="form-input form-input-with-pill" required
-                      inputmode="tel" autocomplete="tel" placeholder="812-xxxx-xxxx">
+              <!-- Nomor WhatsApp -->
+              <div class="form-group">
+                <label class="form-label" for="regPhone">
+                  Nomor WhatsApp Aktif <span class="required-indicator" aria-hidden="true">*</span>
+                </label>
+                <div class="input-with-icon">
+                  <div class="input-prefix-pill" aria-hidden="true">
+                    <span>🇮🇩</span> <span>+62</span>
                   </div>
-                  <p id="regPhoneError" class="form-help-text text-xs mt-1"
-                    style="display: none; color: #DC2626; font-weight: 500;" role="alert"></p>
+                  <input type="tel" id="regPhone" name="phone_number" class="form-input form-input-with-pill" required
+                    inputmode="tel" autocomplete="tel" placeholder="812-xxxx-xxxx">
                 </div>
+                <p id="regPhoneError" class="form-help-text text-xs mt-1"
+                  style="display: none; color: #DC2626; font-weight: 500;" role="alert"></p>
+              </div>
 
+              <!-- Baris Grid 2: Tanggal Lahir & Jenis Kelamin -->
+              <div class="form-grid-2">
                 <div class="form-group">
                   <label class="form-label" for="regBirthDate">
                     Tanggal Lahir
@@ -147,6 +148,25 @@
                       <line x1="3" y1="10" x2="21" y2="10"></line>
                     </svg>
                     <input type="date" id="regBirthDate" name="birth_date" class="form-input" autocomplete="bday">
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="regGender">
+                    Jenis Kelamin
+                  </label>
+                  <div class="input-with-icon">
+                    <svg class="input-prefix-icon" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                      aria-hidden="true">
+                      <circle cx="12" cy="7" r="4"></circle>
+                      <path d="M5.5 21v-2a6.5 6.5 0 0 1 13 0v2"></path>
+                    </svg>
+                    <select id="regGender" name="gender" class="form-input" style="cursor: pointer; appearance: auto;">
+                      <option value="">Pilih Jenis Kelamin</option>
+                      <option value="Laki-laki">Laki-laki</option>
+                      <option value="Perempuan">Perempuan</option>
+                    </select>
                   </div>
                 </div>
               </div>
@@ -805,6 +825,7 @@
                   email: document.getElementById('regEmail').value.trim(),
                   phone_number: normalizeIndoPhone(document.getElementById('regPhone').value.trim()),
                   birth_date: document.getElementById('regBirthDate').value || null,
+                  gender: document.getElementById('regGender')?.value || null,
                   address: document.getElementById('regAddress').value.trim() || null,
                   password: document.getElementById('regPassword').value,
                   password_confirmation: document.getElementById('regPasswordConfirm').value

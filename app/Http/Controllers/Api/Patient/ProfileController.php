@@ -24,6 +24,7 @@ class ProfileController extends Controller
                 'role' => $user->role,
                 'phone_number' => $user->phone_number,
                 'birth_date' => $user->birth_date?->format('Y-m-d'),
+                'gender' => $user->gender,
                 'address' => $user->address,
             ],
         ]);
@@ -70,6 +71,7 @@ class ProfileController extends Controller
                 },
             ],
             'birth_date' => ['nullable', 'date', 'before:today'],
+            'gender' => ['nullable', 'string', 'in:Laki-laki,Perempuan'],
             'address' => ['nullable', 'string', 'max:1000'],
             'password' => ['nullable', 'string', PasswordRule::min(8), 'confirmed'],
         ]);
@@ -82,6 +84,7 @@ class ProfileController extends Controller
             'name' => $validated['name'],
             'phone_number' => $normalizedPhone,
             'birth_date' => $validated['birth_date'] ?? null,
+            'gender' => $validated['gender'] ?? null,
             'address' => $validated['address'] ?? null,
         ];
 
@@ -100,6 +103,7 @@ class ProfileController extends Controller
                 'role' => $user->role,
                 'phone_number' => $user->phone_number,
                 'birth_date' => $user->birth_date?->format('Y-m-d'),
+                'gender' => $user->gender,
                 'address' => $user->address,
             ],
         ]);

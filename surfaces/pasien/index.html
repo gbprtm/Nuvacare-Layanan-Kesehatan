@@ -31,45 +31,100 @@
 <body class="home-body" data-surface="pasien">
   <a href="#main" class="skip-link">Langsung ke isi utama</a>
 
-  <!-- Header / Navigation -->
-  <header class="site-header site-header--sticky">
-    <nav class="navbar--home" aria-label="Navigasi utama">
-      <a href="/index.html" class="brand" id="navClinicName" translate="no">
+  <!-- Header / Navigation (Patient Modern Navbar) -->
+  <div class="patient-nav-frame">
+    <header class="patient-navbar" role="banner">
+      <a href="/index.html" class="patient-brand" id="navClinicName" translate="no">
         <span class="brand-text">Nuvacare</span>
       </a>
 
-      <button type="button" id="mobileMenuBtn" class="mobile-menu-toggle" aria-expanded="false"
-        aria-controls="navbarMenuPanel">
-        <span>Menu</span>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+      <!-- Mobile Hamburger Button -->
+      <button type="button" id="mobileMenuBtn" class="patient-drawer-btn" aria-expanded="false"
+        aria-controls="patientDrawerOverlay" aria-label="Buka menu navigasi">
+        <span>MENU</span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
           stroke-linecap="round" aria-hidden="true">
           <path d="M4 7h16M4 12h16M4 17h16" />
         </svg>
       </button>
 
-      <div id="navbarMenuPanel" class="home-nav-panel">
-        <ul id="homeNavLinks" class="home-nav-center">
-          <li><a href="/index.html" class="active" aria-current="page">Beranda</a></li>
-          <li><a href="#poli">Poliklinik</a></li>
-          <li><a href="#alur-janji">Alur Janji</a></li>
-          <li><a href="/login.html?next=%2Fpasien%2Fjanji-temu.html" id="navBookingLink">Buat Janji</a></li>
-        </ul>
+      <!-- Desktop Cluster -->
+      <div class="patient-nav-cluster">
+        <nav aria-label="Navigasi utama">
+          <ul id="homeNavLinks" class="patient-nav-links">
+            <li><a href="/index.html" class="patient-nav-link active" aria-current="page">BERANDA</a></li>
+            <li><a href="#poli" class="patient-nav-link">POLIKLINIK</a></li>
+            <li><a href="#alur-janji" class="patient-nav-link">ALUR JANJI</a></li>
+            <li><a href="/login.html?next=%2Fpasien%2Fjanji-temu.html" id="navBookingLink" class="patient-nav-link">BUAT JANJI</a></li>
+          </ul>
+        </nav>
 
-        <div class="home-nav-right">
-          <div class="poli-search-wrap" role="search">
-            <label for="poliSearchInput" class="sr-only">Cari poliklinik</label>
-            <input type="search" id="poliSearchInput" class="poli-search-input"
-              placeholder="Cari poliklinik atau dokter…" autocomplete="off">
-          </div>
-
-          <div id="navAuthAction" class="nav-auth-wrap">
-            <a href="/login.html" class="btn btn-pill-outline">Masuk</a>
-            <a href="/daftar.html" class="btn btn-pill-primary">Daftar</a>
-          </div>
+        <div id="navAuthAction" class="patient-nav-auth">
+          <a href="/login.html" id="navAuthSecondary" class="patient-nav-link">MASUK</a>
+          <a href="/daftar.html" id="navAuthPrimary" class="patient-pill-cta">
+            <span>DAFTAR</span>
+            <span class="patient-arrow" aria-hidden="true">&#x2197;</span>
+          </a>
         </div>
       </div>
-    </nav>
-  </header>
+    </header>
+  </div>
+
+  <!-- Mobile Drawer Overlay -->
+  <div id="patientDrawerOverlay" class="patient-drawer-overlay" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Menu navigasi mobile">
+    <div class="patient-drawer" role="document">
+      <div class="patient-drawer__top">
+        <a href="/index.html" class="patient-brand" style="text-decoration: none;">Nuvacare</a>
+        <button type="button" id="closeDrawerBtn" class="patient-drawer__close-btn" aria-label="Tutup menu navigasi">
+          <span>TUTUP &#x2715;</span>
+        </button>
+      </div>
+
+      <ul class="patient-drawer__list">
+        <li class="patient-drawer__item">
+          <div class="patient-drawer__row">
+            <a href="/index.html" class="patient-drawer__link active">BERANDA</a>
+          </div>
+        </li>
+        <li class="patient-drawer__item">
+          <div class="patient-drawer__row">
+            <a href="#poli" class="patient-drawer__link" id="drawerPoliLink">POLIKLINIK</a>
+            <button type="button" id="drawerExpandBtn" class="patient-drawer__toggle-expand" aria-expanded="false" aria-controls="drawerSubInfo" aria-label="Rincian informasi poliklinik">+</button>
+          </div>
+          <div id="drawerSubInfo" class="patient-drawer__subinfo" hidden>
+            <p class="patient-drawer__subtext">Tersedia dokter spesialis gigi, penyakit dalam, dan umum setiap hari kerja.</p>
+            <a href="#poli" id="drawerLihatPoliLink" class="patient-drawer__sublink">Lihat semua poli &#x2192;</a>
+          </div>
+        </li>
+        <li class="patient-drawer__item">
+          <div class="patient-drawer__row">
+            <a href="#alur-janji" class="patient-drawer__link" id="drawerAlurLink">ALUR JANJI</a>
+          </div>
+        </li>
+        <li class="patient-drawer__item">
+          <div class="patient-drawer__row">
+            <a href="/login.html" id="drawerAuthLink" class="patient-drawer__link">MASUK AKUN</a>
+          </div>
+        </li>
+        <li class="patient-drawer__item">
+          <div class="patient-drawer__row">
+            <a href="/daftar.html" id="drawerProfileLink" class="patient-drawer__link">DAFTAR BARU</a>
+          </div>
+        </li>
+      </ul>
+
+      <div class="patient-drawer__spacer" aria-hidden="true">
+        <div class="patient-drawer__stamp">NC</div>
+      </div>
+
+      <div class="patient-drawer__footer">
+        <a href="/login.html?next=%2Fpasien%2Fjanji-temu.html" id="drawerCtaBtn" class="patient-drawer__pill-cta">
+          <span>BUAT JANJI</span>
+          <span class="patient-arrow" aria-hidden="true">&#x2197;</span>
+        </a>
+      </div>
+    </div>
+  </div>
 
   <main id="main">
     <!-- Hero Section (2-Column Warm Clinical Modernism) -->
@@ -166,6 +221,11 @@
             <div class="section-kicker">Spesialisasi Medis</div>
             <h2 id="poliSectionTitle">Pilihan Poliklinik</h2>
             <p>Pilih poliklinik tujuan untuk melihat jadwal dokter spesialis dan melakukan pendaftaran janji temu.</p>
+          </div>
+          <div class="poli-search-wrap" role="search">
+            <label for="poliSearchInput" class="sr-only">Cari poliklinik atau dokter</label>
+            <input type="search" id="poliSearchInput" class="poli-search-input"
+              placeholder="Cari poliklinik atau dokter…" autocomplete="off">
           </div>
         </div>
 

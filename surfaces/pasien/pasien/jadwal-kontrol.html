@@ -28,31 +28,125 @@
 <body data-surface="pasien">
   <a href="#main-content" class="skip-link">Langsung ke isi utama</a>
 
-  <header class="site-header">
-    <nav class="navbar" aria-label="Navigasi utama">
-      <a href="/index.html" class="brand" translate="no">
-        <span class="brand-text">Nuvacare</span>
+  <div class="patient-nav-frame">
+    <header class="patient-navbar" aria-label="Navigasi pasien">
+      <a href="/index.html" class="patient-brand" id="navClinicName" translate="no">
+        <span class="patient-brand-text">Nuvacare</span>
       </a>
-      <ul class="nav-links">
-        <li><a href="/index.html">Beranda</a></li>
-        <li><a href="/pasien/janji-temu.html">Janji Temu</a></li>
-        <li><a href="/pasien/jadwal-kontrol.html" class="active" aria-current="page">Jadwal Kontrol</a></li>
-        <li><a href="/pasien/riwayat.html">Riwayat Pemeriksaan</a></li>
-        <li class="nav-user">
-          <a href="/pasien/profil.html" class="nav-profile-link">
-            <span id="navUserName" class="nav-user-name"></span>
-            <span class="nav-profile-badge">Profil</span>
+
+      <!-- Mobile Drawer Trigger Button -->
+      <button type="button" class="patient-drawer-btn" id="mobileMenuBtn" aria-expanded="false" aria-controls="patientDrawerPanel" aria-label="Buka navigasi">
+        <span class="patient-drawer-btn__label">MENU</span>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <path d="M4 7h16M4 12h16M4 17h16" />
+        </svg>
+      </button>
+
+      <!-- Desktop Cluster (>= 901px) -->
+      <div class="patient-nav-cluster" id="patientDesktopNavCluster">
+        <ul class="patient-nav-links">
+          <li><a href="/index.html" class="patient-nav-link">BERANDA</a></li>
+          <li><a href="/pasien/janji-temu.html" class="patient-nav-link">JANJI TEMU</a></li>
+          <li><a href="/pasien/jadwal-kontrol.html" class="patient-nav-link active" aria-current="page">JADWAL KONTROL</a></li>
+          <li><a href="/pasien/riwayat.html" class="patient-nav-link">RIWAYAT</a></li>
+        </ul>
+
+        <div class="patient-nav-auth">
+          <button type="button" id="logoutBtn" class="patient-nav-link" style="background: none; border: none; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer;">KELUAR</button>
+          <a href="/pasien/profil.html" class="patient-pill-cta">
+            <span id="navUserName">Profil</span>
+            <span class="patient-arrow" aria-hidden="true">&#x2197;</span>
           </a>
-          <button type="button" id="logoutBtn" class="btn btn-secondary btn-sm">Keluar</button>
-        </li>
-      </ul>
-    </nav>
-  </header>
+        </div>
+      </div>
+    </header>
+  </div>
+
+  <!-- Mobile Drawer Modal/Overlay -->
+  <div class="patient-drawer-overlay" id="patientDrawerOverlay" aria-hidden="true">
+    <div class="patient-drawer" id="patientDrawerPanel" role="dialog" aria-modal="true" aria-label="Menu navigasi">
+      <div class="patient-drawer__top">
+        <a href="/index.html" class="patient-brand" style="text-decoration: none;">Nuvacare</a>
+        <button type="button" class="patient-drawer__close-btn" id="closeDrawerBtn" aria-label="Tutup menu">
+          <span>TUTUP &#x2715;</span>
+        </button>
+      </div>
+
+      <div class="patient-drawer__list">
+        <!-- Row 0: Beranda -->
+        <div class="patient-drawer__item">
+          <div class="patient-drawer__row">
+            <a href="/index.html" class="patient-drawer__link">BERANDA</a>
+            <span class="patient-arrow" aria-hidden="true">&#x2197;</span>
+          </div>
+        </div>
+
+        <!-- Row 1: Expandable Jadwal Kontrol (+) -->
+        <div class="patient-drawer__item patient-drawer__item--expandable" id="drawerRowJadwalKontrol">
+          <div class="patient-drawer__row">
+            <a href="/pasien/jadwal-kontrol.html" class="patient-drawer__link active" aria-current="page">JADWAL KONTROL</a>
+            <button type="button" class="patient-drawer__toggle-expand" id="drawerExpandBtn" aria-expanded="false" aria-controls="drawerSubInfo" aria-label="Tampilkan info jadwal kontrol">+</button>
+          </div>
+          <div class="patient-drawer__subinfo" id="drawerSubInfo" hidden>
+            <p class="patient-drawer__subtext">Kunjungan ulang terjadwal dari dokter Anda.</p>
+            <a href="/pasien/jadwal-kontrol.html" class="patient-drawer__sublink">Buka Jadwal Kontrol &#x2197;</a>
+          </div>
+        </div>
+
+        <!-- Row 2: Janji Temu -->
+        <div class="patient-drawer__item">
+          <div class="patient-drawer__row">
+            <a href="/pasien/janji-temu.html" class="patient-drawer__link">JANJI TEMU</a>
+            <span class="patient-arrow" aria-hidden="true">&#x2197;</span>
+          </div>
+        </div>
+
+        <!-- Row 3: Riwayat Pemeriksaan -->
+        <div class="patient-drawer__item">
+          <div class="patient-drawer__row">
+            <a href="/pasien/riwayat.html" class="patient-drawer__link">RIWAYAT PEMERIKSAAN</a>
+            <span class="patient-arrow" aria-hidden="true">&#x2197;</span>
+          </div>
+        </div>
+
+        <!-- Row 4: Profil Saya -->
+        <div class="patient-drawer__item">
+          <div class="patient-drawer__row">
+            <a href="/pasien/profil.html" class="patient-drawer__link">PROFIL SAYA</a>
+            <span class="patient-arrow" aria-hidden="true">&#x2197;</span>
+          </div>
+        </div>
+
+        <!-- Row 5: Logout Action -->
+        <div class="patient-drawer__item">
+          <div class="patient-drawer__row">
+            <button type="button" id="mobileLogoutBtn" class="patient-drawer__link" style="background: none; border: none; text-align: left; width: 100%; cursor: pointer;">KELUAR</button>
+            <span class="patient-arrow" aria-hidden="true">&#x2197;</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Spacer with Cropped Right Watermark ( N ) -->
+      <div class="patient-drawer__spacer">
+        <div class="patient-drawer__stamp" aria-hidden="true">
+          <span>N</span>
+        </div>
+      </div>
+
+      <!-- Bottom Full-Width Pill CTA -->
+      <div class="patient-drawer__footer">
+        <a href="/pasien/profil.html" class="patient-drawer__pill-cta" id="drawerBottomPill">
+          <span id="drawerBottomPillLabel">PROFIL SAYA</span>
+          <span class="patient-arrow" aria-hidden="true">&#x2197;</span>
+        </a>
+      </div>
+    </div>
+  </div>
 
   <main id="main-content" class="container">
     <div class="mb-4">
       <h1 class="page-title">Jadwal Kontrol</h1>
-      <p class="text-sm text-muted">Jadwal kunjungan ulang yang ditetapkan oleh klinik setelah pemeriksaan sebelumnya.</p>
+      <p class="text-sm text-muted">Jadwal kunjungan ulang dari dokter Anda.</p>
     </div>
 
     <section class="card" aria-label="Tabel jadwal kontrol">

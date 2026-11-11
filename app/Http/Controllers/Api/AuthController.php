@@ -84,6 +84,7 @@ class AuthController extends Controller
                 },
             ],
             'birth_date' => ['nullable', 'date', 'before:today'],
+            'gender' => ['nullable', 'string', 'in:Laki-laki,Perempuan'],
             'address' => ['nullable', 'string', 'max:1000'],
             'password' => ['required', 'string', PasswordRule::min(8), 'confirmed'],
         ], [
@@ -126,6 +127,7 @@ class AuthController extends Controller
                     'email' => $validated['email'],
                     'phone_number' => $normalizedPhone,
                     'birth_date' => $validated['birth_date'] ?? null,
+                    'gender' => $validated['gender'] ?? null,
                     'address' => $validated['address'] ?? null,
                     'password_hash' => Hash::make($validated['password']),
                 ],
@@ -201,6 +203,7 @@ class AuthController extends Controller
             'phone_number' => $canonicalPhone,
             'phone_verified_at' => now(),
             'birth_date' => $payload['birth_date'] ?? null,
+            'gender' => $payload['gender'] ?? null,
             'address' => $payload['address'] ?? null,
         ]);
         $user->password = $payload['password_hash'];
@@ -246,6 +249,7 @@ class AuthController extends Controller
                 },
             ],
             'birth_date' => ['nullable', 'date', 'before:today'],
+            'gender' => ['nullable', 'string', 'in:Laki-laki,Perempuan'],
             'address' => ['nullable', 'string', 'max:1000'],
         ], [
             'email.unique' => 'Alamat email ini sudah terdaftar pada akun lain.',
@@ -263,6 +267,7 @@ class AuthController extends Controller
             'phone_number' => $normalizedPhone,
             'phone_verified_at' => $normalizedPhone !== null ? now() : null,
             'birth_date' => $validated['birth_date'] ?? null,
+            'gender' => $validated['gender'] ?? null,
             'address' => $validated['address'] ?? null,
         ]);
 
@@ -962,6 +967,7 @@ class AuthController extends Controller
             'phone_number' => $user->phone_number,
             'phone_verified' => $user->hasVerifiedPhone(),
             'birth_date' => $user->birth_date?->format('Y-m-d'),
+            'gender' => $user->gender,
             'address' => $user->address,
             'has_google' => ! empty($user->google_id),
             'permissions' => $permissions,

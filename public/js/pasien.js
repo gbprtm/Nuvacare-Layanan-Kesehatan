@@ -3,8 +3,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const currentUser = api.getUser();
   const userNameEl = document.getElementById('navUserName');
-  if (userNameEl && currentUser) {
-    userNameEl.textContent = currentUser.name;
+  const drawerBottomPillLabel = document.getElementById('drawerBottomPillLabel');
+  if (currentUser) {
+    if (userNameEl) {
+      userNameEl.textContent = `${currentUser.name} · Profil`;
+    }
+    if (drawerBottomPillLabel) {
+      drawerBottomPillLabel.textContent = `PROFIL (${currentUser.name})`;
+    }
   }
 
   const logoutBtn = document.getElementById('logoutBtn');
@@ -13,6 +19,81 @@ document.addEventListener('DOMContentLoaded', () => {
       e.preventDefault();
       if (confirm('Keluar dari akunmu sekarang?')) {
         api.logout();
+      }
+    });
+  }
+
+  const mobileLogoutBtn = document.getElementById('mobileLogoutBtn');
+  if (mobileLogoutBtn) {
+    mobileLogoutBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (confirm('Keluar dari akunmu sekarang?')) {
+        api.logout();
+      }
+    });
+  }
+
+  const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+  const drawerOverlay = document.getElementById('patientDrawerOverlay');
+  const closeDrawerBtn = document.getElementById('closeDrawerBtn');
+  const drawerExpandBtn = document.getElementById('drawerExpandBtn');
+  const drawerSubInfo = document.getElementById('drawerSubInfo');
+
+  const closeDrawer = () => {
+    if (!drawerOverlay) return;
+    drawerOverlay.classList.remove('is-open');
+    if (mobileMenuBtn) {
+      mobileMenuBtn.setAttribute('aria-expanded', 'false');
+    }
+    document.body.style.overflow = '';
+  };
+
+  const openDrawer = () => {
+    if (!drawerOverlay) return;
+    drawerOverlay.classList.add('is-open');
+    if (mobileMenuBtn) {
+      mobileMenuBtn.setAttribute('aria-expanded', 'true');
+    }
+    document.body.style.overflow = 'hidden';
+  };
+
+  if (mobileMenuBtn && drawerOverlay) {
+    mobileMenuBtn.addEventListener('click', () => {
+      openDrawer();
+    });
+  }
+
+  if (closeDrawerBtn) {
+    closeDrawerBtn.addEventListener('click', () => {
+      closeDrawer();
+    });
+  }
+
+  if (drawerOverlay) {
+    drawerOverlay.addEventListener('click', (e) => {
+      if (e.target === drawerOverlay) {
+        closeDrawer();
+      }
+    });
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && drawerOverlay && drawerOverlay.classList.contains('is-open')) {
+      closeDrawer();
+    }
+  });
+
+  if (drawerExpandBtn && drawerSubInfo) {
+    drawerExpandBtn.addEventListener('click', () => {
+      const isExpanded = drawerExpandBtn.getAttribute('aria-expanded') === 'true';
+      if (isExpanded) {
+        drawerExpandBtn.setAttribute('aria-expanded', 'false');
+        drawerExpandBtn.textContent = '+';
+        drawerSubInfo.hidden = true;
+      } else {
+        drawerExpandBtn.setAttribute('aria-expanded', 'true');
+        drawerExpandBtn.textContent = '−';
+        drawerSubInfo.hidden = false;
       }
     });
   }
@@ -39,11 +120,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     loadProfile();
 
+    const resetBtn = document.getElementById('resetProfileBtn');
+    if (resetBtn) {
+      resetBtn.addEventListener('click', () => {
+        api.hideAlert('profileAlert');
+        loadProfile();
+      });
+    }
+
     profileForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       api.hideAlert('profileAlert');
 
-      const submitBtn = profileForm.querySelector('button[type="submit"]');
+      const submitBtn = document.getElementById('saveProfileBtn') || profileForm.querySelector('button[type="submit"]');
+      const submitBtnText = document.getElementById('saveProfileBtnText');
       const nameInput = document.getElementById('name');
       const name = nameInput.value.trim();
       const rawPhone = document.getElementById('phone_number').value.trim();
@@ -56,11 +146,8 @@ document.addEventListener('DOMContentLoaded', () => {
         phone_number = cleanDigits ? '62' + cleanDigits : '';
       }
       const birth_date = document.getElementById('birth_date').value;
+      const gender = document.getElementById('gender')?.value || null;
       const address = document.getElementById('address').value.trim();
-      const passwordInput = document.getElementById('password');
-      const passwordConfirmInput = document.getElementById('password_confirmation');
-      const password = passwordInput ? passwordInput.value : '';
-      const password_confirmation = passwordConfirmInput ? passwordConfirmInput.value : '';
 
       if (!name) {
         api.showAlert('profileAlert', 'Nama lengkap wajib diisi.', 'danger');
@@ -68,51 +155,34 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      if (password && password.length < 8) {
-        api.showAlert('profileAlert', 'Kata sandi baru minimal 8 karakter.', 'danger');
-        passwordInput.focus();
-        return;
-      }
-
-      if (password && password !== password_confirmation) {
-        api.showAlert('profileAlert', 'Konfirmasi kata sandi baru tidak cocok. Ketik ulang kata sandimu.', 'danger');
-        passwordConfirmInput.focus();
-        return;
-      }
-
-      const payload = { name, phone_number, birth_date: birth_date || null, address };
-      if (password) {
-        payload.password = password;
-        payload.password_confirmation = password_confirmation;
-      }
+      const payload = { name, phone_number, birth_date: birth_date || null, gender, address };
 
       try {
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Menyimpan…';
+        if (submitBtn) submitBtn.disabled = true;
+        if (submitBtnText) submitBtnText.textContent = 'Menyimpan…';
 
         const res = await api.request('/profil', {
           method: 'PATCH',
           body: JSON.stringify(payload)
         });
 
-        const updatedUser = { ...currentUser, name: res.data.name, phone_number: res.data.phone_number };
+        const updatedUser = { ...currentUser, name: res.data.name, phone_number: res.data.phone_number, gender: res.data.gender };
         api.setUser(updatedUser);
         if (userNameEl) userNameEl.textContent = res.data.name;
-        if (passwordInput) passwordInput.value = '';
-        if (passwordConfirmInput) passwordConfirmInput.value = '';
+        if (drawerBottomPillLabel) drawerBottomPillLabel.textContent = `PROFIL (${res.data.name})`;
 
         api.showAlert('profileAlert', res.message || 'Profil berhasil diperbarui.', 'success');
       } catch (err) {
         const msg =
-          err.errors?.password?.[0] ||
+          err.errors?.gender?.[0] ||
           err.errors?.birth_date?.[0] ||
           err.errors?.name?.[0] ||
           err.message ||
           'Gagal memperbarui profil. Periksa kembali isianmu.';
         api.showAlert('profileAlert', msg, 'danger');
       } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Simpan profil';
+        if (submitBtn) submitBtn.disabled = false;
+        if (submitBtnText) submitBtnText.textContent = 'Simpan Perubahan';
       }
     });
   }
@@ -143,6 +213,8 @@ async function loadProfile() {
     else if (rawPhone.startsWith('0')) rawPhone = rawPhone.substring(1);
     document.getElementById('phone_number').value = rawPhone;
     document.getElementById('birth_date').value = user.birth_date || '';
+    const genderEl = document.getElementById('gender');
+    if (genderEl) genderEl.value = user.gender || '';
     document.getElementById('address').value = user.address || '';
   } catch (err) {
     api.showAlert('profileAlert', 'Gagal memuat profil. Coba muat ulang halaman. (' + err.message + ')', 'danger');
@@ -254,126 +326,144 @@ async function initBookingPage() {
   const summaryPatientPhone = document.getElementById('summaryPatientPhone');
   const submitBookingBtn = document.getElementById('submitBookingBtn');
 
-  // Date Boundaries: Today up to 4 days ahead (H to H+4)
+  // Date Boundaries: Open calendar from today onwards based on doctor availability
   const todayObj = new Date();
   const todayStr = formatIsoDateLocal(todayObj);
-  const maxAllowedDateStr = addDaysToIso(todayStr, 4);
-  const maxAllowedDateObj = parseIsoDateLocal(maxAllowedDateStr);
 
   let currentCalYear = todayObj.getFullYear();
   let currentCalMonth = todayObj.getMonth();
   let stripStartStr = todayStr;
   let lastLoadedSlots = [];
+  let currentActiveStep = 1;
 
   if (dateInput) {
     dateInput.min = todayStr;
-    dateInput.max = maxAllowedDateStr;
+    dateInput.removeAttribute('max');
     // Keep empty initially so step 1 must be completed by patient selection
     dateInput.value = '';
   }
 
-  // Smooth scroll to step helper
-  const scrollToStep = (stepNumber) => {
-    const targetCard = document.getElementById(`stepCard${stepNumber}`) ||
-      document.querySelector(`[aria-labelledby="step${stepNumber}Title"]`) ||
-      document.querySelector(`[data-step="${stepNumber}"]`);
+  // Navigate to specific step (single active step wizard)
+  const goToStep = (stepNumber) => {
+    currentActiveStep = Math.max(1, Math.min(5, stepNumber));
+    syncStepProgression();
+    const targetCard = document.getElementById(`stepCard${currentActiveStep}`);
     if (targetCard && typeof targetCard.scrollIntoView === 'function') {
-      targetCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      targetCard.scrollIntoView({ behavior: 'auto', block: 'nearest' });
     }
   };
 
   // Progressive Disclosure: Sync Step Visibility & Stepper States
   const syncStepProgression = () => {
-    const step1Done = Boolean(dateInput && dateInput.value && dateInput.value >= todayStr && dateInput.value <= maxAllowedDateStr);
+    const step1Done = Boolean(dateInput && dateInput.value && dateInput.value >= todayStr);
     const step2Done = step1Done && Boolean(doctorSelect && doctorSelect.value);
     const step3Done = step2Done && Boolean(timeSelect && timeSelect.value);
     const step4Done = step3Done; // WhatsApp connected
     const step5Done = step3Done; // Ready to submit
 
-    const stepCard1 = document.getElementById('stepCard1');
-    const stepCard2 = document.getElementById('stepCard2');
-    const stepCard3 = document.getElementById('stepCard3');
-    const stepCard4 = document.getElementById('stepCard4');
-    const stepCard5 = document.getElementById('stepCard5');
+    // Boundary check: cannot skip ahead to incomplete prerequisite steps
+    if (currentActiveStep === 2 && !step1Done) currentActiveStep = 1;
+    if (currentActiveStep === 3 && !step2Done) currentActiveStep = step1Done ? 2 : 1;
+    if (currentActiveStep === 4 && !step3Done) currentActiveStep = step2Done ? 3 : (step1Done ? 2 : 1);
+    if (currentActiveStep === 5 && !step3Done) currentActiveStep = step2Done ? 3 : (step1Done ? 2 : 1);
 
-    // Step 1: Always visible
-    if (stepCard1) {
-      stepCard1.classList.remove('is-step-hidden');
-      stepCard1.classList.toggle('is-step-completed', step1Done);
-      stepCard1.classList.toggle('is-step-active', !step1Done);
+    const stepCards = [
+      document.getElementById('stepCard1'),
+      document.getElementById('stepCard2'),
+      document.getElementById('stepCard3'),
+      document.getElementById('stepCard4'),
+      document.getElementById('stepCard5')
+    ];
+
+    stepCards.forEach((card, idx) => {
+      if (!card) return;
+      const stepNum = idx + 1;
+      const isCurrent = stepNum === currentActiveStep;
+      card.classList.toggle('is-step-hidden', !isCurrent);
+      card.classList.toggle('is-step-active', isCurrent);
+      if (stepNum === 1) card.classList.toggle('is-step-completed', step1Done);
+      if (stepNum === 2) card.classList.toggle('is-step-completed', step2Done);
+      if (stepNum === 3) card.classList.toggle('is-step-completed', step3Done);
+      if (stepNum === 4) card.classList.toggle('is-step-completed', step4Done);
+    });
+
+    // Dynamic Back Button Labels
+    const backToStep1Label = document.getElementById('backToStep1Label');
+    if (backToStep1Label && dateInput && dateInput.value) {
+      backToStep1Label.textContent = `Ubah Tanggal (${formatFullDateId(dateInput.value)})`;
     }
 
-    // Step 2: Visible only if Step 1 is done
-    if (stepCard2) {
-      if (step1Done) {
-        stepCard2.classList.remove('is-step-hidden');
-        stepCard2.classList.toggle('is-step-completed', step2Done);
-        stepCard2.classList.toggle('is-step-active', !step2Done);
-      } else {
-        stepCard2.classList.add('is-step-hidden');
-        stepCard2.classList.remove('is-step-completed', 'is-step-active');
-      }
+    const backToStep2Label = document.getElementById('backToStep2Label');
+    if (backToStep2Label) {
+      const selectedDocId = parseInt(doctorSelect?.value || '0', 10);
+      const selectedPoliId = parseInt(poliSelect?.value || '0', 10);
+      const pObj = Array.isArray(poliData) ? poliData.find((p) => p.id === selectedPoliId) : null;
+      const dObj = pObj ? (pObj.doctors || []).find((d) => d.id === selectedDocId) : null;
+      backToStep2Label.textContent = dObj ? `Ubah Dokter (${dObj.name})` : 'Ubah Dokter Spesialis';
     }
 
-    // Step 3: Visible only if Step 2 is done
-    if (stepCard3) {
-      if (step2Done) {
-        stepCard3.classList.remove('is-step-hidden');
-        stepCard3.classList.toggle('is-step-completed', step3Done);
-        stepCard3.classList.toggle('is-step-active', !step3Done);
-      } else {
-        stepCard3.classList.add('is-step-hidden');
-        stepCard3.classList.remove('is-step-completed', 'is-step-active');
-      }
+    const backToStep3Label = document.getElementById('backToStep3Label');
+    if (backToStep3Label && timeSelect && timeSelect.value) {
+      backToStep3Label.textContent = `Ubah Jam Kunjungan (${timeSelect.value} WIB)`;
     }
 
-    // Step 4 & 5: Visible only if Step 3 is done
-    if (stepCard4) {
-      if (step3Done) {
-        stepCard4.classList.remove('is-step-hidden');
-        stepCard4.classList.add('is-step-completed');
-      } else {
-        stepCard4.classList.add('is-step-hidden');
-        stepCard4.classList.remove('is-step-completed', 'is-step-active');
-      }
-    }
-
-    if (stepCard5) {
-      if (step3Done) {
-        stepCard5.classList.remove('is-step-hidden');
-        stepCard5.classList.add('is-step-active');
-      } else {
-        stepCard5.classList.add('is-step-hidden');
-        stepCard5.classList.remove('is-step-completed', 'is-step-active');
-      }
-    }
-
-    // Stepper Items
-    const updateStepperItem = (stepId, isCompleted, isActive, isDisabled) => {
+    // Stepper Items (1-5)
+    const updateStepperItem = (stepId, stepNum, isDone) => {
       const el = document.getElementById(stepId);
       if (!el) return;
       el.classList.remove('is-completed', 'is-active', 'is-upcoming', 'is-disabled');
-      if (isCompleted) {
-        el.classList.add('is-completed');
-      } else if (isActive) {
+      if (stepNum === currentActiveStep) {
         el.classList.add('is-active');
-      } else if (isDisabled) {
+      } else if (isDone) {
+        el.classList.add('is-completed');
+      } else {
         el.classList.add('is-upcoming', 'is-disabled');
       }
     };
 
-    updateStepperItem('stepperStep1', step1Done, !step1Done, false);
-    updateStepperItem('stepperStep2', step2Done, step1Done && !step2Done, !step1Done);
-    updateStepperItem('stepperStep3', step3Done, step2Done && !step3Done, !step2Done);
-    updateStepperItem('stepperStep4', step4Done, false, !step3Done);
-    updateStepperItem('stepperStep5', false, step3Done, !step3Done);
+    updateStepperItem('stepperStep1', 1, step1Done);
+    updateStepperItem('stepperStep2', 2, step2Done);
+    updateStepperItem('stepperStep3', 3, step3Done);
+    updateStepperItem('stepperStep4', 4, step4Done);
+    updateStepperItem('stepperStep5', 5, step5Done);
 
     if (submitBookingBtn) {
       submitBookingBtn.disabled = !step3Done;
     }
   };
 
-  // Wire click to navigate stepper (only for unlocked steps)
+  // Wire step back and next buttons
+  const backToStep1Btn = document.getElementById('backToStep1Btn');
+  if (backToStep1Btn) {
+    backToStep1Btn.addEventListener('click', () => goToStep(1));
+  }
+
+  const backToStep2Btn = document.getElementById('backToStep2Btn');
+  if (backToStep2Btn) {
+    backToStep2Btn.addEventListener('click', () => goToStep(2));
+  }
+
+  const changeDateFromStep3Btn = document.getElementById('changeDateFromStep3Btn');
+  if (changeDateFromStep3Btn) {
+    changeDateFromStep3Btn.addEventListener('click', () => goToStep(1));
+  }
+
+  const backToStep3Btn = document.getElementById('backToStep3Btn');
+  if (backToStep3Btn) {
+    backToStep3Btn.addEventListener('click', () => goToStep(3));
+  }
+
+  const nextToStep5Btn = document.getElementById('nextToStep5Btn');
+  if (nextToStep5Btn) {
+    nextToStep5Btn.addEventListener('click', () => goToStep(5));
+  }
+
+  const backToStep4Btn = document.getElementById('backToStep4Btn');
+  if (backToStep4Btn) {
+    backToStep4Btn.addEventListener('click', () => goToStep(4));
+  }
+
+  // Wire click to navigate stepper (only for unlocked/completed steps or active)
   document.querySelectorAll('.stepper-step, .booking-stepper-item, .booking-nav-item').forEach((item) => {
     item.addEventListener('click', (e) => {
       if (item.classList.contains('is-disabled')) {
@@ -381,15 +471,19 @@ async function initBookingPage() {
         return;
       }
       const stepVal = parseInt(item.getAttribute('data-step') || '0', 10);
-      if (stepVal) scrollToStep(stepVal);
+      if (stepVal) goToStep(stepVal);
     });
   });
 
   // Sync patient info from authenticated session
+  const waPreview = document.getElementById('bookingWhatsappPreview');
   const syncPatientInfoUI = (userObj) => {
     if (!userObj) return;
     const phoneInfo = formatPatientPhoneDisplay(userObj.phone_number);
-    if (waDisplay) waDisplay.value = phoneInfo.localPart;
+    if (waDisplay) waDisplay.value = phoneInfo.localPart || '';
+    if (waPreview) {
+      waPreview.textContent = phoneInfo.localPart ? `+62 ${phoneInfo.localPart}` : '+62 8xx-xxxx-xxxx';
+    }
     if (summaryPatientName) summaryPatientName.textContent = userObj.name || 'Pasien Nuvacare';
     if (summaryPatientPhone) summaryPatientPhone.textContent = phoneInfo.fullLabel;
   };
@@ -462,34 +556,21 @@ async function initBookingPage() {
     syncStepProgression();
   };
 
-  // Month Calendar Grid Renderer
+  // Month Calendar Grid Renderer (Bebas Navigasi Bulan, Sinkron Jadwal Dokter)
   const renderMonthCalendar = (year, month) => {
     if (calendarMonthLabel) {
       calendarMonthLabel.textContent = `${MONTH_NAMES_ID[month]} ${year}`;
     }
 
-    // Boundary check for Previous Button: user cannot navigate before current month
+    // Free month navigation: previous and next buttons remain enabled for exploring calendar
     if (calendarPrevBtn) {
-      const isPastMonth = (year < todayObj.getFullYear()) ||
-        (year === todayObj.getFullYear() && month <= todayObj.getMonth());
-      calendarPrevBtn.disabled = isPastMonth;
-      if (isPastMonth) {
-        calendarPrevBtn.setAttribute('aria-disabled', 'true');
-      } else {
-        calendarPrevBtn.removeAttribute('aria-disabled');
-      }
+      calendarPrevBtn.disabled = false;
+      calendarPrevBtn.removeAttribute('aria-disabled');
     }
 
-    // Boundary check for Next Button: cannot navigate past month of max allowed date (H+4)
     if (calendarNextBtn) {
-      const nextMonthFirstDate = new Date(year, month + 1, 1);
-      const isBeyondWindow = formatIsoDateLocal(nextMonthFirstDate) > maxAllowedDateStr;
-      calendarNextBtn.disabled = isBeyondWindow;
-      if (isBeyondWindow) {
-        calendarNextBtn.setAttribute('aria-disabled', 'true');
-      } else {
-        calendarNextBtn.removeAttribute('aria-disabled');
-      }
+      calendarNextBtn.disabled = false;
+      calendarNextBtn.removeAttribute('aria-disabled');
     }
 
     if (!calendarDaysGrid) return;
@@ -513,9 +594,13 @@ async function initBookingPage() {
 
     // Days in current month
     for (let d = 1; d <= daysInMonth; d++) {
+      const dateObj = new Date(year, month, d);
+      const dayOfWeek = dateObj.getDay(); // 0 = Minggu
       const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
       const isToday = dateStr === todayStr;
-      const isAvailable = dateStr >= todayStr && dateStr <= maxAllowedDateStr;
+      const isSunday = dayOfWeek === 0;
+      const isPast = dateStr < todayStr;
+      const isAvailable = !isPast && !isSunday;
       const isSelected = dateStr === selectedDateStr;
 
       if (isAvailable) {
@@ -528,14 +613,14 @@ async function initBookingPage() {
             aria-pressed="${isSelected ? 'true' : 'false'}"
           >
             <span class="calendar-day-number">${d}</span>
-            ${isToday ? '<span class="calendar-day-badge">Hari ini</span>' : '<span class="calendar-day-status">Tersedia</span>'}
+            ${isToday ? '<span class="calendar-day-badge">Hari ini</span>' : ''}
           </button>
         `);
       } else {
         cells.push(`
-          <div class="calendar-day-cell is-disabled ${isToday ? 'is-today' : ''}" aria-disabled="true">
+          <div class="calendar-day-cell is-disabled ${isSunday ? 'is-sunday' : ''} ${isToday ? 'is-today' : ''}" aria-disabled="true" title="${isSunday ? 'Klinik Tutup (Hari Minggu)' : 'Tanggal tidak tersedia'}">
             <span class="calendar-day-number">${d}</span>
-            ${isToday ? '<span class="calendar-day-badge">Hari ini</span>' : ''}
+            ${isToday ? '<span class="calendar-day-badge">Hari ini</span>' : (isSunday ? '<span class="calendar-day-status is-closed">Tutup</span>' : '')}
           </div>
         `);
       }
@@ -567,9 +652,7 @@ async function initBookingPage() {
         renderMonthCalendar(currentCalYear, currentCalMonth);
         renderDateStrip();
         updateBookingSummary();
-        if (!doctorSelect.value) {
-          scrollToStep(2);
-        }
+        goToStep(2);
       });
     });
   };
@@ -640,9 +723,7 @@ async function initBookingPage() {
         renderMonthCalendar(currentCalYear, currentCalMonth);
         renderDateStrip();
         updateBookingSummary();
-        if (!doctorSelect.value) {
-          scrollToStep(2);
-        }
+        goToStep(2);
       });
     });
   };
@@ -745,7 +826,7 @@ async function initBookingPage() {
         if (!chosenTime || !timeSelect) return;
         timeSelect.value = chosenTime;
         timeSelect.dispatchEvent(new Event('change'));
-        scrollToStep(4);
+        goToStep(4);
       });
     });
   };
@@ -848,7 +929,7 @@ async function initBookingPage() {
         }
         doctorSelect.value = targetDocId;
         doctorSelect.dispatchEvent(new Event('change'));
-        scrollToStep(3);
+        goToStep(3);
       });
     });
   };
@@ -1083,7 +1164,14 @@ async function initBookingPage() {
           })
         });
 
-        api.showAlert('bookingAlert', res.message || 'Janji temu berhasil dibuat.', 'success');
+        // Success Confirmation Modal
+        openBookingSuccessModal(res.data, {
+          polyclinic_id,
+          doctor_id,
+          appointment_date,
+          appointment_time
+        });
+
         bookingForm.reset();
         doctorSelect.innerHTML = '<option value="">Pilih poliklinik terlebih dahulu…</option>';
         doctorSelect.disabled = true;
@@ -1107,7 +1195,7 @@ async function initBookingPage() {
         updateBookingSummary();
 
         await loadPatientAppointments();
-        scrollToStep(1);
+        goToStep(1);
       } catch (err) {
         const msg =
           err.errors?.appointment_time?.[0] ||
@@ -1227,6 +1315,89 @@ function getStatusLabel(status) {
     case 'dibatalkan': return 'Dibatalkan';
     default: return status;
   }
+}
+
+function openBookingSuccessModal(appointment, fallbackForm) {
+  const modal = document.getElementById('bookingSuccessModal');
+  if (!modal) return;
+
+  const user = api.getUser() || {};
+  const apptId = appointment?.id || Math.floor(Math.random() * 90 + 10);
+  const dateStr = appointment?.appointment_date || fallbackForm?.appointment_date || '';
+  const timeStr = appointment?.appointment_time || fallbackForm?.appointment_time || '';
+  const dateClean = dateStr.replace(/-/g, '');
+  const poliId = appointment?.polyclinic_id || fallbackForm?.polyclinic_id || 1;
+  const docId = appointment?.doctor_id || fallbackForm?.doctor_id || 1;
+
+  const poliObj = Array.isArray(poliData) ? poliData.find((p) => p.id === parseInt(poliId, 10)) : null;
+  const docObj = poliObj ? (poliObj.doctors || []).find((d) => d.id === parseInt(docId, 10)) : null;
+
+  const bookingCode = `NC-POLI-${dateClean}-${String(apptId).padStart(2, '0')}`;
+  const queueBadge = `Poli #${String(apptId % 50 || 1).padStart(2, '0')}`;
+  const docName = appointment?.doctor?.name || docObj?.name || 'dr. Spesialis Nuvacare';
+  const poliName = appointment?.polyclinic?.name || poliObj?.name || 'Poliklinik Nuvacare';
+  const roomName = `Gedung Utama Lt. ${(parseInt(poliId, 10) % 3) + 1} \u2022 Ruang ${100 + parseInt(poliId, 10)}`;
+
+  let hour = parseInt(String(timeStr).split(':')[0], 10) || 9;
+  let endHour = String(hour + 1).padStart(2, '0');
+  let sessionName = hour < 12 ? 'Pagi' : hour < 15 ? 'Siang' : 'Sore';
+  let timeRange = `${timeStr} - ${endHour}:00 WIB (${sessionName})`;
+
+  const modalCode = document.getElementById('modalBookingCode');
+  const modalQueue = document.getElementById('modalQueueBadge');
+  const modalDoc = document.getElementById('modalDoctorName');
+  const modalPoli = document.getElementById('modalPoliName');
+  const modalRoom = document.getElementById('modalRoomName');
+  const modalDate = document.getElementById('modalDateVal');
+  const modalTime = document.getElementById('modalTimeVal');
+  const modalPatientName = document.getElementById('modalPatientNameVal');
+  const modalPatientRm = document.getElementById('modalPatientRmVal');
+  const modalPhoneDisplay = document.getElementById('modalPatientPhoneDisplay');
+
+  if (modalCode) modalCode.textContent = bookingCode;
+  if (modalQueue) modalQueue.textContent = queueBadge;
+  if (modalDoc) modalDoc.textContent = docName;
+  if (modalPoli) modalPoli.textContent = poliName;
+  if (modalRoom) modalRoom.textContent = roomName;
+  if (modalDate) modalDate.textContent = formatFullDateId(dateStr);
+  if (modalTime) modalTime.textContent = timeRange;
+  if (modalPatientName) modalPatientName.textContent = user.name || 'Pasien Nuvacare';
+  if (modalPatientRm) modalPatientRm.textContent = `#NC-${String(user.id || 1000).padStart(6, '0')}`;
+  if (modalPhoneDisplay) {
+    const pInfo = formatPatientPhoneDisplay(user.phone_number);
+    modalPhoneDisplay.textContent = pInfo.localPart ? `+62 ${pInfo.localPart}` : '+62 8xx-xxxx-xxxx';
+  }
+
+  // Generate QR Code for Ticket
+  const qrContainer = document.getElementById('ticketQrcodeContainer');
+  if (qrContainer) {
+    if (typeof QRCode !== 'undefined' && typeof QRCode.generateSvg === 'function') {
+      qrContainer.innerHTML = QRCode.generateSvg(bookingCode, { cellSize: 3.5, margin: 1 });
+    } else {
+      qrContainer.innerHTML = `<span style="font-size: 11px; color: #0037B0; font-weight: 700;">${bookingCode}</span>`;
+    }
+  }
+
+  modal.classList.add('is-open');
+  modal.setAttribute('aria-hidden', 'false');
+  document.body.style.overflow = 'hidden';
+
+  const closeBtn = document.getElementById('closeSuccessModalBtn');
+  const handleClose = () => {
+    modal.classList.remove('is-open');
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+  };
+
+  if (closeBtn) {
+    closeBtn.onclick = handleClose;
+  }
+
+  modal.onclick = (e) => {
+    if (e.target === modal) {
+      handleClose();
+    }
+  };
 }
 
 function escapeHtml(str) {
