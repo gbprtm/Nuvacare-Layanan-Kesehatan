@@ -28,42 +28,87 @@ class DoctorPortalAndCancellationApiTest extends TestCase
     {
         Carbon::setTestNow();
 
-        $allRequestIds = array_unique(array_merge(
-            $this->createdRequestIds,
-            ! empty($this->createdAppointmentIds)
-                ? CancellationRequest::whereIn('appointment_id', $this->createdAppointmentIds)->pluck('id')->all()
-                : []
-        ));
-
-        if (! empty($allRequestIds)) {
-            StatusChangeLog::where('subject_type', StatusChangeLog::SUBJECT_CANCELLATION_REQUEST)
-                ->whereIn('subject_id', $allRequestIds)
-                ->delete();
-
-            CancellationRequest::whereIn('id', $allRequestIds)->delete();
-        }
-
-        if (! empty($this->createdAppointmentIds)) {
-            StatusChangeLog::where('subject_type', StatusChangeLog::SUBJECT_APPOINTMENT)
-                ->whereIn('subject_id', $this->createdAppointmentIds)
-                ->delete();
-
-            Appointment::whereIn('id', $this->createdAppointmentIds)->delete();
-        }
-
-        foreach (array_reverse($this->createdDoctorIds) as $doctorId) {
-            Doctor::whereKey($doctorId)->delete();
-        }
-
-        foreach (array_reverse($this->createdUserIds) as $userId) {
-            $user = User::find($userId);
-            if ($user) {
-                $user->tokens()->delete();
-                $user->delete();
+        DB::transaction(function (): void {
+            if (DB::getDriverName() === 'pgsql') {
+                DB::statement('SET LOCAL search_path TO klinik, public');
             }
-        }
+
+            $allRequestIds = array_unique(array_merge(
+                $this->createdRequestIds,
+                ! empty($this->createdAppointmentIds)
+                    ? CancellationRequest::whereIn('appointment_id', $this->createdAppointmentIds)->pluck('id')->all()
+                    : []
+            ));
+
+            if (! empty($allRequestIds)) {
+                StatusChangeLog::where('subject_type', StatusChangeLog::SUBJECT_CANCELLATION_REQUEST)
+                    ->whereIn('subject_id', $allRequestIds)
+                    ->delete();
+
+                CancellationRequest::whereIn('id', $allRequestIds)->delete();
+            }
+
+            if (! empty($this->createdAppointmentIds)) {
+                StatusChangeLog::where('subject_type', StatusChangeLog::SUBJECT_APPOINTMENT)
+                    ->whereIn('subject_id', $this->createdAppointmentIds)
+                    ->delete();
+
+                Appointment::whereIn('id', $this->createdAppointmentIds)->delete();
+            }
+
+            foreach (array_reverse($this->createdDoctorIds) as $doctorId) {
+                Doctor::whereKey($doctorId)->delete();
+            }
+
+            foreach (array_reverse($this->createdUserIds) as $userId) {
+                $user = User::find($userId);
+                if ($user) {
+                    $user->tokens()->delete();
+                    $user->delete();
+                }
+            }
+        });
 
         parent::tearDown();
+    }
+
+    private function deleteAppointmentsSafely(array $appointmentIds): void
+    {
+        $ids = array_values(array_unique(array_filter($appointmentIds)));
+        if (empty($ids)) {
+            return;
+        }
+
+        DB::transaction(function () use ($ids): void {
+            if (DB::getDriverName() === 'pgsql') {
+                DB::statement('SET LOCAL search_path TO klinik, public');
+            }
+
+            $requestIds = CancellationRequest::whereIn('appointment_id', $ids)->pluck('id')->all();
+            if (! empty($requestIds)) {
+                StatusChangeLog::where('subject_type', StatusChangeLog::SUBJECT_CANCELLATION_REQUEST)
+                    ->whereIn('subject_id', $requestIds)
+                    ->delete();
+
+                CancellationRequest::whereIn('id', $requestIds)->delete();
+            }
+
+            StatusChangeLog::where('subject_type', StatusChangeLog::SUBJECT_APPOINTMENT)
+                ->whereIn('subject_id', $ids)
+                ->delete();
+
+            Appointment::whereIn('id', $ids)->delete();
+        });
+    }
+
+    private function cleanupAppointmentsForDoctorsDates(array $doctorIds, array $dates): void
+    {
+        $ids = Appointment::whereIn('doctor_id', $doctorIds)
+            ->whereIn('appointment_date', $dates)
+            ->pluck('id')
+            ->all();
+
+        $this->deleteAppointmentsSafely($ids);
     }
 
     public function test_doctor_rbac_minimal_read_isolation_and_read_only_table_snapshot(): void
@@ -86,9 +131,7 @@ class DoctorPortalAndCancellationApiTest extends TestCase
 
         $targetDate = now()->addDays(4)->format('Y-m-d');
 
-        Appointment::whereIn('doctor_id', [$doctor1->id, $otherDoctor->id])
-            ->whereDate('appointment_date', $targetDate)
-            ->delete();
+        $this->cleanupAppointmentsForDoctorsDates([$doctor1->id, $otherDoctor->id], [$targetDate]);
 
         $ownAppointment = Appointment::create([
             'user_id' => $patient->id,
@@ -239,7 +282,7 @@ class DoctorPortalAndCancellationApiTest extends TestCase
         $dokterToken = $dokterUser->createToken('dokter-token', ['surface:staf'])->plainTextToken;
 
         $baseDate = '2030-05-10';
-        Appointment::where('doctor_id', $doctor->id)->whereDate('appointment_date', $baseDate)->delete();
+        $this->cleanupAppointmentsForDoctorsDates([$doctor->id], [$baseDate]);
 
         // < 2 hours before appointment (08:00 now vs 09:00 appointment = 1 hour -> 422)
         $tooCloseApp = Appointment::create([
@@ -324,12 +367,8 @@ class DoctorPortalAndCancellationApiTest extends TestCase
         $dayResched = now()->addDays(26)->format('Y-m-d');
         $dayReject = now()->addDays(27)->format('Y-m-d');
 
-        Appointment::where('doctor_id', $doctor1->id)
-            ->whereIn('appointment_date', [$dayApprove, $dayResched, $dayReject])
-            ->delete();
-        Appointment::where('doctor_id', $repDoctor->id)
-            ->whereDate('appointment_date', $dayResched)
-            ->delete();
+        $this->cleanupAppointmentsForDoctorsDates([$doctor1->id], [$dayApprove, $dayResched, $dayReject]);
+        $this->cleanupAppointmentsForDoctorsDates([$repDoctor->id], [$dayResched, $dayReject]);
 
         $appApprove = Appointment::create([
             'user_id' => $patient1->id,
@@ -409,6 +448,7 @@ class DoctorPortalAndCancellationApiTest extends TestCase
         $this->withHeader('Authorization', 'Bearer '.$adminToken)
             ->postJson("/api/admin/pengajuan-pembatalan/{$reqApproveId}/tolak", [
                 'admin_note' => 'Admin kedua mencoba menolak.',
+                'substitute_doctor_id' => $repDoctor->id,
             ])
             ->assertStatus(409);
 
@@ -448,27 +488,52 @@ class DoctorPortalAndCancellationApiTest extends TestCase
         Http::assertSent(fn ($req) => str_contains((string) $req['target'], '6281277778888')
             && str_contains((string) $req['message'], 'dokter pengganti'));
 
-        // Criterion 10: Reject without note -> 422; with valid note -> 200, appointment remains terjadwal, patient NOT notified
+        // Criterion 10: Reject without note or substitute_doctor_id -> 422; with valid note & substitute_doctor_id -> 200, appointment reassigned & patient + substitute doctor notified
+        $this->withHeader('Authorization', 'Bearer '.$adminToken)
+            ->postJson("/api/admin/pengajuan-pembatalan/{$reqRejectId}/tolak", [
+                'admin_note' => 'Pengajuan ditolak tanpa memilih dokter pengganti.',
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['substitute_doctor_id']);
+
         $this->withHeader('Authorization', 'Bearer '.$adminToken)
             ->postJson("/api/admin/pengajuan-pembatalan/{$reqRejectId}/tolak", [
                 'admin_note' => 'No',
+                'substitute_doctor_id' => $repDoctor->id,
             ])
             ->assertStatus(422)
             ->assertJsonValidationErrors(['admin_note']);
 
         $sentCountBeforeReject = Http::recorded()->count();
-        $this->withHeader('Authorization', 'Bearer '.$adminToken)
+        $rejectRes = $this->withHeader('Authorization', 'Bearer '.$adminToken)
             ->postJson("/api/admin/pengajuan-pembatalan/{$reqRejectId}/tolak", [
-                'admin_note' => 'Tidak ada dokter pengganti pada jam tersebut.',
-            ])
-            ->assertStatus(200)
-            ->assertJsonPath('data.status', 'ditolak');
+                'admin_note' => 'Pengajuan ditolak dan jadwal dialihkan ke dokter pengganti.',
+                'substitute_doctor_id' => $repDoctor->id,
+            ]);
 
-        $this->assertEquals('terjadwal', $appReject->fresh()->status);
+        $rejectRes->assertStatus(200)
+            ->assertJsonPath('data.status', 'ditolak')
+            ->assertJsonPath('data.appointment.doctor_id', $repDoctor->id);
+
+        $rejectUserPayload = $rejectRes->json('data.appointment.user');
+        $this->assertIsArray($rejectUserPayload);
+        $this->assertArrayHasKey('medical_record_id', $rejectUserPayload);
+        $this->assertArrayHasKey('initial_name', $rejectUserPayload);
+        $this->assertArrayNotHasKey('phone_number', $rejectUserPayload);
+        $this->assertArrayNotHasKey('email', $rejectUserPayload);
+
+        $appReject->refresh();
+        $this->assertEquals('terjadwal', $appReject->status);
+        $this->assertEquals($repDoctor->id, $appReject->doctor_id);
 
         $recordedAfterReject = Http::recorded()->slice($sentCountBeforeReject);
-        foreach ($recordedAfterReject as [$sentRequest, $sentResponse]) {
-            $this->assertNotEquals('6281234567890', (string) $sentRequest['target']);
+        $targetsAfterReject = $recordedAfterReject->map(fn ($pair) => (string) ($pair[0]['target'] ?? ''))->all();
+        $this->assertContains('6281277778888', $targetsAfterReject);
+        if (! empty($patient1->phone_number)) {
+            $normalizedPatientPhone = str_starts_with($patient1->phone_number, '0')
+                ? '62'.substr($patient1->phone_number, 1)
+                : $patient1->phone_number;
+            $this->assertContains($normalizedPatientPhone, $targetsAfterReject);
         }
 
         // Audit logs endpoint returns complete timeline for admin, and hard delete method is not allowed (405)
@@ -503,7 +568,7 @@ class DoctorPortalAndCancellationApiTest extends TestCase
         $patient = User::where('role', 'pasien')->firstOrFail();
 
         $targetDate = now()->addDays(28)->format('Y-m-d');
-        Appointment::where('doctor_id', $doctor->id)->whereDate('appointment_date', $targetDate)->delete();
+        $this->cleanupAppointmentsForDoctorsDates([$doctor->id], [$targetDate]);
 
         $app = Appointment::create([
             'user_id' => $patient->id,
@@ -572,7 +637,11 @@ class DoctorPortalAndCancellationApiTest extends TestCase
 
         $d1 = '2030-06-03';
         $d2 = '2030-06-05';
-        Appointment::where('doctor_id', $doctor->id)->whereBetween('appointment_date', [$d1, $d2])->delete();
+        $rangeIds = Appointment::where('doctor_id', $doctor->id)
+            ->whereBetween('appointment_date', [$d1, $d2])
+            ->pluck('id')
+            ->all();
+        $this->deleteAppointmentsSafely($rangeIds);
 
         $elig1 = Appointment::create([
             'user_id' => $patient->id,
