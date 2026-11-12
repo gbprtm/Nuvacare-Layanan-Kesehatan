@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\DoctorSlotRequest;
 use App\Models\StatusChangeLog;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class DoctorSlotRequestWorkflowTest extends TestCase
@@ -14,11 +15,17 @@ class DoctorSlotRequestWorkflowTest extends TestCase
     protected function tearDown(): void
     {
         if (! empty($this->createdSlotRequestIds)) {
-            StatusChangeLog::where('subject_type', 'doctor_slot_request')
-                ->whereIn('subject_id', $this->createdSlotRequestIds)
-                ->delete();
+            DB::transaction(function (): void {
+                if (DB::getDriverName() === 'pgsql') {
+                    DB::statement('SET LOCAL search_path TO klinik, public');
+                }
 
-            DoctorSlotRequest::whereIn('id', $this->createdSlotRequestIds)->delete();
+                StatusChangeLog::where('subject_type', 'doctor_slot_request')
+                    ->whereIn('subject_id', $this->createdSlotRequestIds)
+                    ->delete();
+
+                DoctorSlotRequest::whereIn('id', $this->createdSlotRequestIds)->delete();
+            });
         }
 
         parent::tearDown();

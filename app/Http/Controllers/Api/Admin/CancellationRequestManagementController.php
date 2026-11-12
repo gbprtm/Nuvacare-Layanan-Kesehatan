@@ -7,6 +7,7 @@ use App\Models\Appointment;
 use App\Models\CancellationRequest;
 use App\Models\Doctor;
 use App\Models\StatusChangeLog;
+use App\Models\User;
 use App\Services\CancellationRequestService;
 use App\Services\StatusChangeLogger;
 use App\Services\WhatsAppNotificationService;
@@ -83,6 +84,7 @@ class CancellationRequestManagementController extends Controller
                 && $item->due_at !== null
                 && $item->due_at->lessThanOrEqualTo($now);
             $item->setAttribute('is_overdue', $isOverdue);
+            $this->maskPatientPrivacy($item);
         });
 
         $pendingCount = CancellationRequest::query()
@@ -199,11 +201,14 @@ class CancellationRequestManagementController extends Controller
 
         $whatsappNotification = $whatsApp->notifyScheduleUpdate($appointment, 'cancelled');
         $whatsApp->notifyDoctorDecision($cancellationRequest, CancellationRequest::STATUS_APPROVED);
+        $this->maskPatientPrivacy($cancellationRequest);
 
         return response()->json([
             'message' => 'Pengajuan pembatalan disetujui dan janji temu telah dibatalkan.',
             'data' => $cancellationRequest,
-            'whatsapp' => $whatsappNotification,
+            'whatsapp' => [
+                'sent' => (bool) ($whatsappNotification['sent'] ?? false),
+            ],
         ]);
     }
 
@@ -391,11 +396,14 @@ class CancellationRequestManagementController extends Controller
             CancellationRequest::STATUS_RESCHEDULED,
             $newDoctorIfChanged,
         );
+        $this->maskPatientPrivacy($cancellationRequest);
 
         return response()->json([
             'message' => 'Janji temu berhasil dijadwalkan ulang.',
             'data' => $cancellationRequest,
-            'whatsapp' => $whatsappNotification,
+            'whatsapp' => [
+                'sent' => (bool) ($whatsappNotification['sent'] ?? false),
+            ],
         ]);
     }
 
@@ -573,11 +581,14 @@ class CancellationRequestManagementController extends Controller
             CancellationRequest::STATUS_REJECTED,
             $substituteDoctor,
         );
+        $this->maskPatientPrivacy($cancellationRequest);
 
         return response()->json([
             'message' => 'Pengajuan pembatalan ditolak dan janji temu dialihkan ke dokter pengganti.',
             'data' => $cancellationRequest,
-            'whatsapp' => $whatsappNotification,
+            'whatsapp' => [
+                'sent' => (bool) ($whatsappNotification['sent'] ?? false),
+            ],
         ]);
     }
 
@@ -666,5 +677,51 @@ class CancellationRequestManagementController extends Controller
             'appointment.doctor',
             'handler:id,name',
         ]);
+    }
+
+    private function maskPatientPrivacy(CancellationRequest $cancellationRequest): void
+    {
+        if ($cancellationRequest->relationLoaded('doctor') && $cancellationRequest->doctor) {
+            $cancellationRequest->doctor->unsetRelation('user');
+        }
+
+        $appointment = $cancellationRequest->appointment;
+        if (! $appointment || ! $appointment->relationLoaded('user') || ! $appointment->user) {
+            return;
+        }
+
+        $user = $appointment->user;
+        $initialName = $this->formatInitialName($user->name);
+        $medicalRecordId = 'RM-'.str_pad((string) $user->id, 4, '0', STR_PAD_LEFT);
+
+        $appointment->setRelation(
+            'user',
+            (new User)->forceFill([
+                'id' => $user->id,
+                'name' => $initialName,
+            ])->setAttribute('medical_record_id', $medicalRecordId)
+                ->setAttribute('initial_name', $initialName),
+        );
+    }
+
+    private function formatInitialName(?string $name): string
+    {
+        $trimmed = trim((string) ($name ?? ''));
+        if ($trimmed === '') {
+            return 'Pasien';
+        }
+
+        $parts = preg_split('/\s+/', $trimmed) ?: [];
+        if (count($parts) <= 1) {
+            return $parts[0] ?? 'Pasien';
+        }
+
+        $first = array_shift($parts);
+        $initials = array_map(
+            fn (string $part): string => mb_strtoupper(mb_substr($part, 0, 1)).'.',
+            $parts,
+        );
+
+        return trim($first.' '.implode(' ', $initials));
     }
 }
