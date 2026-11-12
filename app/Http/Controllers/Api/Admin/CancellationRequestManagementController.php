@@ -409,54 +409,175 @@ class CancellationRequestManagementController extends Controller
 
         $validated = $request->validate([
             'admin_note' => ['required', 'string', 'min:5', 'max:500'],
+            'substitute_doctor_id' => ['required', 'integer', 'exists:doctors,id'],
         ]);
 
         $adminNote = trim($validated['admin_note']);
+        $substituteDoctorId = (int) $validated['substitute_doctor_id'];
 
-        $result = DB::transaction(function () use ($id, $adminNote, $request, $logger): array {
-            $guard = $this->lockPendingRequest($id);
-            if ($guard['status'] !== 200) {
-                return $guard;
-            }
+        try {
+            $result = DB::transaction(function () use ($id, $adminNote, $substituteDoctorId, $request, $logger): array {
+                $guard = $this->lockPendingRequest($id);
+                if ($guard['status'] !== 200) {
+                    return $guard;
+                }
 
-            /** @var CancellationRequest $lockedRequest */
-            $lockedRequest = $guard['request'];
+                /** @var CancellationRequest $lockedRequest */
+                $lockedRequest = $guard['request'];
 
-            $lockedRequest->update([
-                'status' => CancellationRequest::STATUS_REJECTED,
-                'handled_by' => $request->user()->id,
-                'handled_at' => now(),
-                'admin_note' => $adminNote,
-            ]);
+                $lockedAppointment = Appointment::query()
+                    ->whereKey($lockedRequest->appointment_id)
+                    ->lockForUpdate()
+                    ->first();
 
-            $logger->log(
-                subjectType: StatusChangeLog::SUBJECT_CANCELLATION_REQUEST,
-                subjectId: $lockedRequest->id,
-                actor: $request->user(),
-                fromStatus: CancellationRequest::STATUS_PENDING,
-                toStatus: CancellationRequest::STATUS_REJECTED,
-                reason: $adminNote,
-            );
+                if (! $lockedAppointment || $lockedAppointment->status !== 'terjadwal') {
+                    return [
+                        'status' => 409,
+                        'payload' => [
+                            'message' => 'Janji temu terkait sudah tidak berstatus terjadwal dan tidak dapat dialihkan.',
+                        ],
+                    ];
+                }
 
-            return [
-                'status' => 200,
-                'request' => $lockedRequest,
-            ];
-        });
+                $oldDoctorId = (int) $lockedAppointment->doctor_id;
+
+                if ($substituteDoctorId === $oldDoctorId) {
+                    $msg = 'Dokter pengganti harus berbeda dari dokter asal.';
+
+                    return [
+                        'status' => 422,
+                        'payload' => [
+                            'message' => $msg,
+                            'errors' => [
+                                'substitute_doctor_id' => [$msg],
+                            ],
+                        ],
+                    ];
+                }
+
+                $substituteDoctor = Doctor::query()
+                    ->where('id', $substituteDoctorId)
+                    ->where('polyclinic_id', $lockedAppointment->polyclinic_id)
+                    ->where('is_active', true)
+                    ->first();
+
+                if (! $substituteDoctor) {
+                    $msg = 'Dokter pengganti harus berasal dari poliklinik yang sama dan berstatus aktif.';
+
+                    return [
+                        'status' => 422,
+                        'payload' => [
+                            'message' => $msg,
+                            'errors' => [
+                                'substitute_doctor_id' => [$msg],
+                            ],
+                        ],
+                    ];
+                }
+
+                $slotTaken = Appointment::query()
+                    ->where('doctor_id', $substituteDoctor->id)
+                    ->whereDate('appointment_date', $lockedAppointment->appointment_date?->format('Y-m-d'))
+                    ->where('appointment_time', $lockedAppointment->appointment_time)
+                    ->where('status', 'terjadwal')
+                    ->where('id', '!=', $lockedAppointment->id)
+                    ->exists();
+
+                if ($slotTaken) {
+                    $msg = 'Jadwal dokter pengganti pada tanggal dan jam tersebut sudah terisi pasien lain.';
+
+                    return [
+                        'status' => 422,
+                        'payload' => [
+                            'message' => $msg,
+                            'errors' => [
+                                'substitute_doctor_id' => [$msg],
+                            ],
+                        ],
+                    ];
+                }
+
+                $changes = [
+                    'doctor_id' => [
+                        'old' => $oldDoctorId,
+                        'new' => $substituteDoctor->id,
+                    ],
+                ];
+
+                $lockedAppointment->update([
+                    'doctor_id' => $substituteDoctor->id,
+                ]);
+
+                $logger->log(
+                    subjectType: StatusChangeLog::SUBJECT_APPOINTMENT,
+                    subjectId: $lockedAppointment->id,
+                    actor: $request->user(),
+                    fromStatus: 'terjadwal',
+                    toStatus: 'terjadwal',
+                    reason: "Pengajuan pembatalan ditolak; dialihkan ke {$substituteDoctor->name}. {$adminNote}",
+                    changes: $changes,
+                );
+
+                $lockedRequest->update([
+                    'status' => CancellationRequest::STATUS_REJECTED,
+                    'handled_by' => $request->user()->id,
+                    'handled_at' => now(),
+                    'admin_note' => $adminNote,
+                ]);
+
+                $logger->log(
+                    subjectType: StatusChangeLog::SUBJECT_CANCELLATION_REQUEST,
+                    subjectId: $lockedRequest->id,
+                    actor: $request->user(),
+                    fromStatus: CancellationRequest::STATUS_PENDING,
+                    toStatus: CancellationRequest::STATUS_REJECTED,
+                    reason: $adminNote,
+                    changes: $changes,
+                );
+
+                return [
+                    'status' => 200,
+                    'request' => $lockedRequest,
+                    'appointment' => $lockedAppointment,
+                    'substitute_doctor' => $substituteDoctor,
+                ];
+            });
+        } catch (UniqueConstraintViolationException) {
+            $msg = 'Jadwal dokter pengganti pada tanggal dan jam tersebut sudah terisi pasien lain.';
+
+            return response()->json([
+                'message' => $msg,
+                'errors' => [
+                    'substitute_doctor_id' => [$msg],
+                ],
+            ], 422);
+        }
 
         if ($result['status'] !== 200) {
             return response()->json($result['payload'], $result['status']);
         }
 
+        /** @var Appointment $appointment */
+        $appointment = $result['appointment'];
         /** @var CancellationRequest $cancellationRequest */
         $cancellationRequest = $result['request'];
+        /** @var Doctor $substituteDoctor */
+        $substituteDoctor = $result['substitute_doctor'];
+
+        $appointment->load(['user', 'polyclinic', 'doctor']);
         $this->loadRequestRelations($cancellationRequest);
 
-        $whatsApp->notifyDoctorDecision($cancellationRequest, CancellationRequest::STATUS_REJECTED);
+        $whatsappNotification = $whatsApp->notifyScheduleUpdate($appointment, 'rescheduled');
+        $whatsApp->notifyDoctorDecision(
+            $cancellationRequest,
+            CancellationRequest::STATUS_REJECTED,
+            $substituteDoctor,
+        );
 
         return response()->json([
-            'message' => 'Pengajuan pembatalan ditolak dan janji temu tetap terjadwal.',
+            'message' => 'Pengajuan pembatalan ditolak dan janji temu dialihkan ke dokter pengganti.',
             'data' => $cancellationRequest,
+            'whatsapp' => $whatsappNotification,
         ]);
     }
 

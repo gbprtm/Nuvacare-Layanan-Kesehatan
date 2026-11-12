@@ -4,12 +4,14 @@ namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Appointment;
+use App\Models\CancellationRequest;
 use App\Models\Doctor;
 use App\Models\StatusChangeLog;
 use App\Models\User;
 use App\Services\CancellationRequestService;
 use App\Services\StatusChangeLogger;
 use App\Services\WhatsAppNotificationService;
+use Carbon\CarbonInterface;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -46,18 +48,21 @@ class AppointmentManagementController extends Controller
 
         $now = now();
         $appointments = $query->get();
-        $appointments->each(function (Appointment $appointment) use ($now): void {
-            if ($appointment->openCancellationRequest !== null) {
-                $openRequest = $appointment->openCancellationRequest;
-                $openRequest->setAttribute(
-                    'is_overdue',
-                    $openRequest->due_at !== null && $openRequest->due_at->lessThanOrEqualTo($now),
-                );
-            }
-        });
+        $totalCompletedCount = Appointment::query()->where('status', 'selesai')->count();
+
+        $formatted = $appointments->map(
+            fn (Appointment $appointment): array => $this->formatAdminAppointmentPayload($appointment, $now)
+        )->values();
 
         return response()->json([
-            'data' => $appointments,
+            'data' => $formatted,
+            'meta' => [
+                'total_count' => $formatted->count(),
+                'completed_count' => $formatted->where('status', 'selesai')->count(),
+                'total_completed_count' => $totalCompletedCount,
+                'scheduled_count' => $formatted->where('status', 'terjadwal')->count(),
+                'cancelled_count' => $formatted->where('status', 'dibatalkan')->count(),
+            ],
         ]);
     }
 
@@ -80,6 +85,17 @@ class AppointmentManagementController extends Controller
             'doctor_notes' => ['nullable', 'string', 'max:2000'],
         ]);
 
+        if (($validated['status'] ?? null) === 'selesai') {
+            $msg = 'Status selesai hanya dapat ditetapkan oleh dokter pemeriksa.';
+
+            return response()->json([
+                'message' => $msg,
+                'errors' => [
+                    'status' => [$msg],
+                ],
+            ], 403);
+        }
+
         try {
             $result = DB::transaction(function () use ($appointment, $validated, $request, $logger): array {
                 $locked = Appointment::query()
@@ -97,6 +113,31 @@ class AppointmentManagementController extends Controller
                 $nextTime = $validated['appointment_time'] ?? $oldTime;
                 $nextDoctorId = isset($validated['doctor_id']) ? (int) $validated['doctor_id'] : $oldDoctorId;
 
+                if ($nextStatus === 'dibatalkan' && $oldStatus !== 'dibatalkan') {
+                    $hasCancellationRequest = CancellationRequest::query()
+                        ->where('appointment_id', $locked->id)
+                        ->whereIn('status', [
+                            CancellationRequest::STATUS_PENDING,
+                            CancellationRequest::STATUS_APPROVED,
+                        ])
+                        ->exists();
+
+                    if (! $hasCancellationRequest) {
+                        $msg = 'Pembatalan janji temu sepihak oleh admin tidak diperbolehkan tanpa pengajuan pembatalan dokter.';
+
+                        return [
+                            'error' => true,
+                            'status_code' => 403,
+                            'payload' => [
+                                'message' => $msg,
+                                'errors' => [
+                                    'status' => [$msg],
+                                ],
+                            ],
+                        ];
+                    }
+                }
+
                 if (isset($validated['doctor_id'])) {
                     $doctor = Doctor::query()
                         ->where('id', $nextDoctorId)
@@ -107,6 +148,7 @@ class AppointmentManagementController extends Controller
                     if (! $doctor) {
                         return [
                             'error' => true,
+                            'status_code' => 422,
                             'payload' => [
                                 'message' => 'Dokter pengganti harus berasal dari poliklinik yang sama dan berstatus aktif.',
                             ],
@@ -128,6 +170,7 @@ class AppointmentManagementController extends Controller
 
                         return [
                             'error' => true,
+                            'status_code' => 422,
                             'payload' => [
                                 'message' => $msg,
                                 'errors' => [
@@ -203,7 +246,7 @@ class AppointmentManagementController extends Controller
         }
 
         if ($result['error']) {
-            return response()->json($result['payload'], 422);
+            return response()->json($result['payload'], $result['status_code'] ?? 422);
         }
 
         /** @var Appointment $updatedAppointment */
@@ -342,5 +385,94 @@ class AppointmentManagementController extends Controller
         return response()->json([
             'data' => $patients,
         ]);
+    }
+
+    private function formatAdminAppointmentPayload(Appointment $appointment, CarbonInterface $now): array
+    {
+        $openRequest = $appointment->openCancellationRequest;
+        $openRequestPayload = null;
+        if ($openRequest !== null) {
+            $openRequestPayload = [
+                'id' => $openRequest->id,
+                'appointment_id' => $openRequest->appointment_id,
+                'doctor_id' => $openRequest->doctor_id,
+                'reason_category' => $openRequest->reason_category,
+                'reason' => $openRequest->reason,
+                'status' => $openRequest->status,
+                'batch_id' => $openRequest->batch_id,
+                'due_at' => $openRequest->due_at?->toIso8601String(),
+                'is_overdue' => $openRequest->due_at !== null && $openRequest->due_at->lessThanOrEqualTo($now),
+                'created_at' => $openRequest->created_at?->toIso8601String(),
+            ];
+        }
+
+        $sanitizedUser = $this->formatAdminUserPrivacy($appointment->user);
+
+        return [
+            'id' => $appointment->id,
+            'user_id' => $appointment->user_id,
+            'polyclinic_id' => $appointment->polyclinic_id,
+            'doctor_id' => $appointment->doctor_id,
+            'appointment_date' => $appointment->appointment_date?->format('Y-m-d'),
+            'appointment_time' => $appointment->appointment_time,
+            'type' => $appointment->type,
+            'status' => $appointment->status,
+            'complaint' => $appointment->complaint,
+            'doctor_notes' => $appointment->doctor_notes,
+            'created_at' => $appointment->created_at?->toIso8601String(),
+            'updated_at' => $appointment->updated_at?->toIso8601String(),
+            'user' => $sanitizedUser,
+            'patient' => $sanitizedUser,
+            'polyclinic' => $appointment->polyclinic ? [
+                'id' => $appointment->polyclinic->id,
+                'name' => $appointment->polyclinic->name,
+            ] : null,
+            'doctor' => $appointment->doctor ? [
+                'id' => $appointment->doctor->id,
+                'polyclinic_id' => $appointment->doctor->polyclinic_id,
+                'name' => $appointment->doctor->name,
+                'is_active' => $appointment->doctor->is_active,
+                'schedule_label' => $appointment->doctor->schedule_label,
+            ] : null,
+            'open_cancellation_request' => $openRequestPayload,
+        ];
+    }
+
+    private function formatAdminUserPrivacy(?User $user): ?array
+    {
+        if (! $user) {
+            return null;
+        }
+
+        $initialName = $this->formatInitialName($user->name);
+        $medicalRecordId = 'RM-'.str_pad((string) $user->id, 4, '0', STR_PAD_LEFT);
+
+        return [
+            'id' => $user->id,
+            'medical_record_id' => $medicalRecordId,
+            'name' => $initialName,
+            'initial_name' => $initialName,
+        ];
+    }
+
+    private function formatInitialName(?string $name): string
+    {
+        $trimmed = trim((string) ($name ?? ''));
+        if ($trimmed === '') {
+            return 'Pasien';
+        }
+
+        $parts = preg_split('/\s+/', $trimmed) ?: [];
+        if (count($parts) <= 1) {
+            return $parts[0] ?? 'Pasien';
+        }
+
+        $first = array_shift($parts);
+        $initials = array_map(
+            fn (string $part): string => mb_strtoupper(mb_substr($part, 0, 1)).'.',
+            $parts,
+        );
+
+        return trim($first.' '.implode(' ', $initials));
     }
 }
