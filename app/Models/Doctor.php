@@ -55,4 +55,9 @@ class Doctor extends Model
     {
         return $this->hasMany(CancellationRequest::class, 'doctor_id');
     }
+
+    public function slotRequests(): HasMany
+    {
+        return $this->hasMany(DoctorSlotRequest::class, 'doctor_id');
+    }
 }
