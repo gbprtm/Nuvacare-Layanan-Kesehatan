@@ -1,5 +1,7 @@
 let doctorAppointmentsCache = [];
 let doctorRequestsCache = [];
+let doctorSlotRequestsCache = [];
+let doctorMasterPoliCache = [];
 let selectedDoctorAppointmentId = null;
 let pendingWithdrawRequestId = null;
 let batchPreviewSeq = 0;
@@ -36,7 +38,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   await syncDoctorUserFromServer();
   await Promise.all([
     loadDoctorAppointments(),
-    loadDoctorRequests()
+    loadDoctorRequests(),
+    loadDoctorSlotRequests(),
+    loadDoctorMasterPoli()
   ]);
 });
 
@@ -87,6 +91,7 @@ function getLocalIsoDate(offsetDays = 0) {
 function initDoctorTabs() {
   const tabAppointmentsBtn = document.getElementById('tabBtnAppointments');
   const tabRequestsBtn = document.getElementById('tabBtnRequests');
+  const tabSlotRequestsBtn = document.getElementById('tabBtnSlotRequests');
 
   if (tabAppointmentsBtn) {
     tabAppointmentsBtn.addEventListener('click', () => switchDoctorTab('appointments'));
@@ -97,31 +102,49 @@ function initDoctorTabs() {
       loadDoctorRequests();
     });
   }
+  if (tabSlotRequestsBtn) {
+    tabSlotRequestsBtn.addEventListener('click', () => {
+      switchDoctorTab('slotRequests');
+      loadDoctorSlotRequests();
+    });
+  }
 }
 
 function switchDoctorTab(tabName) {
   const tabAppointmentsBtn = document.getElementById('tabBtnAppointments');
   const tabRequestsBtn = document.getElementById('tabBtnRequests');
+  const tabSlotRequestsBtn = document.getElementById('tabBtnSlotRequests');
   const viewAppointments = document.getElementById('viewAppointments');
   const viewRequests = document.getElementById('viewRequests');
+  const viewSlotRequests = document.getElementById('viewSlotRequests');
 
   const isAppointments = tabName === 'appointments';
+  const isRequests = tabName === 'requests';
+  const isSlotRequests = tabName === 'slotRequests';
 
   if (tabAppointmentsBtn) {
     tabAppointmentsBtn.classList.toggle('is-active', isAppointments);
     tabAppointmentsBtn.setAttribute('aria-selected', isAppointments ? 'true' : 'false');
   }
   if (tabRequestsBtn) {
-    tabRequestsBtn.classList.toggle('is-active', !isAppointments);
-    tabRequestsBtn.setAttribute('aria-selected', !isAppointments ? 'true' : 'false');
+    tabRequestsBtn.classList.toggle('is-active', isRequests);
+    tabRequestsBtn.setAttribute('aria-selected', isRequests ? 'true' : 'false');
+  }
+  if (tabSlotRequestsBtn) {
+    tabSlotRequestsBtn.classList.toggle('is-active', isSlotRequests);
+    tabSlotRequestsBtn.setAttribute('aria-selected', isSlotRequests ? 'true' : 'false');
   }
   if (viewAppointments) {
     viewAppointments.hidden = !isAppointments;
     viewAppointments.style.display = isAppointments ? '' : 'none';
   }
   if (viewRequests) {
-    viewRequests.hidden = isAppointments;
-    viewRequests.style.display = isAppointments ? 'none' : '';
+    viewRequests.hidden = !isRequests;
+    viewRequests.style.display = isRequests ? '' : 'none';
+  }
+  if (viewSlotRequests) {
+    viewSlotRequests.hidden = !isSlotRequests;
+    viewSlotRequests.style.display = isSlotRequests ? '' : 'none';
   }
 }
 
@@ -510,8 +533,47 @@ function renderDoctorDetailPanel(d) {
     }
   }
 
+  const completeBtn = document.getElementById('detailCompleteBtn');
+  const quickCancelBtn = document.getElementById('detailQuickCancelBtn');
+  const quickCancelHint = document.getElementById('detailQuickCancelHint');
   const reqCancelBtn = document.getElementById('detailRequestCancelBtn');
   const hintEl = document.getElementById('detailEligibilityHint');
+
+  if (completeBtn) {
+    if (d.status === 'terjadwal') {
+      completeBtn.hidden = false;
+      completeBtn.style.display = '';
+      completeBtn.onclick = () => openCompleteAppointmentModal(d);
+    } else {
+      completeBtn.hidden = true;
+      completeBtn.style.display = 'none';
+      completeBtn.onclick = null;
+    }
+  }
+
+  const canQuickCancel = isAppointmentQuickCancellable(d);
+  if (quickCancelBtn) {
+    if (canQuickCancel) {
+      quickCancelBtn.hidden = false;
+      quickCancelBtn.style.display = '';
+      quickCancelBtn.onclick = () => openQuickCancelModal(d);
+    } else {
+      quickCancelBtn.hidden = true;
+      quickCancelBtn.style.display = 'none';
+      quickCancelBtn.onclick = null;
+    }
+  }
+  if (quickCancelHint) {
+    if (canQuickCancel && d.quick_cancel_deadline_at) {
+      quickCancelHint.hidden = false;
+      quickCancelHint.style.display = 'block';
+      quickCancelHint.textContent = `Batas batal cepat 15 menit: ${formatDateTimeId(d.quick_cancel_deadline_at)}`;
+    } else {
+      quickCancelHint.hidden = true;
+      quickCancelHint.style.display = 'none';
+      quickCancelHint.textContent = '';
+    }
+  }
 
   if (d.can_request_cancellation) {
     if (reqCancelBtn) {
@@ -540,6 +602,9 @@ function initDoctorModals() {
   initSingleCancelModal();
   initBatchCancelModal();
   initWithdrawModal();
+  initQuickCancelModal();
+  initCompleteAppointmentModal();
+  initSlotRequestModal();
 
   document.querySelectorAll('[data-close-modal]').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -548,7 +613,14 @@ function initDoctorModals() {
     });
   });
 
-  ['singleCancelModal', 'batchCancelModal', 'withdrawConfirmModal'].forEach((modalId) => {
+  [
+    'singleCancelModal',
+    'batchCancelModal',
+    'withdrawConfirmModal',
+    'quickCancelModal',
+    'completeAppointmentModal',
+    'slotRequestModal'
+  ].forEach((modalId) => {
     const modal = document.getElementById(modalId);
     if (!modal) return;
     modal.addEventListener('click', (e) => {
@@ -562,7 +634,14 @@ function initDoctorModals() {
 function setupDoctorEscapeHandler() {
   window.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
-    const modalIds = ['withdrawConfirmModal', 'batchCancelModal', 'singleCancelModal'];
+    const modalIds = [
+      'slotRequestModal',
+      'completeAppointmentModal',
+      'quickCancelModal',
+      'withdrawConfirmModal',
+      'batchCancelModal',
+      'singleCancelModal'
+    ];
     for (const id of modalIds) {
       const modal = document.getElementById(id);
       if (modal && isModalOpen(modal)) {
@@ -1271,4 +1350,443 @@ function escapeHtml(str) {
   const div = document.createElement('div');
   div.textContent = String(str);
   return div.innerHTML;
+}
+
+function isAppointmentQuickCancellable(d) {
+  if (!d || d.status !== 'terjadwal') return false;
+  if (typeof d.can_quick_cancel === 'boolean') return d.can_quick_cancel;
+  if (!d.created_at) return false;
+  const createdMs = new Date(d.created_at).getTime();
+  if (Number.isNaN(createdMs)) return false;
+  return Date.now() - createdMs <= 15 * 60 * 1000;
+}
+
+async function loadDoctorMasterPoli() {
+  try {
+    const res = await api.request('/master-poli', { priority: 'low' });
+    doctorMasterPoliCache = Array.isArray(res.data) ? res.data : [];
+  } catch (err) {
+    doctorMasterPoliCache = [];
+  }
+}
+
+function getDoctorSamePoliDoctors(poliId) {
+  if (!Array.isArray(doctorMasterPoliCache) || !doctorMasterPoliCache.length) return [];
+  const poli = doctorMasterPoliCache.find((p) => Number(p.id) === Number(poliId));
+  if (!poli || !Array.isArray(poli.doctors)) return [];
+  return poli.doctors.filter((doc) => doc && (doc.is_active === undefined || Boolean(doc.is_active)));
+}
+
+function initQuickCancelModal() {
+  const form = document.getElementById('quickCancelForm');
+  if (!form) return;
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    api.hideAlert('quickCancelAlert');
+
+    const apptId = Number(document.getElementById('quickCancelAppointmentId')?.value);
+    const reason = (document.getElementById('quickCancelReason')?.value || '').trim();
+    const submitBtn = document.getElementById('submitQuickCancelBtn');
+
+    if (!apptId) {
+      api.showAlert('quickCancelAlert', 'ID janji temu tidak ditemukan.', 'danger');
+      return;
+    }
+
+    const originalText = submitBtn ? submitBtn.textContent : '';
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Membatalkan...';
+    }
+
+    try {
+      const payload = reason ? { reason } : {};
+      const res = await api.request(`/dokter/janji-temu/${apptId}/batal-cepat`, {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+
+      closeDoctorModal(document.getElementById('quickCancelModal'));
+      api.showAlert('doctorPortalAlert', res.message || 'Janji temu berhasil dibatalkan dalam batas waktu 15 menit.', 'success');
+
+      await Promise.all([
+        loadDoctorAppointments(),
+        loadDoctorRequests()
+      ]);
+      if (Number(selectedDoctorAppointmentId) === apptId) {
+        await selectDoctorAppointment(apptId);
+      }
+    } catch (err) {
+      api.showAlert('quickCancelAlert', err.message || 'Gagal melakukan pembatalan cepat.', 'danger');
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText || 'Ya, Batalkan Sekarang';
+      }
+    }
+  });
+}
+
+function openQuickCancelModal(d) {
+  const modal = document.getElementById('quickCancelModal');
+  if (!modal || !d) return;
+
+  api.hideAlert('quickCancelAlert');
+  const idInput = document.getElementById('quickCancelAppointmentId');
+  const reasonEl = document.getElementById('quickCancelReason');
+  const summaryEl = document.getElementById('quickCancelSummary');
+
+  if (idInput) idInput.value = String(d.id);
+  if (reasonEl) reasonEl.value = '';
+  if (summaryEl) {
+    const patientName = d.patient?.name || 'Pasien';
+    const deadlineText = d.quick_cancel_deadline_at ? formatDateTimeId(d.quick_cancel_deadline_at) : '15 menit sejak dibuat';
+    summaryEl.innerHTML = `
+      <div class="detail-open-request-box">
+        <div><strong>Pasien:</strong> ${escapeHtml(patientName)}</div>
+        <div><strong>Jadwal:</strong> ${escapeHtml(api.formatDate(d.appointment_date))}, ${escapeHtml(d.appointment_time || '09:00')} WIB</div>
+        <div><strong>Batas batal cepat:</strong> ${escapeHtml(deadlineText)}</div>
+      </div>
+    `;
+  }
+
+  openDoctorModal(modal, reasonEl);
+}
+
+function initCompleteAppointmentModal() {
+  const form = document.getElementById('completeAppointmentForm');
+  const notesEl = document.getElementById('completeDoctorNotes');
+  const countEl = document.getElementById('completeDoctorNotesCount');
+  const followUpCheckbox = document.getElementById('completeScheduleFollowUp');
+  const followUpFields = document.getElementById('completeFollowUpFields');
+  const followUpDate = document.getElementById('completeFollowUpDate');
+
+  if (notesEl && countEl) {
+    notesEl.addEventListener('input', () => {
+      countEl.textContent = `${notesEl.value.length}/1000`;
+    });
+  }
+
+  if (followUpCheckbox && followUpFields) {
+    followUpCheckbox.addEventListener('change', () => {
+      const checked = followUpCheckbox.checked;
+      followUpFields.hidden = !checked;
+      followUpFields.style.display = checked ? 'block' : 'none';
+      if (followUpDate) {
+        followUpDate.required = checked;
+      }
+    });
+  }
+
+  if (!form) return;
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    api.hideAlert('completeModalAlert');
+
+    const apptId = Number(document.getElementById('completeAppointmentId')?.value);
+    const notes = (notesEl?.value || '').trim();
+    const shouldFollowUp = Boolean(followUpCheckbox?.checked);
+    const followDate = followUpDate?.value || '';
+    const followDoctorId = document.getElementById('completeFollowUpDoctorId')?.value || '';
+    const submitBtn = document.getElementById('submitCompleteBtn');
+
+    if (!apptId) {
+      api.showAlert('completeModalAlert', 'ID janji temu tidak ditemukan.', 'danger');
+      return;
+    }
+    if (notes.length < 5) {
+      api.showAlert('completeModalAlert', 'Catatan pemeriksaan dokter minimal 5 karakter.', 'danger');
+      notesEl?.focus();
+      return;
+    }
+    if (shouldFollowUp && !followDate) {
+      api.showAlert('completeModalAlert', 'Pilih tanggal kontrol rutin terlebih dahulu.', 'danger');
+      followUpDate?.focus();
+      return;
+    }
+
+    const payload = { doctor_notes: notes };
+    if (shouldFollowUp) {
+      payload.follow_up_date = followDate;
+      if (followDoctorId) {
+        payload.follow_up_doctor_id = Number(followDoctorId);
+      }
+    }
+
+    const originalText = submitBtn ? submitBtn.textContent : '';
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Menyimpan...';
+    }
+
+    try {
+      const res = await api.request(`/dokter/janji-temu/${apptId}/selesai`, {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+
+      closeDoctorModal(document.getElementById('completeAppointmentModal'));
+      const followUpCreated = res.data?.follow_up_appointment;
+      const msg = followUpCreated
+        ? `${res.message || 'Pemeriksaan selesai.'} Jadwal kontrol rutin berhasil dibuat untuk ${api.formatDate(followUpCreated.appointment_date)}.`
+        : (res.message || 'Janji temu ditandai selesai dan catatan dokter tersimpan.');
+      api.showAlert('doctorPortalAlert', msg, 'success');
+
+      await Promise.all([
+        loadDoctorAppointments(),
+        loadDoctorRequests()
+      ]);
+      if (Number(selectedDoctorAppointmentId) === apptId) {
+        await selectDoctorAppointment(apptId);
+      }
+    } catch (err) {
+      api.showAlert('completeModalAlert', err.message || 'Gagal menyelesaikan pemeriksaan janji temu.', 'danger');
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText || 'Simpan & Tandai Selesai';
+      }
+    }
+  });
+}
+
+async function openCompleteAppointmentModal(d) {
+  const modal = document.getElementById('completeAppointmentModal');
+  if (!modal || !d) return;
+
+  api.hideAlert('completeModalAlert');
+  const idInput = document.getElementById('completeAppointmentId');
+  const notesEl = document.getElementById('completeDoctorNotes');
+  const countEl = document.getElementById('completeDoctorNotesCount');
+  const summaryEl = document.getElementById('completeModalSummary');
+  const followUpCheckbox = document.getElementById('completeScheduleFollowUp');
+  const followUpFields = document.getElementById('completeFollowUpFields');
+  const followUpDate = document.getElementById('completeFollowUpDate');
+  const followUpDoctorSelect = document.getElementById('completeFollowUpDoctorId');
+
+  if (idInput) idInput.value = String(d.id);
+  if (notesEl) notesEl.value = '';
+  if (countEl) countEl.textContent = '0/1000';
+  if (followUpCheckbox) followUpCheckbox.checked = false;
+  if (followUpFields) {
+    followUpFields.hidden = true;
+    followUpFields.style.display = 'none';
+  }
+  if (followUpDate) {
+    followUpDate.value = '';
+    followUpDate.min = getLocalIsoDate(1);
+    followUpDate.required = false;
+  }
+
+  if (summaryEl) {
+    const patientName = d.patient?.name || 'Pasien';
+    summaryEl.innerHTML = `
+      <div class="detail-open-request-box">
+        <div><strong>Pasien:</strong> ${escapeHtml(patientName)}</div>
+        <div><strong>Poliklinik:</strong> ${escapeHtml(d.polyclinic?.name || '-')}</div>
+        <div><strong>Jadwal:</strong> ${escapeHtml(api.formatDate(d.appointment_date))}, ${escapeHtml(d.appointment_time || '09:00')} WIB</div>
+      </div>
+    `;
+  }
+
+  openDoctorModal(modal, notesEl);
+
+  if (followUpDoctorSelect) {
+    if (!doctorMasterPoliCache.length) {
+      await loadDoctorMasterPoli();
+    }
+    const user = api.getUser() || {};
+    const currentDoctorId = Number(d.doctor_id || user.doctor?.id || 0);
+    const currentDoctorName = d.doctor?.name || user.doctor?.name || user.name || 'Saya';
+    const poliId = d.polyclinic_id || d.polyclinic?.id || user.doctor?.polyclinic_id;
+    let doctors = getDoctorSamePoliDoctors(poliId);
+    if (!doctors.length && currentDoctorId) {
+      doctors = [{ id: currentDoctorId, name: currentDoctorName }];
+    }
+    followUpDoctorSelect.innerHTML = doctors.map((doc) => {
+      const selected = Number(doc.id) === currentDoctorId ? 'selected' : '';
+      return `<option value="${doc.id}" ${selected}>${escapeHtml(doc.name)}</option>`;
+    }).join('');
+  }
+}
+
+function initSlotRequestModal() {
+  const openBtns = [
+    document.getElementById('openSlotRequestBtn'),
+    document.getElementById('slotTabOpenModalBtn')
+  ];
+  openBtns.forEach((btn) => {
+    if (btn) btn.addEventListener('click', openSlotRequestModal);
+  });
+
+  const reloadBtn = document.getElementById('reloadSlotRequestsBtn');
+  if (reloadBtn) reloadBtn.addEventListener('click', loadDoctorSlotRequests);
+
+  const retryBtn = document.getElementById('retrySlotRequestsBtn');
+  if (retryBtn) retryBtn.addEventListener('click', loadDoctorSlotRequests);
+
+  const form = document.getElementById('slotRequestForm');
+  if (!form) return;
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    api.hideAlert('slotRequestModalAlert');
+
+    const scheduleDate = document.getElementById('slotScheduleDate')?.value || '';
+    const startTime = document.getElementById('slotStartTime')?.value || '';
+    const endTime = document.getElementById('slotEndTime')?.value || '';
+    const quota = Number(document.getElementById('slotQuota')?.value || 0);
+    const reason = (document.getElementById('slotReason')?.value || '').trim();
+    const submitBtn = document.getElementById('submitSlotRequestBtn');
+
+    if (!scheduleDate || !startTime || !endTime) {
+      api.showAlert('slotRequestModalAlert', 'Tanggal, jam mulai, dan jam selesai wajib diisi.', 'danger');
+      return;
+    }
+    if (endTime <= startTime) {
+      api.showAlert('slotRequestModalAlert', 'Jam selesai harus lebih lambat daripada jam mulai.', 'danger');
+      return;
+    }
+    if (!Number.isInteger(quota) || quota < 1 || quota > 50) {
+      api.showAlert('slotRequestModalAlert', 'Kuota pasien harus antara 1 sampai 50.', 'danger');
+      return;
+    }
+    if (reason.length < 5) {
+      api.showAlert('slotRequestModalAlert', 'Alasan pengajuan slot minimal 5 karakter.', 'danger');
+      return;
+    }
+
+    const originalText = submitBtn ? submitBtn.textContent : '';
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Mengirim...';
+    }
+
+    try {
+      const res = await api.request('/dokter/slot-tambahan', {
+        method: 'POST',
+        body: JSON.stringify({
+          schedule_date: scheduleDate,
+          start_time: startTime,
+          end_time: endTime,
+          quota,
+          reason
+        })
+      });
+
+      closeDoctorModal(document.getElementById('slotRequestModal'));
+      api.showAlert('doctorPortalAlert', res.message || 'Pengajuan slot tambahan berhasil dikirim ke admin.', 'success');
+      switchDoctorTab('slotRequests');
+      await loadDoctorSlotRequests();
+    } catch (err) {
+      api.showAlert('slotRequestModalAlert', err.message || 'Gagal mengirim pengajuan slot tambahan.', 'danger');
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText || 'Kirim Pengajuan Slot';
+      }
+    }
+  });
+}
+
+function openSlotRequestModal() {
+  const modal = document.getElementById('slotRequestModal');
+  if (!modal) return;
+
+  api.hideAlert('slotRequestModalAlert');
+  const dateInput = document.getElementById('slotScheduleDate');
+  const startInput = document.getElementById('slotStartTime');
+  const endInput = document.getElementById('slotEndTime');
+  const quotaInput = document.getElementById('slotQuota');
+  const reasonInput = document.getElementById('slotReason');
+
+  const today = getLocalIsoDate(0);
+  if (dateInput) {
+    dateInput.min = today;
+    dateInput.value = getLocalIsoDate(1);
+  }
+  if (startInput) startInput.value = '16:00';
+  if (endInput) endInput.value = '18:00';
+  if (quotaInput) quotaInput.value = '5';
+  if (reasonInput) reasonInput.value = '';
+
+  openDoctorModal(modal, dateInput);
+}
+
+async function loadDoctorSlotRequests() {
+  const loadingEl = document.getElementById('slotRequestsLoading');
+  const emptyEl = document.getElementById('slotRequestsEmpty');
+  const errorEl = document.getElementById('slotRequestsError');
+  const errorMsgEl = document.getElementById('slotRequestsErrorMsg');
+  const tableWrap = document.getElementById('slotRequestsTableWrap');
+  const tableBody = document.getElementById('slotRequestsTableBody');
+  const cardsEl = document.getElementById('slotRequestsCards');
+
+  if (!tableBody && !cardsEl) return;
+
+  if (loadingEl) loadingEl.hidden = false;
+  if (emptyEl) emptyEl.hidden = true;
+  if (errorEl) errorEl.hidden = true;
+  if (tableWrap) tableWrap.hidden = true;
+  if (cardsEl) cardsEl.innerHTML = '';
+
+  try {
+    const res = await api.request('/dokter/slot-tambahan', { priority: 'low' });
+    const items = Array.isArray(res.data) ? res.data : [];
+    doctorSlotRequestsCache = items;
+
+    if (loadingEl) loadingEl.hidden = true;
+
+    if (!items.length) {
+      if (emptyEl) emptyEl.hidden = false;
+      return;
+    }
+
+    if (tableWrap) tableWrap.hidden = false;
+    if (tableBody) {
+      tableBody.innerHTML = items.map((item) => {
+        const startLabel = String(item.start_time || '').slice(0, 5);
+        const endLabel = String(item.end_time || '').slice(0, 5);
+        return `
+          <tr>
+            <td><strong>${escapeHtml(api.formatDate(item.schedule_date))}</strong></td>
+            <td>${escapeHtml(startLabel)} - ${escapeHtml(endLabel)} WIB</td>
+            <td>${escapeHtml(String(item.quota || 0))} pasien</td>
+            <td>${escapeHtml(item.reason || '-')}</td>
+            <td><span class="badge ${getRequestBadgeClass(item.status)}">${escapeHtml(getRequestStatusLabel(item.status))}</span></td>
+            <td>${escapeHtml(item.admin_note || '-')}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    if (cardsEl) {
+      cardsEl.innerHTML = items.map((item) => {
+        const startLabel = String(item.start_time || '').slice(0, 5);
+        const endLabel = String(item.end_time || '').slice(0, 5);
+        return `
+          <article class="mobile-data-card">
+            <div class="mobile-card-head">
+              <div>
+                <strong>${escapeHtml(api.formatDate(item.schedule_date))}</strong>
+                <div class="text-sm text-muted">${escapeHtml(startLabel)} - ${escapeHtml(endLabel)} WIB</div>
+              </div>
+              <span class="badge ${getRequestBadgeClass(item.status)}">${escapeHtml(getRequestStatusLabel(item.status))}</span>
+            </div>
+            <div class="mobile-card-body">
+              <div><strong>Kuota:</strong> ${escapeHtml(String(item.quota || 0))} pasien</div>
+              <div><strong>Alasan:</strong> ${escapeHtml(item.reason || '-')}</div>
+              ${item.admin_note ? `<div><strong>Catatan admin:</strong> ${escapeHtml(item.admin_note)}</div>` : ''}
+            </div>
+          </article>
+        `;
+      }).join('');
+    }
+  } catch (err) {
+    if (loadingEl) loadingEl.hidden = true;
+    if (errorEl) errorEl.hidden = false;
+    if (errorMsgEl) errorMsgEl.textContent = err.message || 'Gagal memuat daftar pengajuan slot tambahan.';
+  }
 }

@@ -3,10 +3,12 @@
 use App\Http\Controllers\Api\Admin\AppointmentManagementController;
 use App\Http\Controllers\Api\Admin\CancellationRequestManagementController;
 use App\Http\Controllers\Api\Admin\DoctorController;
+use App\Http\Controllers\Api\Admin\DoctorSlotApprovalController;
 use App\Http\Controllers\Api\Admin\PolyclinicController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\Doctor\CancellationRequestController as DoctorCancellationRequestController;
 use App\Http\Controllers\Api\Doctor\DoctorAppointmentController;
+use App\Http\Controllers\Api\Doctor\DoctorSlotRequestController;
 use App\Http\Controllers\Api\Patient\AppointmentController;
 use App\Http\Controllers\Api\Patient\ControlScheduleController;
 use App\Http\Controllers\Api\Patient\HistoryController;
@@ -49,6 +51,7 @@ Route::middleware(['surface.route:pasien', 'auth:sanctum', 'surface.token', 'rol
 
     Route::get('/janji-temu', [AppointmentController::class, 'index']);
     Route::post('/janji-temu', [AppointmentController::class, 'store']);
+    Route::post('/janji-temu/{id}/batal', [AppointmentController::class, 'cancel'])->whereNumber('id');
 
     Route::get('/riwayat-pemeriksaan', [HistoryController::class, 'index']);
     Route::get('/jadwal-kontrol', [ControlScheduleController::class, 'index']);
@@ -66,6 +69,9 @@ Route::middleware(['surface.route:staf', 'staff.ip', 'auth:sanctum', 'surface.to
         Route::post('/dokter', [DoctorController::class, 'store']);
         Route::patch('/dokter/{id}', [DoctorController::class, 'updateStatus'])->whereNumber('id');
         Route::get('/pasien', [AppointmentManagementController::class, 'patients']);
+        Route::get('/slot-tambahan', [DoctorSlotApprovalController::class, 'index']);
+        Route::post('/slot-tambahan/{id}/setujui', [DoctorSlotApprovalController::class, 'approve'])->whereNumber('id');
+        Route::post('/slot-tambahan/{id}/tolak', [DoctorSlotApprovalController::class, 'reject'])->whereNumber('id');
 
         Route::middleware('feature:doctor_portal')->group(function () {
             Route::get('/dokter-akun', [DoctorController::class, 'index']);
@@ -86,9 +92,14 @@ Route::middleware(['surface.route:staf', 'staff.ip', 'feature:doctor_portal', 'a
     ->group(function () {
         Route::get('/janji-temu', [DoctorAppointmentController::class, 'index']);
         Route::get('/janji-temu/{id}', [DoctorAppointmentController::class, 'show'])->whereNumber('id');
+        Route::post('/janji-temu/{id}/batal-cepat', [DoctorCancellationRequestController::class, 'quickCancel'])->whereNumber('id');
+        Route::post('/janji-temu/{id}/selesai', [DoctorAppointmentController::class, 'complete'])->whereNumber('id');
         Route::post('/janji-temu/{id}/pengajuan-pembatalan', [DoctorCancellationRequestController::class, 'store'])->whereNumber('id');
 
         Route::get('/pengajuan-pembatalan', [DoctorCancellationRequestController::class, 'index']);
         Route::post('/pengajuan-pembatalan/massal', [DoctorCancellationRequestController::class, 'storeBatch']);
         Route::post('/pengajuan-pembatalan/{id}/tarik', [DoctorCancellationRequestController::class, 'withdraw'])->whereNumber('id');
+
+        Route::get('/slot-tambahan', [DoctorSlotRequestController::class, 'index']);
+        Route::post('/slot-tambahan', [DoctorSlotRequestController::class, 'store']);
     });
