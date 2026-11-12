@@ -341,6 +341,127 @@ class CancellationRequestController extends Controller
         ]);
     }
 
+    public function quickCancel(
+        Request $request,
+        int $id,
+        CancellationRequestService $service,
+        StatusChangeLogger $logger,
+        WhatsAppNotificationService $whatsApp,
+    ): JsonResponse {
+        Gate::authorize('pengajuan.ajukan');
+
+        $user = $request->user();
+        $doctor = $this->resolveDoctor($request);
+
+        $appointment = Appointment::query()
+            ->where('id', $id)
+            ->where('doctor_id', $doctor->id)
+            ->first();
+
+        if (! $appointment) {
+            return response()->json([
+                'message' => 'Janji temu tidak ditemukan.',
+            ], 404);
+        }
+
+        Gate::authorize('requestCancellation', $appointment);
+
+        if ($appointment->status !== 'terjadwal') {
+            return response()->json([
+                'message' => 'Pembatalan cepat hanya dapat dilakukan untuk janji temu berstatus terjadwal.',
+            ], 409);
+        }
+
+        $validated = $request->validate([
+            'reason' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $graceDeadline = $appointment->created_at?->copy()->addMinutes(15);
+        if ($graceDeadline === null || now()->greaterThan($graceDeadline)) {
+            return response()->json([
+                'message' => 'Jendela pembatalan cepat (15 menit pertama) telah berakhir. Silakan gunakan pengajuan pembatalan resmi.',
+            ], 422);
+        }
+
+        $reason = isset($validated['reason']) && trim((string) $validated['reason']) !== ''
+            ? trim((string) $validated['reason'])
+            : 'Pembatalan cepat oleh dokter dalam jendela 15 menit pertama.';
+
+        $result = DB::transaction(function () use ($appointment, $doctor, $user, $reason, $logger): array {
+            $lockedAppointment = Appointment::query()
+                ->whereKey($appointment->id)
+                ->where('doctor_id', $doctor->id)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $lockedAppointment) {
+                return [
+                    'status' => 404,
+                    'message' => 'Janji temu tidak ditemukan.',
+                ];
+            }
+
+            if ($lockedAppointment->status !== 'terjadwal') {
+                return [
+                    'status' => 409,
+                    'message' => 'Pembatalan cepat hanya dapat dilakukan untuk janji temu berstatus terjadwal.',
+                ];
+            }
+
+            $lockedDeadline = $lockedAppointment->created_at?->copy()->addMinutes(15);
+            if ($lockedDeadline === null || now()->greaterThan($lockedDeadline)) {
+                return [
+                    'status' => 422,
+                    'message' => 'Jendela pembatalan cepat (15 menit pertama) telah berakhir. Silakan gunakan pengajuan pembatalan resmi.',
+                ];
+            }
+
+            $lockedAppointment->update([
+                'status' => 'dibatalkan',
+            ]);
+
+            $logger->log(
+                subjectType: StatusChangeLog::SUBJECT_APPOINTMENT,
+                subjectId: $lockedAppointment->id,
+                actor: $user,
+                fromStatus: 'terjadwal',
+                toStatus: 'dibatalkan',
+                reason: $reason,
+                changes: ['quick_cancel' => true],
+            );
+
+            return [
+                'status' => 200,
+                'appointment' => $lockedAppointment,
+            ];
+        });
+
+        if ($result['status'] !== 200) {
+            return response()->json([
+                'message' => $result['message'],
+            ], $result['status']);
+        }
+
+        /** @var Appointment $cancelledAppointment */
+        $cancelledAppointment = $result['appointment'];
+        $cancelledAppointment->load(['user', 'polyclinic', 'doctor']);
+
+        $service->voidOpenRequestsForAppointment(
+            $cancelledAppointment,
+            $user,
+            'Janji temu dibatalkan cepat oleh dokter dalam jendela 15 menit.',
+        );
+
+        $whatsappNotification = $whatsApp->notifyScheduleUpdate($cancelledAppointment, 'cancelled');
+        $whatsApp->notifyAdminsNewRequest($doctor, [$cancelledAppointment]);
+
+        return response()->json([
+            'message' => 'Janji temu berhasil dibatalkan dalam jendela pembatalan cepat 15 menit.',
+            'data' => $service->formatDoctorAppointmentPayload($cancelledAppointment),
+            'whatsapp' => $whatsappNotification,
+        ]);
+    }
+
     /**
      * @return array{eligible: bool, code?: ?int, reason?: ?string, request?: CancellationRequest}
      */
