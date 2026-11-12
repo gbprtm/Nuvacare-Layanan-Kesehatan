@@ -277,6 +277,22 @@ class AppointmentManagementController extends Controller
 
         $whatsappNotification = $whatsApp->notifyScheduleUpdate($updatedAppointment, $reasonType);
 
+        if ($updatedAppointment->user) {
+            $updatedAppointment->setRelation(
+                'user',
+                (new User)->forceFill([
+                    'id' => $updatedAppointment->user->id,
+                    'name' => $this->formatInitialName($updatedAppointment->user->name),
+                ])->setAttribute(
+                    'medical_record_id',
+                    'RM-'.str_pad((string) $updatedAppointment->user->id, 4, '0', STR_PAD_LEFT),
+                )->setAttribute(
+                    'initial_name',
+                    $this->formatInitialName($updatedAppointment->user->name),
+                ),
+            );
+        }
+
         return response()->json([
             'message' => 'Data janji temu berhasil diperbarui',
             'data' => $updatedAppointment,
@@ -379,8 +395,19 @@ class AppointmentManagementController extends Controller
 
         $patients = User::where('role', 'pasien')
             ->orderBy('name', 'asc')
-            ->select(['id', 'name', 'email', 'phone_number'])
-            ->get();
+            ->select(['id', 'name'])
+            ->get()
+            ->map(function (User $patient): array {
+                $initialName = $this->formatInitialName($patient->name);
+
+                return [
+                    'id' => $patient->id,
+                    'medical_record_id' => 'RM-'.str_pad((string) $patient->id, 4, '0', STR_PAD_LEFT),
+                    'name' => $initialName,
+                    'initial_name' => $initialName,
+                ];
+            })
+            ->values();
 
         return response()->json([
             'data' => $patients,

@@ -7,6 +7,7 @@ use App\Models\CancellationRequest;
 use App\Models\Doctor;
 use App\Models\StatusChangeLog;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
@@ -23,40 +24,46 @@ class AdminPrivacyAndReassignmentTest extends TestCase
 
     protected function tearDown(): void
     {
-        $allRequestIds = array_unique(array_merge(
-            $this->createdRequestIds,
-            ! empty($this->createdAppointmentIds)
-                ? CancellationRequest::whereIn('appointment_id', $this->createdAppointmentIds)->pluck('id')->all()
-                : [],
-        ));
-
-        if (! empty($allRequestIds)) {
-            StatusChangeLog::where('subject_type', StatusChangeLog::SUBJECT_CANCELLATION_REQUEST)
-                ->whereIn('subject_id', $allRequestIds)
-                ->delete();
-
-            CancellationRequest::whereIn('id', $allRequestIds)->delete();
-        }
-
-        if (! empty($this->createdAppointmentIds)) {
-            StatusChangeLog::where('subject_type', StatusChangeLog::SUBJECT_APPOINTMENT)
-                ->whereIn('subject_id', $this->createdAppointmentIds)
-                ->delete();
-
-            Appointment::whereIn('id', $this->createdAppointmentIds)->delete();
-        }
-
-        foreach (array_reverse($this->createdDoctorIds) as $doctorId) {
-            Doctor::whereKey($doctorId)->delete();
-        }
-
-        foreach (array_reverse($this->createdUserIds) as $userId) {
-            $user = User::find($userId);
-            if ($user) {
-                $user->tokens()->delete();
-                $user->delete();
+        DB::transaction(function (): void {
+            if (DB::getDriverName() === 'pgsql') {
+                DB::statement('SET LOCAL search_path TO klinik, public');
             }
-        }
+
+            $allRequestIds = array_unique(array_merge(
+                $this->createdRequestIds,
+                ! empty($this->createdAppointmentIds)
+                    ? CancellationRequest::whereIn('appointment_id', $this->createdAppointmentIds)->pluck('id')->all()
+                    : [],
+            ));
+
+            if (! empty($allRequestIds)) {
+                StatusChangeLog::where('subject_type', StatusChangeLog::SUBJECT_CANCELLATION_REQUEST)
+                    ->whereIn('subject_id', $allRequestIds)
+                    ->delete();
+
+                CancellationRequest::whereIn('id', $allRequestIds)->delete();
+            }
+
+            if (! empty($this->createdAppointmentIds)) {
+                StatusChangeLog::where('subject_type', StatusChangeLog::SUBJECT_APPOINTMENT)
+                    ->whereIn('subject_id', $this->createdAppointmentIds)
+                    ->delete();
+
+                Appointment::whereIn('id', $this->createdAppointmentIds)->delete();
+            }
+
+            foreach (array_reverse($this->createdDoctorIds) as $doctorId) {
+                Doctor::whereKey($doctorId)->delete();
+            }
+
+            foreach (array_reverse($this->createdUserIds) as $userId) {
+                $user = User::find($userId);
+                if ($user) {
+                    $user->tokens()->delete();
+                    $user->delete();
+                }
+            }
+        });
 
         parent::tearDown();
     }
@@ -126,6 +133,16 @@ class AdminPrivacyAndReassignmentTest extends TestCase
         $this->assertSame('Budi S.', $item['patient']['initial_name'] ?? null);
         $this->assertArrayNotHasKey('phone_number', $item['user']);
         $this->assertArrayNotHasKey('email', $item['user']);
+
+        // Also verify /api/admin/pasien hides phone_number, email, and full name
+        $patientsRes = $this->withHeader('Authorization', 'Bearer '.$adminToken)
+            ->getJson('/api/admin/pasien');
+        $patientsRes->assertStatus(200);
+        $patientsRaw = $patientsRes->getContent() ?: '';
+        $this->assertStringNotContainsString('081299887766', $patientsRaw);
+        $this->assertStringNotContainsString('phone_number', $patientsRaw);
+        $this->assertStringNotContainsString($patient->email, $patientsRaw);
+        $this->assertStringNotContainsString('Budi Santoso', $patientsRaw);
     }
 
     public function test_admin_cannot_mark_completed_or_unilaterally_cancel_appointment(): void
@@ -285,6 +302,15 @@ class AdminPrivacyAndReassignmentTest extends TestCase
             ->assertStatus(422)
             ->assertJsonValidationErrors(['substitute_doctor_id']);
 
+        // Also verify GET /api/admin/pengajuan-pembatalan masks patient contact & full name
+        $reqListRes = $this->withHeader('Authorization', 'Bearer '.$adminToken)
+            ->getJson('/api/admin/pengajuan-pembatalan');
+        $reqListRes->assertStatus(200);
+        $reqListRaw = $reqListRes->getContent() ?: '';
+        $this->assertStringNotContainsString('081255556666', $reqListRaw);
+        $this->assertStringNotContainsString($patient->email, $reqListRaw);
+        $this->assertStringNotContainsString('Siti Aisyah', $reqListRaw);
+
         // Valid substitute doctor -> 200
         $rejectResponse = $this->withHeader('Authorization', 'Bearer '.$adminToken)
             ->postJson("/api/admin/pengajuan-pembatalan/{$cancellationRequest->id}/tolak", [
@@ -295,6 +321,11 @@ class AdminPrivacyAndReassignmentTest extends TestCase
         $rejectResponse->assertStatus(200)
             ->assertJsonPath('data.status', CancellationRequest::STATUS_REJECTED)
             ->assertJsonPath('data.appointment.doctor_id', $substituteDoctor->id);
+
+        $rejectRaw = $rejectResponse->getContent() ?: '';
+        $this->assertStringNotContainsString('081255556666', $rejectRaw);
+        $this->assertStringNotContainsString($patient->email, $rejectRaw);
+        $this->assertStringNotContainsString('Siti Aisyah', $rejectRaw);
 
         $freshAppointment = $appointment->fresh();
         $this->assertSame('terjadwal', $freshAppointment->status);
