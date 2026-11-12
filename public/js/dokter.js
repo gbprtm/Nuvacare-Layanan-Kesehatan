@@ -271,7 +271,7 @@ function setDoctorListState(stateEl, tableWrap, cardsEl, mode, message, retryFn 
     stateEl.innerHTML = `
       <div class="portal-state-box portal-state-box--error">
         <p>${escapeHtml(message)}</p>
-        <button type="button" class="btn btn-secondary portal-retry-btn">Coba lagi</button>
+        <button type="button" class="btn btn-secondary btn-touch portal-retry-btn">Coba lagi</button>
       </div>
     `;
     const retryBtn = stateEl.querySelector('.portal-retry-btn');
@@ -1726,6 +1726,9 @@ async function loadDoctorSlotRequests() {
 
   if (!tableBody && !cardsEl) return;
 
+  if (tableWrap && cardsEl) {
+    tableWrap.classList.add('has-mobile-cards');
+  }
   if (loadingEl) loadingEl.hidden = false;
   if (emptyEl) emptyEl.hidden = true;
   if (errorEl) errorEl.hidden = true;

@@ -309,7 +309,7 @@ function showAdminWhatsAppFeedback(res, targetAlertId = 'adminListAlert') {
     alertEl.innerHTML = `
       <div class="flex-between" style="flex-wrap: wrap;">
         <span>${escapeHtml(baseMsg)}. ${escapeHtml(gatewayStatus)}</span>
-        <a href="${escapeHtml(wa.whatsapp_url)}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm">
+        <a href="${escapeHtml(wa.whatsapp_url)}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-touch">
           Kirim via WhatsApp
         </a>
       </div>
@@ -350,8 +350,6 @@ function prefillControlForAppointment(id) {
   }
 }
 
-window.openUpdateModal = openUpdateModal;
-window.closeUpdateModal = closeUpdateModal;
 window.prefillControlForAppointment = prefillControlForAppointment;
 
 async function initScheduleControlForm() {
@@ -363,7 +361,12 @@ async function initScheduleControlForm() {
     const patientSelect = document.getElementById('controlPatientId');
     if (patientSelect) {
       patientSelect.innerHTML = '<option value="">Pilih pasien…</option>' +
-        (patientRes.data || []).map(p => `<option value="${p.id}">${escapeHtml(p.name)} (${escapeHtml(p.email)})</option>`).join('');
+        (patientRes.data || []).map(p => {
+          const rmPrefix = p.medical_record_id ? `${p.medical_record_id} - ` : '';
+          const displayName = p.initial_name || p.name || 'Pasien';
+          const suffix = p.email ? ` (${p.email})` : '';
+          return `<option value="${p.id}">${escapeHtml(rmPrefix + displayName + suffix)}</option>`;
+        }).join('');
     }
 
     adminMasterPoli = poliRes.data || [];
@@ -682,7 +685,7 @@ function setAdminRequestsState(stateEl, tableWrap, cardsEl, tableBody, mode, mes
       stateEl.innerHTML = `
         <div class="portal-state-box portal-state-box--error">
           <p>${escapeHtml(message)}</p>
-          <button type="button" class="btn btn-secondary admin-req-retry-btn">Coba lagi</button>
+          <button type="button" class="btn btn-secondary btn-touch admin-req-retry-btn">Coba lagi</button>
         </div>
       `;
       const retryBtn = stateEl.querySelector('.admin-req-retry-btn');
@@ -1131,7 +1134,7 @@ async function loadRescheduleAvailableSlots(doctorId, date, preferredTime = '') 
     if (slotsGrid) {
       slotsGrid.innerHTML = slots.map((s) => `
         <button type="button"
-          class="btn btn-sm ${s.time === timeSelect.value ? 'btn-primary' : 'btn-secondary'}"
+          class="btn btn-touch ${s.time === timeSelect.value ? 'btn-primary' : 'btn-secondary'}"
           data-reschedule-slot="${escapeHtml(s.time)}"
           ${s.available ? '' : 'disabled'}>
           ${escapeHtml(s.time)} WIB
@@ -1379,7 +1382,7 @@ async function openAuditLogModal(appointmentId) {
     bodyEl.innerHTML = `
       <div class="portal-state-box portal-state-box--error">
         <p>${escapeHtml(err.message || 'Gagal memuat riwayat perubahan status.')}</p>
-        <button type="button" class="btn btn-secondary btn-sm" onclick="openAuditLogModal(${appointmentId})">Coba lagi</button>
+        <button type="button" class="btn btn-secondary btn-touch" onclick="openAuditLogModal(${appointmentId})">Coba lagi</button>
       </div>
     `;
   }
@@ -1533,8 +1536,8 @@ async function loadMasterDataList() {
                     : '<span class="badge badge-janji_baru">Belum Punya Akun</span>';
 
                   const accountActionHtml = hasAccount
-                    ? `<button type="button" class="btn btn-secondary btn-sm" onclick="toggleDoctorAccountAccess(${merged.id}, ${!isAccessEnabled})">${isAccessEnabled ? 'Nonaktifkan Akses' : 'Aktifkan Akses'}</button>`
-                    : `<button type="button" class="btn btn-primary btn-sm" onclick="openDoctorAccountModal(${merged.id}, '${escapeJsString(merged.name)}')">Buat Akun</button>`;
+                    ? `<button type="button" class="btn btn-secondary btn-touch" onclick="toggleDoctorAccountAccess(${merged.id}, ${!isAccessEnabled})">${isAccessEnabled ? 'Nonaktifkan Akses' : 'Aktifkan Akses'}</button>`
+                    : `<button type="button" class="btn btn-primary btn-touch" onclick="openDoctorAccountModal(${merged.id}, '${escapeJsString(merged.name)}')">Buat Akun</button>`;
 
                   return `
                     <li style="display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; padding-bottom: var(--space-2); border-bottom: 1px solid var(--color-line);">
@@ -1549,7 +1552,7 @@ async function loadMasterDataList() {
                         ${accountEmail ? `<div class="text-muted text-sm">${escapeHtml(accountEmail)}</div>` : ''}
                       </div>
                       <div style="display: flex; flex-wrap: wrap; gap: var(--space-2);">
-                        <button type="button" class="btn btn-secondary btn-sm" onclick="toggleDoctorStatus(${merged.id}, ${!merged.is_active})">
+                        <button type="button" class="btn btn-secondary btn-touch" onclick="toggleDoctorStatus(${merged.id}, ${!merged.is_active})">
                           ${merged.is_active ? 'Nonaktifkan' : 'Aktifkan'}
                         </button>
                         ${accountActionHtml}
