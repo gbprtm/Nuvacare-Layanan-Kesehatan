@@ -2,6 +2,7 @@ let adminMasterPoli = [];
 let adminDoctorsCatalog = [];
 let adminAppointmentsCache = [];
 let adminRequestsCache = [];
+let adminSlotRequestsCache = [];
 let activeAdminRequestId = null;
 
 function getAdminEl(...ids) {
@@ -59,26 +60,35 @@ document.addEventListener('DOMContentLoaded', () => {
     initAdminCancellationInbox();
   }
 
+  if (
+    document.getElementById('adminTabBtnSlotRequests') ||
+    document.getElementById('adminSlotRequestsTableBody')
+  ) {
+    initAdminSlotRequests();
+  }
+
   if (document.getElementById('poliForm') || document.getElementById('doctorForm')) {
     initMasterData();
   }
 });
 
 function closeAllAdminModals() {
-  closeUpdateModal();
   closeAdminApproveModal();
   closeAdminRescheduleModal();
   closeAdminRejectModal();
+  closeAdminSlotApproveModal();
+  closeAdminSlotRejectModal();
   closeAuditLogModal();
   closeDoctorAccountModal();
 }
 
 function initAdminBackdropAndCloseButtons() {
   const modalIds = [
-    'updateModal',
     'adminApproveModal',
     'adminRescheduleModal',
     'adminRejectModal',
+    'adminSlotApproveModal',
+    'adminSlotRejectModal',
     'adminAuditLogModal',
     'auditLogModal',
     'doctorAccountModal'
@@ -143,44 +153,6 @@ async function initAppointmentManagement() {
 
   await loadAppointments();
 
-  const updateForm = document.getElementById('updateForm');
-  if (updateForm) {
-    updateForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      api.hideAlert('modalAlert');
-
-      const id = document.getElementById('modalAppointmentId').value;
-      const status = document.getElementById('modalStatus').value;
-      const appointment_date = document.getElementById('modalDate')?.value || undefined;
-      const appointment_time = document.getElementById('modalTime')?.value || undefined;
-      const doctor_notes = document.getElementById('modalNotes').value.trim();
-      const submitBtn = document.getElementById('modalSubmitBtn');
-
-      try {
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Menyimpan…';
-
-        const res = await api.request(`/admin/janji-temu/${id}`, {
-          method: 'PATCH',
-          body: JSON.stringify({ status, appointment_date, appointment_time, doctor_notes })
-        });
-
-        closeUpdateModal();
-        showAdminWhatsAppFeedback(res, 'adminListAlert');
-        await loadAppointments();
-        if (getAdminEl('adminRequestTableBody', 'adminRequestsTableBody', 'adminPendingReqBadge')) {
-          await loadCancellationRequests();
-        }
-      } catch (err) {
-        const msg = err.errors?.appointment_time?.[0] || err.message || 'Coba ulangi kembali.';
-        api.showAlert('modalAlert', 'Gagal menyimpan perubahan: ' + msg, 'danger');
-      } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Simpan';
-      }
-    });
-  }
-
   const scheduleControlForm = document.getElementById('scheduleControlForm');
   if (scheduleControlForm) {
     initScheduleControlForm();
@@ -190,6 +162,7 @@ async function initAppointmentManagement() {
 async function loadAppointments() {
   const tableBody = document.getElementById('adminAppointmentTableBody');
   const cardsEl = document.getElementById('adminAppointmentCards');
+  const metaEl = document.getElementById('adminAppointmentMetaSummary');
   if (!tableBody) return;
 
   const tableWrap = tableBody.closest('.table-responsive');
@@ -210,6 +183,17 @@ async function loadAppointments() {
     const res = await api.request(`/admin/janji-temu?${params.toString()}`, { priority: 'high' });
     adminAppointmentsCache = res.data || [];
 
+    if (metaEl) {
+      const m = res.meta;
+      if (m && typeof m.total_count === 'number') {
+        metaEl.hidden = false;
+        metaEl.textContent = `Ringkasan: Total ${m.total_count} | Terjadwal ${m.scheduled_count ?? 0} | Selesai ${m.completed_count ?? 0} | Dibatalkan ${m.cancelled_count ?? 0}`;
+      } else {
+        metaEl.hidden = true;
+        metaEl.textContent = '';
+      }
+    }
+
     if (adminAppointmentsCache.length === 0) {
       tableBody.innerHTML = '<tr><td colspan="7" class="text-muted text-center" style="padding: var(--space-6);">Belum ada janji pada filter ini.</td></tr>';
       if (cardsEl) {
@@ -223,12 +207,14 @@ async function loadAppointments() {
       const openReqBadge = openReq
         ? `<div class="mt-2"><span class="badge badge-diajukan">Ada pengajuan batal</span>${openReq.is_overdue ? ' <span class="badge badge-overdue-sla">[Lewat SLA]</span>' : ''}</div>`
         : '';
+      const patientRm = a.user?.medical_record_id || `RM-${String(a.user_id || a.user?.id || 0).padStart(4, '0')}`;
+      const patientInitial = a.user?.initial_name || a.user?.name || '-';
 
       return `
         <tr>
           <td>
-            <strong>${escapeHtml(a.user?.name || '-')}</strong>
-            <div class="text-muted text-sm">${escapeHtml(a.user?.phone_number || a.user?.email || '-')}</div>
+            <strong>${escapeHtml(patientRm)}</strong>
+            <div class="text-muted text-sm">${escapeHtml(patientInitial)}</div>
           </td>
           <td>
             <strong>${escapeHtml(a.polyclinic?.name || '-')}</strong>
@@ -250,10 +236,8 @@ async function loadAppointments() {
           </td>
           <td>
             <div style="display: flex; flex-wrap: wrap; gap: var(--space-2);">
-              <button type="button" class="btn btn-secondary btn-sm" onclick="openUpdateModal(${a.id}, 'selesai')">Selesaikan</button>
-              <button type="button" class="btn btn-danger btn-sm" onclick="openUpdateModal(${a.id}, 'dibatalkan')">Batalkan</button>
-              <button type="button" class="btn btn-secondary btn-sm" onclick="prefillControlForAppointment(${a.id})">Buat jadwal kontrol</button>
-              <button type="button" class="btn btn-secondary btn-sm" onclick="openAuditLogModal(${a.id})">Riwayat Log</button>
+              <button type="button" class="btn btn-secondary btn-touch" onclick="prefillControlForAppointment(${a.id})">Buat jadwal kontrol</button>
+              <button type="button" class="btn btn-secondary btn-touch" onclick="openAuditLogModal(${a.id})">Riwayat Log</button>
             </div>
           </td>
         </tr>
@@ -266,13 +250,15 @@ async function loadAppointments() {
         const openReqBadge = openReq
           ? `<span class="badge badge-diajukan">Ada pengajuan batal</span>${openReq.is_overdue ? '<span class="badge badge-overdue-sla">[Lewat SLA]</span>' : ''}`
           : '';
+        const patientRm = a.user?.medical_record_id || `RM-${String(a.user_id || a.user?.id || 0).padStart(4, '0')}`;
+        const patientInitial = a.user?.initial_name || a.user?.name || '-';
 
         return `
           <article class="mobile-data-card">
             <div class="mobile-data-card__head">
               <div>
-                <strong>${escapeHtml(a.user?.name || '-')}</strong>
-                <div class="text-muted text-sm">${escapeHtml(a.user?.phone_number || a.user?.email || '-')}</div>
+                <strong>${escapeHtml(patientRm)}</strong>
+                <div class="text-muted text-sm">${escapeHtml(patientInitial)}</div>
               </div>
               <span class="badge badge-${escapeHtml(a.status)}">${escapeHtml(getStatusLabel(a.status))}</span>
             </div>
@@ -287,8 +273,6 @@ async function loadAppointments() {
               ${a.doctor_notes ? `<div><strong>Catatan:</strong> ${escapeHtml(a.doctor_notes)}</div>` : ''}
             </div>
             <div class="mobile-data-card__actions">
-              <button type="button" class="btn btn-secondary btn-touch" onclick="openUpdateModal(${a.id}, 'selesai')">Selesaikan</button>
-              <button type="button" class="btn btn-danger btn-touch" onclick="openUpdateModal(${a.id}, 'dibatalkan')">Batalkan</button>
               <button type="button" class="btn btn-secondary btn-touch" onclick="prefillControlForAppointment(${a.id})">Buat jadwal kontrol</button>
               <button type="button" class="btn btn-secondary btn-touch" onclick="openAuditLogModal(${a.id})">Riwayat Log</button>
             </div>
@@ -297,26 +281,15 @@ async function loadAppointments() {
       }).join('');
     }
   } catch {
+    if (metaEl) {
+      metaEl.hidden = true;
+      metaEl.textContent = '';
+    }
     tableBody.innerHTML = '<tr><td colspan="7" class="text-center" style="color: var(--color-danger-ink); padding: var(--space-6);">Gagal memuat data. Coba muat ulang halaman.</td></tr>';
     if (cardsEl) {
       cardsEl.innerHTML = '<div class="portal-state-box portal-state-box--error"><p>Gagal memuat data. Coba muat ulang halaman.</p></div>';
     }
   }
-}
-
-function openUpdateModal(id, presetStatus = null) {
-  const modal = document.getElementById('updateModal');
-  if (!modal) return;
-  const item = adminAppointmentsCache.find(x => x.id === id);
-  api.hideAlert('modalAlert');
-  document.getElementById('modalAppointmentId').value = id;
-  document.getElementById('modalStatus').value = presetStatus || item?.status || 'terjadwal';
-  const modalDate = document.getElementById('modalDate');
-  const modalTime = document.getElementById('modalTime');
-  if (modalDate) modalDate.value = item?.appointment_date || '';
-  if (modalTime) modalTime.value = item?.appointment_time || '09:00';
-  document.getElementById('modalNotes').value = item?.doctor_notes || '';
-  showAdminModal(modal, document.getElementById('modalNotes'));
 }
 
 function showAdminWhatsAppFeedback(res, targetAlertId = 'adminListAlert') {
@@ -346,10 +319,6 @@ function showAdminWhatsAppFeedback(res, targetAlertId = 'adminListAlert') {
   }
 
   alertEl.style.display = 'block';
-}
-
-function closeUpdateModal() {
-  hideAdminModal(document.getElementById('updateModal'));
 }
 
 function prefillControlForAppointment(id) {
@@ -525,6 +494,8 @@ async function initAdminCancellationInbox() {
   const urlParams = new URLSearchParams(window.location.search);
   if (urlParams.get('tab') === 'pengajuan' || window.location.hash === '#pengajuan') {
     switchAdminTab('requests');
+  } else if (urlParams.get('tab') === 'slot-tambahan' || window.location.hash === '#slot-tambahan') {
+    switchAdminTab('slotRequests');
   }
 
   await loadCancellationRequests();
@@ -548,10 +519,14 @@ function getAdminTabPanel(btn, fallbackIds) {
 function switchAdminTab(tabName) {
   const tabApptsBtn = document.getElementById('adminTabBtnAppointments');
   const tabReqsBtn = document.getElementById('adminTabBtnRequests');
+  const tabSlotsBtn = document.getElementById('adminTabBtnSlotRequests');
   const apptsPanel = getAdminTabPanel(tabApptsBtn, ['adminTabAppointments', 'adminViewAppointments', 'adminAppointmentsView']);
   const reqsPanel = getAdminTabPanel(tabReqsBtn, ['adminTabRequests', 'adminViewRequests', 'adminRequestsView']);
+  const slotsPanel = getAdminTabPanel(tabSlotsBtn, ['adminTabSlotRequests']);
 
   const showAppointments = tabName === 'appointments';
+  const showRequests = tabName === 'requests';
+  const showSlots = tabName === 'slotRequests';
 
   if (tabApptsBtn) {
     tabApptsBtn.classList.toggle('is-active', showAppointments);
@@ -562,20 +537,32 @@ function switchAdminTab(tabName) {
     tabApptsBtn.setAttribute('aria-selected', showAppointments ? 'true' : 'false');
   }
   if (tabReqsBtn) {
-    tabReqsBtn.classList.toggle('is-active', !showAppointments);
+    tabReqsBtn.classList.toggle('is-active', showRequests);
     if (!tabReqsBtn.classList.contains('portal-tab-btn')) {
-      tabReqsBtn.classList.toggle('btn-primary', !showAppointments);
-      tabReqsBtn.classList.toggle('btn-secondary', showAppointments);
+      tabReqsBtn.classList.toggle('btn-primary', showRequests);
+      tabReqsBtn.classList.toggle('btn-secondary', !showRequests);
     }
-    tabReqsBtn.setAttribute('aria-selected', !showAppointments ? 'true' : 'false');
+    tabReqsBtn.setAttribute('aria-selected', showRequests ? 'true' : 'false');
+  }
+  if (tabSlotsBtn) {
+    tabSlotsBtn.classList.toggle('is-active', showSlots);
+    if (!tabSlotsBtn.classList.contains('portal-tab-btn')) {
+      tabSlotsBtn.classList.toggle('btn-primary', showSlots);
+      tabSlotsBtn.classList.toggle('btn-secondary', !showSlots);
+    }
+    tabSlotsBtn.setAttribute('aria-selected', showSlots ? 'true' : 'false');
   }
   if (apptsPanel) {
     apptsPanel.hidden = !showAppointments;
     apptsPanel.style.display = showAppointments ? '' : 'none';
   }
   if (reqsPanel) {
-    reqsPanel.hidden = showAppointments;
-    reqsPanel.style.display = showAppointments ? 'none' : '';
+    reqsPanel.hidden = !showRequests;
+    reqsPanel.style.display = showRequests ? '' : 'none';
+  }
+  if (slotsPanel) {
+    slotsPanel.hidden = !showSlots;
+    slotsPanel.style.display = showSlots ? '' : 'none';
   }
 }
 
@@ -780,12 +767,12 @@ function renderAdminRequests(items, tableBody, cardsEl) {
             <div style="display: flex; flex-wrap: wrap; gap: var(--space-2);">
               ${r.status === 'diajukan'
                 ? `
-                  <button type="button" class="btn btn-danger btn-sm" onclick="openAdminApproveModal(${r.id})">Batalkan janji</button>
-                  <button type="button" class="btn btn-primary btn-sm" onclick="openAdminRescheduleModal(${r.id})">Jadwalkan ulang</button>
-                  <button type="button" class="btn btn-secondary btn-sm" onclick="openAdminRejectModal(${r.id})">Tolak</button>
+                  <button type="button" class="btn btn-danger btn-touch" onclick="openAdminApproveModal(${r.id})">Batalkan janji</button>
+                  <button type="button" class="btn btn-primary btn-touch" onclick="openAdminRescheduleModal(${r.id})">Jadwalkan ulang</button>
+                  <button type="button" class="btn btn-secondary btn-touch" onclick="openAdminRejectModal(${r.id})">Tolak</button>
                 `
                 : ''}
-              ${apptId ? `<button type="button" class="btn btn-secondary btn-sm" onclick="openAuditLogModal(${apptId})">Riwayat Log</button>` : ''}
+              ${apptId ? `<button type="button" class="btn btn-secondary btn-touch" onclick="openAuditLogModal(${apptId})">Riwayat Log</button>` : ''}
             </div>
           </td>
         </tr>
@@ -1179,6 +1166,7 @@ function initRejectModal() {
   if (!modal) return;
   const form = document.getElementById('adminRejectForm');
   const noteInput = document.getElementById('rejectAdminNote');
+  const substituteSelect = document.getElementById('rejectSubstituteDoctorId');
   const countEl = document.getElementById('rejectAdminNoteCount');
   const submitBtn = getAdminEl('rejectSubmitBtn', 'adminRejectSubmitBtn') || form?.querySelector('button[type="submit"]');
 
@@ -1193,7 +1181,14 @@ function initRejectModal() {
     api.hideAlert(alertId);
 
     const reqId = Number(document.getElementById('rejectRequestId')?.value || activeAdminRequestId);
+    const substituteDoctorId = Number(substituteSelect?.value || 0);
     const admin_note = noteInput ? noteInput.value.trim() : '';
+
+    if (!substituteDoctorId) {
+      api.showAlert(alertId, 'Dokter pengganti dalam poliklinik yang sama wajib dipilih sebelum menolak pengajuan.', 'danger');
+      if (substituteSelect) substituteSelect.focus();
+      return;
+    }
 
     if (admin_note.length < 5 || admin_note.length > 500) {
       api.showAlert(alertId, 'Catatan penolakan wajib diisi minimal 5 hingga 500 karakter.', 'danger');
@@ -1201,7 +1196,7 @@ function initRejectModal() {
       return;
     }
 
-    const originalText = submitBtn ? submitBtn.textContent : 'Tolak Pengajuan';
+    const originalText = submitBtn ? submitBtn.textContent : 'Tolak & Tugaskan Pengganti';
 
     try {
       if (submitBtn) {
@@ -1211,12 +1206,15 @@ function initRejectModal() {
 
       const res = await api.request(`/admin/pengajuan-pembatalan/${reqId}/tolak`, {
         method: 'POST',
-        body: JSON.stringify({ admin_note })
+        body: JSON.stringify({
+          substitute_doctor_id: substituteDoctorId,
+          admin_note
+        })
       });
 
       closeAdminRejectModal();
       const targetAlert = getAdminAlertId('adminRequestAlert', 'adminRequestsAlert', 'adminListAlert');
-      api.showAlert(targetAlert, res.message || 'Pengajuan pembatalan berhasil ditolak.', 'success');
+      api.showAlert(targetAlert, res.message || 'Pengajuan ditolak dan janji dialihkan ke dokter pengganti.', 'success');
       await Promise.all([
         loadCancellationRequests(),
         loadAppointments()
@@ -1224,7 +1222,7 @@ function initRejectModal() {
     } catch (err) {
       const msg = err.status === 409
         ? 'Pengajuan ini sudah ditindak oleh admin lain. Muat ulang untuk melihat hasilnya.'
-        : (err.errors?.admin_note?.[0] || err.message || 'Gagal menolak pengajuan pembatalan.');
+        : (err.errors?.substitute_doctor_id?.[0] || err.errors?.admin_note?.[0] || err.message || 'Gagal menolak pengajuan pembatalan.');
       api.showAlert(alertId, msg, 'danger');
       if (err.status === 409) {
         loadCancellationRequests();
@@ -1247,7 +1245,7 @@ function initRejectModal() {
   }
 }
 
-function openAdminRejectModal(requestId) {
+async function openAdminRejectModal(requestId) {
   const modal = document.getElementById('adminRejectModal');
   if (!modal) return;
 
@@ -1264,12 +1262,46 @@ function openAdminRejectModal(requestId) {
   if (countEl) countEl.textContent = '0/500';
 
   const summaryEl = getAdminEl('rejectSummary', 'rejectModalSummary');
+  const appt = item?.appointment || {};
   if (summaryEl && item) {
-    const appt = item.appointment || {};
-    summaryEl.textContent = `Tolak pengajuan dari ${item.doctor?.name || 'Dokter'} untuk janji ${appt.user?.name || appt.patient?.name || 'Pasien'} (${api.formatDate(appt.appointment_date)}). Janji temu tetap berstatus terjadwal.`;
+    const patientLabel = appt.user?.initial_name || appt.user?.name || appt.patient?.initial_name || appt.patient?.name || 'Pasien';
+    summaryEl.textContent = `Tolak pengajuan dari ${item.doctor?.name || 'Dokter'} untuk janji ${patientLabel} (${api.formatDate(appt.appointment_date)}). Pilih dokter pengganti aktif pada poliklinik yang sama.`;
   }
 
-  showAdminModal(modal, noteInput);
+  const substituteSelect = document.getElementById('rejectSubstituteDoctorId');
+  if (substituteSelect) {
+    substituteSelect.innerHTML = '<option value="">Memuat daftar dokter pengganti...</option>';
+    substituteSelect.disabled = true;
+  }
+
+  showAdminModal(modal, substituteSelect || noteInput);
+
+  if (substituteSelect) {
+    if (adminMasterPoli.length === 0) {
+      try {
+        const poliRes = await api.request('/master-poli', { priority: 'high' });
+        adminMasterPoli = poliRes.data || [];
+      } catch {
+        adminMasterPoli = [];
+      }
+    }
+
+    const poliId = Number(appt.polyclinic_id || appt.polyclinic?.id || item?.doctor?.polyclinic_id || 0);
+    const originalDoctorId = Number(appt.doctor_id || item?.doctor_id || 0);
+    const poliObj = adminMasterPoli.find(p => Number(p.id) === poliId);
+    const eligibleDoctors = (poliObj?.doctors || []).filter(
+      d => d && (d.is_active === undefined || Boolean(d.is_active)) && Number(d.id) !== originalDoctorId
+    );
+
+    if (eligibleDoctors.length > 0) {
+      substituteSelect.innerHTML = '<option value="">Pilih dokter pengganti...</option>' +
+        eligibleDoctors.map(d => `<option value="${d.id}">${escapeHtml(d.name)}</option>`).join('');
+      substituteSelect.disabled = false;
+    } else {
+      substituteSelect.innerHTML = '<option value="">Tidak ada dokter aktif lain di poliklinik ini</option>';
+      substituteSelect.disabled = false;
+    }
+  }
 }
 
 function closeAdminRejectModal() {
@@ -1763,3 +1795,316 @@ function escapeHtml(str) {
   div.textContent = String(str);
   return div.innerHTML;
 }
+
+/* Pengajuan Slot Tambahan Dokter */
+async function initAdminSlotRequests() {
+  const tabSlotsBtn = document.getElementById('adminTabBtnSlotRequests');
+  const statusFilter = document.getElementById('adminSlotStatusFilter');
+  const reloadBtn = document.getElementById('adminReloadSlotRequestsBtn');
+  const retryBtn = document.getElementById('adminRetrySlotRequestsBtn');
+
+  if (tabSlotsBtn) {
+    tabSlotsBtn.addEventListener('click', () => {
+      switchAdminTab('slotRequests');
+      loadAdminSlotRequests();
+    });
+  }
+  if (statusFilter) {
+    statusFilter.addEventListener('change', loadAdminSlotRequests);
+  }
+  if (reloadBtn) {
+    reloadBtn.addEventListener('click', loadAdminSlotRequests);
+  }
+  if (retryBtn) {
+    retryBtn.addEventListener('click', loadAdminSlotRequests);
+  }
+
+  initAdminSlotApproveModal();
+  initAdminSlotRejectModal();
+  await loadAdminSlotRequests();
+}
+
+function updateAdminSlotBadge(count) {
+  const badge = document.getElementById('adminPendingSlotBadge');
+  if (!badge) return;
+  if (count > 0) {
+    badge.textContent = String(count);
+    badge.style.display = 'inline-flex';
+  } else {
+    badge.textContent = '0';
+    badge.style.display = 'none';
+  }
+}
+
+async function loadAdminSlotRequests() {
+  const loadingEl = document.getElementById('adminSlotRequestsLoading');
+  const emptyEl = document.getElementById('adminSlotRequestsEmpty');
+  const errorEl = document.getElementById('adminSlotRequestsError');
+  const errorMsgEl = document.getElementById('adminSlotRequestsErrorMsg');
+  const tableWrap = document.getElementById('adminSlotRequestsTableWrap');
+  const tableBody = document.getElementById('adminSlotRequestsTableBody');
+  const cardsEl = document.getElementById('adminSlotRequestsCards');
+  const statusFilter = document.getElementById('adminSlotStatusFilter')?.value || 'diajukan';
+
+  if (!tableBody && !cardsEl) return;
+
+  if (tableWrap && cardsEl) {
+    tableWrap.classList.add('has-mobile-cards');
+  }
+  if (loadingEl) loadingEl.hidden = false;
+  if (emptyEl) emptyEl.hidden = true;
+  if (errorEl) errorEl.hidden = true;
+  if (tableWrap) tableWrap.hidden = true;
+  if (cardsEl) cardsEl.innerHTML = '';
+
+  try {
+    const query = statusFilter && statusFilter !== 'semua'
+      ? `?status=${encodeURIComponent(statusFilter)}`
+      : '';
+    const res = await api.request(`/admin/slot-tambahan${query}`, { priority: 'low' });
+    const items = Array.isArray(res.data) ? res.data : [];
+    adminSlotRequestsCache = items;
+
+    if (statusFilter === 'diajukan') {
+      updateAdminSlotBadge(items.length);
+    } else if (statusFilter === 'semua') {
+      updateAdminSlotBadge(items.filter(x => x.status === 'diajukan').length);
+    }
+
+    if (loadingEl) loadingEl.hidden = true;
+
+    if (!items.length) {
+      if (emptyEl) emptyEl.hidden = false;
+      return;
+    }
+
+    if (tableWrap) tableWrap.hidden = false;
+    if (tableBody) {
+      tableBody.innerHTML = items.map((item) => {
+        const docName = item.doctor?.name || `Dokter #${item.doctor_id}`;
+        const poliName = item.doctor?.polyclinic?.name || '-';
+        const startLabel = String(item.start_time || '').slice(0, 5);
+        const endLabel = String(item.end_time || '').slice(0, 5);
+
+        return `
+          <tr>
+            <td>
+              <strong>${escapeHtml(docName)}</strong>
+              <div class="text-muted text-sm">${escapeHtml(poliName)}</div>
+            </td>
+            <td><strong>${escapeHtml(api.formatDate(item.schedule_date))}</strong></td>
+            <td>${escapeHtml(startLabel)} - ${escapeHtml(endLabel)} WIB</td>
+            <td>${escapeHtml(String(item.quota || 0))} pasien</td>
+            <td>
+              <div>${escapeHtml(item.reason || '-')}</div>
+              ${item.admin_note ? `<div class="mt-2 text-sm"><strong>Catatan Admin:</strong> ${escapeHtml(item.admin_note)}</div>` : ''}
+            </td>
+            <td><span class="badge ${getRequestBadgeClassAdmin(item.status)}">${escapeHtml(getRequestStatusLabelAdmin(item.status))}</span></td>
+            <td>
+              <div style="display: flex; flex-wrap: wrap; gap: var(--space-2);">
+                ${item.status === 'diajukan'
+                  ? `
+                    <button type="button" class="btn btn-primary btn-touch" onclick="openAdminSlotApproveModal(${item.id})">Setujui</button>
+                    <button type="button" class="btn btn-danger btn-touch" onclick="openAdminSlotRejectModal(${item.id})">Tolak</button>
+                  `
+                  : '<span class="text-muted text-sm">Sudah diproses</span>'}
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    if (cardsEl) {
+      cardsEl.innerHTML = items.map((item) => {
+        const docName = item.doctor?.name || `Dokter #${item.doctor_id}`;
+        const poliName = item.doctor?.polyclinic?.name || '-';
+        const startLabel = String(item.start_time || '').slice(0, 5);
+        const endLabel = String(item.end_time || '').slice(0, 5);
+
+        return `
+          <article class="mobile-data-card">
+            <div class="mobile-data-card__head">
+              <div>
+                <strong>${escapeHtml(docName)}</strong>
+                <div class="text-muted text-sm">${escapeHtml(poliName)}</div>
+              </div>
+              <span class="badge ${getRequestBadgeClassAdmin(item.status)}">${escapeHtml(getRequestStatusLabelAdmin(item.status))}</span>
+            </div>
+            <div class="mobile-data-card__meta">
+              <div><strong>Tanggal:</strong> ${escapeHtml(api.formatDate(item.schedule_date))}</div>
+              <div><strong>Jam:</strong> ${escapeHtml(startLabel)} - ${escapeHtml(endLabel)} WIB</div>
+              <div><strong>Kuota:</strong> ${escapeHtml(String(item.quota || 0))} pasien</div>
+              <div><strong>Alasan:</strong> ${escapeHtml(item.reason || '-')}</div>
+              ${item.admin_note ? `<div><strong>Catatan Admin:</strong> ${escapeHtml(item.admin_note)}</div>` : ''}
+            </div>
+            ${item.status === 'diajukan'
+              ? `
+                <div class="mobile-data-card__actions">
+                  <button type="button" class="btn btn-primary btn-touch" onclick="openAdminSlotApproveModal(${item.id})">Setujui</button>
+                  <button type="button" class="btn btn-danger btn-touch" onclick="openAdminSlotRejectModal(${item.id})">Tolak</button>
+                </div>
+              `
+              : ''}
+          </article>
+        `;
+      }).join('');
+    }
+  } catch (err) {
+    if (loadingEl) loadingEl.hidden = true;
+    if (errorEl) errorEl.hidden = false;
+    if (errorMsgEl) errorMsgEl.textContent = err.message || 'Gagal memuat daftar pengajuan slot tambahan.';
+  }
+}
+
+function initAdminSlotApproveModal() {
+  const form = document.getElementById('adminSlotApproveForm');
+  if (!form) return;
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    api.hideAlert('slotApproveAlert');
+
+    const reqId = Number(document.getElementById('slotApproveRequestId')?.value || 0);
+    const admin_note = (document.getElementById('slotApproveAdminNote')?.value || '').trim();
+    const submitBtn = document.getElementById('slotApproveSubmitBtn');
+    const originalText = submitBtn ? submitBtn.textContent : 'Ya, Setujui Slot';
+
+    try {
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Memproses…';
+      }
+
+      const res = await api.request(`/admin/slot-tambahan/${reqId}/setujui`, {
+        method: 'POST',
+        body: JSON.stringify({ admin_note: admin_note || null })
+      });
+
+      closeAdminSlotApproveModal();
+      api.showAlert('adminSlotRequestsAlert', res.message || 'Pengajuan slot tambahan berhasil disetujui.', 'success');
+      await loadAdminSlotRequests();
+    } catch (err) {
+      api.showAlert('slotApproveAlert', err.message || 'Gagal menyetujui pengajuan slot tambahan.', 'danger');
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+      }
+    }
+  });
+}
+
+function openAdminSlotApproveModal(requestId) {
+  const modal = document.getElementById('adminSlotApproveModal');
+  if (!modal) return;
+
+  api.hideAlert('slotApproveAlert');
+  const item = adminSlotRequestsCache.find(x => Number(x.id) === Number(requestId));
+  const idInput = document.getElementById('slotApproveRequestId');
+  const noteInput = document.getElementById('slotApproveAdminNote');
+  const summaryEl = document.getElementById('slotApproveSummary');
+
+  if (idInput) idInput.value = String(requestId);
+  if (noteInput) noteInput.value = '';
+  if (summaryEl && item) {
+    const docName = item.doctor?.name || `Dokter #${item.doctor_id}`;
+    const startLabel = String(item.start_time || '').slice(0, 5);
+    const endLabel = String(item.end_time || '').slice(0, 5);
+    summaryEl.textContent = `Setujui slot tambahan ${docName} pada ${api.formatDate(item.schedule_date)} (${startLabel} - ${endLabel} WIB, kuota ${item.quota} pasien).`;
+  }
+
+  showAdminModal(modal, noteInput);
+}
+
+function closeAdminSlotApproveModal() {
+  hideAdminModal(document.getElementById('adminSlotApproveModal'));
+}
+
+function initAdminSlotRejectModal() {
+  const form = document.getElementById('adminSlotRejectForm');
+  const noteInput = document.getElementById('slotRejectAdminNote');
+  const countEl = document.getElementById('slotRejectAdminNoteCount');
+
+  if (noteInput && countEl) {
+    noteInput.addEventListener('input', () => {
+      countEl.textContent = `${noteInput.value.length}/500`;
+    });
+  }
+
+  if (!form) return;
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    api.hideAlert('slotRejectAlert');
+
+    const reqId = Number(document.getElementById('slotRejectRequestId')?.value || 0);
+    const admin_note = (noteInput?.value || '').trim();
+    const submitBtn = document.getElementById('slotRejectSubmitBtn');
+
+    if (admin_note.length < 5 || admin_note.length > 500) {
+      api.showAlert('slotRejectAlert', 'Alasan penolakan wajib diisi minimal 5 hingga 500 karakter.', 'danger');
+      noteInput?.focus();
+      return;
+    }
+
+    const originalText = submitBtn ? submitBtn.textContent : 'Tolak Pengajuan Slot';
+
+    try {
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Memproses…';
+      }
+
+      const res = await api.request(`/admin/slot-tambahan/${reqId}/tolak`, {
+        method: 'POST',
+        body: JSON.stringify({ admin_note })
+      });
+
+      closeAdminSlotRejectModal();
+      api.showAlert('adminSlotRequestsAlert', res.message || 'Pengajuan slot tambahan berhasil ditolak.', 'success');
+      await loadAdminSlotRequests();
+    } catch (err) {
+      const msg = err.errors?.admin_note?.[0] || err.message || 'Gagal menolak pengajuan slot tambahan.';
+      api.showAlert('slotRejectAlert', msg, 'danger');
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+      }
+    }
+  });
+}
+
+function openAdminSlotRejectModal(requestId) {
+  const modal = document.getElementById('adminSlotRejectModal');
+  if (!modal) return;
+
+  api.hideAlert('slotRejectAlert');
+  const item = adminSlotRequestsCache.find(x => Number(x.id) === Number(requestId));
+  const idInput = document.getElementById('slotRejectRequestId');
+  const noteInput = document.getElementById('slotRejectAdminNote');
+  const countEl = document.getElementById('slotRejectAdminNoteCount');
+  const summaryEl = document.getElementById('slotRejectSummary');
+
+  if (idInput) idInput.value = String(requestId);
+  if (noteInput) noteInput.value = '';
+  if (countEl) countEl.textContent = '0/500';
+  if (summaryEl && item) {
+    const docName = item.doctor?.name || `Dokter #${item.doctor_id}`;
+    const startLabel = String(item.start_time || '').slice(0, 5);
+    const endLabel = String(item.end_time || '').slice(0, 5);
+    summaryEl.textContent = `Tolak usulan slot tambahan ${docName} pada ${api.formatDate(item.schedule_date)} (${startLabel} - ${endLabel} WIB).`;
+  }
+
+  showAdminModal(modal, noteInput);
+}
+
+function closeAdminSlotRejectModal() {
+  hideAdminModal(document.getElementById('adminSlotRejectModal'));
+}
+
+window.openAdminSlotApproveModal = openAdminSlotApproveModal;
+window.closeAdminSlotApproveModal = closeAdminSlotApproveModal;
+window.openAdminSlotRejectModal = openAdminSlotRejectModal;
+window.closeAdminSlotRejectModal = closeAdminSlotRejectModal;

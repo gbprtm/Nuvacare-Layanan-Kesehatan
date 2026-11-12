@@ -192,6 +192,15 @@ document.addEventListener('DOMContentLoaded', () => {
     initBookingPage();
   }
 
+  if (document.getElementById('appointmentTableBody')) {
+    initPatientCancelModal();
+    const reloadPatientBtn = document.getElementById('reloadPatientAppointmentsBtn');
+    if (reloadPatientBtn) {
+      reloadPatientBtn.addEventListener('click', loadPatientAppointments);
+    }
+    loadPatientAppointments();
+  }
+
   if (document.getElementById('historyCardsContainer') || document.getElementById('historyTableBody')) {
     loadExaminationHistory();
 
@@ -1265,36 +1274,161 @@ async function initBookingPage() {
   }
 }
 
+let patientAppointmentsCache = [];
+
 async function loadPatientAppointments() {
   const tableBody = document.getElementById('appointmentTableBody');
-  if (!tableBody) return;
+  const cardsEl = document.getElementById('patientAppointmentCards');
+  if (!tableBody && !cardsEl) return;
+
+  const tableWrap = tableBody ? tableBody.closest('.table-responsive') : null;
+  if (tableWrap && cardsEl) {
+    tableWrap.classList.add('has-mobile-cards');
+  }
 
   try {
     const res = await api.request('/janji-temu', { priority: 'high' });
     const appointments = res.data || [];
+    patientAppointmentsCache = appointments;
 
     if (appointments.length === 0) {
-      tableBody.innerHTML = '<tr><td colspan="6" class="text-muted text-center" style="padding: var(--space-6);">Belum ada janji. Buat janji pertamamu.</td></tr>';
+      if (tableBody) {
+        tableBody.innerHTML = '<tr><td colspan="7" class="text-muted text-center" style="padding: var(--space-6);">Belum ada janji. Buat janji pertamamu di formulir atas.</td></tr>';
+      }
+      if (cardsEl) {
+        cardsEl.innerHTML = '<div class="portal-state-box"><p class="text-muted">Belum ada janji temu. Buat janji pertamamu di formulir atas.</p></div>';
+      }
       return;
     }
 
-    tableBody.innerHTML = appointments.map(a => `
-      <tr>
-        <td>
-          <strong>${escapeHtml(api.formatDate(a.appointment_date))}</strong>
-          <div class="text-muted text-sm">Pukul ${escapeHtml(a.appointment_time || '09:00')} WIB</div>
-        </td>
-        <td>${escapeHtml(a.polyclinic?.name || '-')}</td>
-        <td>${escapeHtml(a.doctor?.name || '-')}</td>
-        <td>${escapeHtml(a.complaint || '-')}</td>
-        <td><span class="badge badge-${a.status}">${getStatusLabel(a.status)}</span></td>
-        <td>${escapeHtml(a.doctor_notes || '-')}</td>
-      </tr>
-    `).join('');
+    if (tableBody) {
+      tableBody.innerHTML = appointments.map(a => `
+        <tr>
+          <td>
+            <strong>${escapeHtml(api.formatDate(a.appointment_date))}</strong>
+            <div class="text-muted text-sm">Pukul ${escapeHtml(a.appointment_time || '09:00')} WIB</div>
+          </td>
+          <td>${escapeHtml(a.polyclinic?.name || '-')}</td>
+          <td>${escapeHtml(a.doctor?.name || '-')}</td>
+          <td>${escapeHtml(a.complaint || '-')}</td>
+          <td><span class="badge badge-${escapeHtml(a.status)}">${escapeHtml(getStatusLabel(a.status))}</span></td>
+          <td>${escapeHtml(a.doctor_notes || '-')}</td>
+          <td>
+            ${a.status === 'terjadwal'
+              ? `<button type="button" class="btn btn-danger btn-touch" onclick="openPatientCancelModal(${a.id})">Batalkan Janji</button>`
+              : '<span class="text-muted text-sm">-</span>'}
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    if (cardsEl) {
+      cardsEl.innerHTML = appointments.map(a => `
+        <article class="mobile-data-card">
+          <div class="mobile-data-card__head">
+            <div>
+              <strong>${escapeHtml(api.formatDate(a.appointment_date))}</strong>
+              <div class="text-muted text-sm">Pukul ${escapeHtml(a.appointment_time || '09:00')} WIB</div>
+            </div>
+            <span class="badge badge-${escapeHtml(a.status)}">${escapeHtml(getStatusLabel(a.status))}</span>
+          </div>
+          <div class="mobile-data-card__meta">
+            <div><strong>Poliklinik:</strong> ${escapeHtml(a.polyclinic?.name || '-')}</div>
+            <div><strong>Dokter:</strong> ${escapeHtml(a.doctor?.name || '-')}</div>
+            ${a.complaint ? `<div><strong>Keluhan:</strong> ${escapeHtml(a.complaint)}</div>` : ''}
+            ${a.doctor_notes ? `<div><strong>Catatan Dokter:</strong> ${escapeHtml(a.doctor_notes)}</div>` : ''}
+          </div>
+          ${a.status === 'terjadwal'
+            ? `<div class="mobile-data-card__actions">
+                <button type="button" class="btn btn-danger btn-touch" onclick="openPatientCancelModal(${a.id})">Batalkan Janji</button>
+              </div>`
+            : ''}
+        </article>
+      `).join('');
+    }
   } catch {
-    tableBody.innerHTML = '<tr><td colspan="6" class="text-center" style="color: var(--color-danger-ink); padding: var(--space-6);">Gagal memuat data. Coba muat ulang halaman.</td></tr>';
+    if (tableBody) {
+      tableBody.innerHTML = '<tr><td colspan="7" class="text-center" style="color: var(--color-danger-ink); padding: var(--space-6);">Gagal memuat data. Coba muat ulang halaman.</td></tr>';
+    }
+    if (cardsEl) {
+      cardsEl.innerHTML = '<div class="portal-state-box portal-state-box--error"><p>Gagal memuat daftar janji temu. Coba muat ulang.</p></div>';
+    }
   }
 }
+
+function initPatientCancelModal() {
+  const modal = document.getElementById('patientCancelConfirmModal');
+  if (!modal) return;
+
+  const closeBtn = document.getElementById('closePatientCancelModalBtn');
+  const cancelBtn = document.getElementById('cancelPatientCancelBtn');
+  const confirmBtn = document.getElementById('confirmPatientCancelBtn');
+
+  const closeModal = () => {
+    modal.hidden = true;
+    modal.style.display = 'none';
+  };
+
+  if (closeBtn) closeBtn.addEventListener('click', closeModal);
+  if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeModal();
+  });
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !modal.hidden && modal.style.display === 'flex') {
+      closeModal();
+    }
+  });
+
+  if (confirmBtn) {
+    confirmBtn.addEventListener('click', async () => {
+      api.hideAlert('patientCancelModalAlert');
+      const apptId = Number(document.getElementById('patientCancelAppointmentId')?.value || 0);
+      if (!apptId) return;
+
+      const originalText = confirmBtn.textContent;
+      confirmBtn.disabled = true;
+      confirmBtn.textContent = 'Membatalkan...';
+
+      try {
+        const res = await api.request(`/janji-temu/${apptId}/batal`, {
+          method: 'POST',
+          body: JSON.stringify({})
+        });
+        closeModal();
+        api.showAlert('patientAppointmentsAlert', res.message || 'Janji temu Anda berhasil dibatalkan.', 'success');
+        await loadPatientAppointments();
+      } catch (err) {
+        api.showAlert('patientCancelModalAlert', err.message || 'Gagal membatalkan janji temu.', 'danger');
+      } finally {
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = originalText;
+      }
+    });
+  }
+}
+
+function openPatientCancelModal(appointmentId) {
+  const modal = document.getElementById('patientCancelConfirmModal');
+  if (!modal) return;
+
+  api.hideAlert('patientCancelModalAlert');
+  const idInput = document.getElementById('patientCancelAppointmentId');
+  const summaryEl = document.getElementById('patientCancelSummary');
+  const item = patientAppointmentsCache.find(a => Number(a.id) === Number(appointmentId));
+
+  if (idInput) idInput.value = String(appointmentId);
+  if (summaryEl && item) {
+    summaryEl.textContent = `Batalkan janji temu dengan ${item.doctor?.name || 'Dokter'} (${item.polyclinic?.name || 'Poliklinik'}) pada ${api.formatDate(item.appointment_date)} pukul ${item.appointment_time || '09:00'} WIB?`;
+  }
+
+  modal.hidden = false;
+  modal.style.display = 'flex';
+  const cancelBtn = document.getElementById('cancelPatientCancelBtn');
+  if (cancelBtn) setTimeout(() => cancelBtn.focus(), 40);
+}
+
+window.openPatientCancelModal = openPatientCancelModal;
 
 let examinationHistoryData = [];
 

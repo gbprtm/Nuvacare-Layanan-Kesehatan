@@ -578,6 +578,41 @@
         </aside>
       </div>
     </form>
+
+    <section id="patientAppointmentsSection" class="card mt-6" aria-labelledby="patientAppointmentsTitle" style="border-radius: 16px; margin-top: var(--space-6);">
+      <div class="portal-toolbar" style="margin-bottom: var(--space-4);">
+        <div>
+          <h2 id="patientAppointmentsTitle" class="card-title" style="margin-bottom: 4px;">Daftar Janji Temu Saya</h2>
+          <p class="text-sm text-muted" style="margin-bottom: 0;">Pantau status janji temu Anda. Janji yang masih terjadwal dapat dibatalkan kapan saja.</p>
+        </div>
+        <button type="button" id="reloadPatientAppointmentsBtn" class="btn btn-secondary btn-touch" style="border-radius: 8px;">Muat ulang</button>
+      </div>
+
+      <div id="patientAppointmentsAlert" class="alert" role="status" aria-live="polite"></div>
+
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>Tanggal &amp; Jam</th>
+              <th>Poliklinik</th>
+              <th>Dokter</th>
+              <th>Keluhan</th>
+              <th>Status</th>
+              <th>Catatan Dokter</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="appointmentTableBody" aria-live="polite">
+            <tr>
+              <td colspan="7" class="text-muted text-center" style="padding: var(--space-6);">Memuat daftar janji temu...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div id="patientAppointmentCards" class="mobile-card-list mt-4" aria-live="polite"></div>
+    </section>
   </main>
 
   <!-- Modal Konfirmasi Berhasil (Sesuai Desain E-Tiket Gambar 3) -->
@@ -684,6 +719,23 @@
         <a href="/index.html" class="booking-modal-secondary-btn" id="modalBackHomeBtn">
           Kembali ke Beranda
         </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Konfirmasi Pembatalan Mandiri Pasien -->
+  <div id="patientCancelConfirmModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="patientCancelModalTitle" hidden>
+    <div class="modal-content" style="border-radius: 16px;">
+      <div class="flex-between mb-4">
+        <h2 id="patientCancelModalTitle" class="card-title" style="margin-bottom: 0;">Batalkan Janji Temu</h2>
+        <button type="button" id="closePatientCancelModalBtn" class="btn btn-secondary btn-touch" style="border-radius: 8px;">Tutup</button>
+      </div>
+      <div id="patientCancelModalAlert" class="alert" role="alert" aria-live="polite"></div>
+      <p id="patientCancelSummary" class="text-sm mb-4">Apakah Anda yakin ingin membatalkan janji temu ini? Slot akan dibuka kembali untuk pasien lain.</p>
+      <input type="hidden" id="patientCancelAppointmentId">
+      <div style="display: flex; justify-content: flex-end; gap: var(--space-2); flex-wrap: wrap;">
+        <button type="button" id="cancelPatientCancelBtn" class="btn btn-secondary btn-touch" style="border-radius: 8px;">Tidak, Kembali</button>
+        <button type="button" id="confirmPatientCancelBtn" class="btn btn-danger btn-touch" style="border-radius: 8px;">Ya, Batalkan Janji</button>
       </div>
     </div>
   </div>
