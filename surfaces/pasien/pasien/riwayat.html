@@ -183,7 +183,7 @@
 
     <div class="medical-history-header">
       <h1 class="medical-history-title">Riwayat Pemeriksaan</h1>
-      <p class="medical-history-sub">Catatan dan hasil pemeriksaan poliklinik Anda.</p>
+      <p class="medical-history-sub">Catatan pemeriksaan selesai dan janji temu yang dibatalkan.</p>
     </div>
 
     <!-- Search & Filter Bar -->
@@ -195,7 +195,7 @@
             <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
           </svg>
         </span>
-        <input type="search" id="medicalSearchInput" class="medical-search-input" placeholder="Cari dokter, poli, atau diagnosis..." aria-label="Cari riwayat pemeriksaan">
+        <input type="search" id="medicalSearchInput" class="medical-search-input" placeholder="Cari dokter, poli, atau catatan..." aria-label="Cari riwayat pemeriksaan">
       </div>
       <div class="medical-filter-dropdown-wrap">
         <label for="medicalYearSelect" class="sr-only">Filter Tahun</label>
@@ -220,6 +220,12 @@
           </span>
         </div>
       </div>
+    </div>
+
+    <div id="medicalStatusFilters" class="medical-filter-chips medical-history-status-filters" role="group" aria-label="Filter status riwayat">
+      <button type="button" class="medical-filter-chip is-active" data-status="all" aria-pressed="true">Semua</button>
+      <button type="button" class="medical-filter-chip" data-status="selesai" aria-pressed="false">Selesai</button>
+      <button type="button" class="medical-filter-chip" data-status="dibatalkan" aria-pressed="false">Dibatalkan</button>
     </div>
 
     <!-- Container Kartu Riwayat Pemeriksaan -->

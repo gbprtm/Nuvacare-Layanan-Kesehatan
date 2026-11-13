@@ -579,39 +579,35 @@
       </div>
     </form>
 
-    <section id="patientAppointmentsSection" class="card mt-6" aria-labelledby="patientAppointmentsTitle" style="border-radius: 16px; margin-top: var(--space-6);">
-      <div class="portal-toolbar" style="margin-bottom: var(--space-4);">
+    <section id="patientAppointmentsSection" class="appt-minimal-section" aria-labelledby="patientAppointmentsTitle">
+      <div class="appt-minimal-toolbar">
         <div>
-          <h2 id="patientAppointmentsTitle" class="card-title" style="margin-bottom: 4px;">Daftar Janji Temu Saya</h2>
-          <p class="text-sm text-muted" style="margin-bottom: 0;">Pantau status janji temu Anda. Janji yang masih terjadwal dapat dibatalkan kapan saja.</p>
+          <h2 id="patientAppointmentsTitle" class="appt-minimal-title">Daftar Janji Temu Saya</h2>
+          <p id="patientAppointmentsSub" class="appt-minimal-sub">Pantau status kunjungan poliklinik Anda.</p>
         </div>
-        <button type="button" id="reloadPatientAppointmentsBtn" class="btn btn-secondary btn-touch" style="border-radius: 8px;">Muat ulang</button>
+        <button type="button" id="reloadPatientAppointmentsBtn" class="appt-btn-reload">Muat ulang</button>
       </div>
 
       <div id="patientAppointmentsAlert" class="alert" role="status" aria-live="polite"></div>
 
-      <div class="table-responsive">
-        <table>
+      <div class="appt-table-wrap">
+        <table class="appt-minimal-table">
           <thead>
             <tr>
-              <th>Tanggal &amp; Jam</th>
-              <th>Poliklinik</th>
-              <th>Dokter</th>
-              <th>Keluhan</th>
-              <th>Status</th>
-              <th>Catatan Dokter</th>
-              <th>Aksi</th>
+              <th scope="col">Jadwal</th>
+              <th scope="col">Layanan</th>
+              <th scope="col" class="appt-col-notes">Keluhan &amp; Catatan</th>
+              <th scope="col">Status</th>
+              <th scope="col" class="appt-col-actions">Aksi</th>
             </tr>
           </thead>
           <tbody id="appointmentTableBody" aria-live="polite">
             <tr>
-              <td colspan="7" class="text-muted text-center" style="padding: var(--space-6);">Memuat daftar janji temu...</td>
+              <td colspan="5" class="text-muted text-center" style="padding: var(--space-6);">Memuat daftar janji temu...</td>
             </tr>
           </tbody>
         </table>
       </div>
-
-      <div id="patientAppointmentCards" class="mobile-card-list mt-4" aria-live="polite"></div>
     </section>
   </main>
 
@@ -736,6 +732,22 @@
       <div style="display: flex; justify-content: flex-end; gap: var(--space-2); flex-wrap: wrap;">
         <button type="button" id="cancelPatientCancelBtn" class="btn btn-secondary btn-touch" style="border-radius: 8px;">Tidak, Kembali</button>
         <button type="button" id="confirmPatientCancelBtn" class="btn btn-danger btn-touch" style="border-radius: 8px;">Ya, Batalkan Janji</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Konfirmasi Hapus Tampilan Baris Janji Temu -->
+  <div id="patientDeleteConfirmModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="patientDeleteModalTitle" hidden>
+    <div class="modal-content" style="border-radius: 12px;">
+      <div class="flex-between mb-4">
+        <h2 id="patientDeleteModalTitle" class="card-title" style="margin-bottom: 0; font-size: 16px;">Hapus dari Daftar</h2>
+        <button type="button" id="closePatientDeleteModalBtn" class="btn btn-secondary btn-touch" style="border-radius: 8px;">Tutup</button>
+      </div>
+      <p id="patientDeleteSummary" class="text-sm mb-4">Hapus baris janji temu ini dari tampilan daftar? Catatan riwayat medis tetap tersimpan aman.</p>
+      <input type="hidden" id="patientDeleteAppointmentId">
+      <div style="display: flex; justify-content: flex-end; gap: var(--space-2); flex-wrap: wrap;">
+        <button type="button" id="cancelPatientDeleteBtn" class="btn btn-secondary btn-touch" style="border-radius: 8px;">Batal</button>
+        <button type="button" id="confirmPatientDeleteBtn" class="btn btn-danger btn-touch" style="border-radius: 8px;">Hapus</button>
       </div>
     </div>
   </div>

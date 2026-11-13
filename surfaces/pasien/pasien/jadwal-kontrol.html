@@ -14,8 +14,9 @@
   <link rel="stylesheet" href="/css/style.css" fetchpriority="high">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400..800;1,400..800&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:ital,wght@0,400..800;1,400..800&display=swap">
   <script src="/js/api.js" defer fetchpriority="high"></script>
+  <script src="/js/qrcode.min.js" defer></script>
   <script src="/js/pasien.js" defer></script>
   <script type="speculationrules">
   {
@@ -35,7 +36,6 @@
         <span class="patient-brand-text">Nuvacare</span>
       </a>
 
-      <!-- Mobile Drawer Trigger Button -->
       <button type="button" class="patient-drawer-btn" id="mobileMenuBtn" aria-expanded="false" aria-controls="patientDrawerPanel" aria-label="Buka navigasi">
         <span class="patient-drawer-btn__label">MENU</span>
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
@@ -43,7 +43,6 @@
         </svg>
       </button>
 
-      <!-- Desktop Cluster (>= 901px) -->
       <div class="patient-nav-cluster" id="patientDesktopNavCluster">
         <ul class="patient-nav-links">
           <li><a href="/index.html" class="patient-nav-link">BERANDA</a></li>
@@ -62,7 +61,7 @@
               <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
             </svg>
           </button>
-          <button type="button" id="logoutBtn" class="patient-nav-link" style="background: none; border: none; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer;">KELUAR</button>
+          <button type="button" id="logoutBtn" class="patient-nav-link patient-nav-logout-btn">KELUAR</button>
           <a href="/pasien/profil.html" class="patient-pill-cta">
             <span id="navUserName">Profil</span>
             <span class="patient-arrow" aria-hidden="true">&#x2197;</span>
@@ -72,7 +71,6 @@
     </header>
   </div>
 
-  <!-- Mobile Drawer Modal/Overlay -->
   <div class="patient-drawer-overlay" id="patientDrawerOverlay" aria-hidden="true">
     <div class="patient-drawer" id="patientDrawerPanel" role="dialog" aria-modal="true" aria-label="Menu navigasi">
       <div class="patient-drawer__top">
@@ -83,7 +81,6 @@
       </div>
 
       <div class="patient-drawer__list">
-        <!-- Row 0: Beranda -->
         <div class="patient-drawer__item">
           <div class="patient-drawer__row">
             <a href="/index.html" class="patient-drawer__link">BERANDA</a>
@@ -91,7 +88,6 @@
           </div>
         </div>
 
-        <!-- Row 1: Expandable Jadwal Kontrol (+) -->
         <div class="patient-drawer__item patient-drawer__item--expandable" id="drawerRowJadwalKontrol">
           <div class="patient-drawer__row">
             <a href="/pasien/jadwal-kontrol.html" class="patient-drawer__link active" aria-current="page">JADWAL KONTROL</a>
@@ -103,7 +99,6 @@
           </div>
         </div>
 
-        <!-- Row 2: Janji Temu -->
         <div class="patient-drawer__item">
           <div class="patient-drawer__row">
             <a href="/pasien/janji-temu.html" class="patient-drawer__link">JANJI TEMU</a>
@@ -111,7 +106,6 @@
           </div>
         </div>
 
-        <!-- Row 3: Riwayat Pemeriksaan -->
         <div class="patient-drawer__item">
           <div class="patient-drawer__row">
             <a href="/pasien/riwayat.html" class="patient-drawer__link">RIWAYAT PEMERIKSAAN</a>
@@ -119,7 +113,6 @@
           </div>
         </div>
 
-        <!-- Row 4: Profil Saya -->
         <div class="patient-drawer__item">
           <div class="patient-drawer__row">
             <a href="/pasien/profil.html" class="patient-drawer__link">PROFIL SAYA</a>
@@ -127,7 +120,6 @@
           </div>
         </div>
 
-        <!-- Row: Ganti Tema -->
         <div class="patient-drawer__item">
           <div class="patient-drawer__row">
             <button type="button" class="patient-drawer__link patient-drawer__theme-btn" data-theme-toggle aria-label="Ganti tema">
@@ -146,23 +138,20 @@
           </div>
         </div>
 
-        <!-- Row 5: Logout Action -->
         <div class="patient-drawer__item">
           <div class="patient-drawer__row">
-            <button type="button" id="mobileLogoutBtn" class="patient-drawer__link" style="background: none; border: none; text-align: left; width: 100%; cursor: pointer;">KELUAR</button>
+            <button type="button" id="mobileLogoutBtn" class="patient-drawer__link patient-drawer__logout-btn">KELUAR</button>
             <span class="patient-arrow" aria-hidden="true">&#x2197;</span>
           </div>
         </div>
       </div>
 
-      <!-- Spacer with Cropped Right Watermark ( N ) -->
       <div class="patient-drawer__spacer">
         <div class="patient-drawer__stamp" aria-hidden="true">
           <span>N</span>
         </div>
       </div>
 
-      <!-- Bottom Full-Width Pill CTA -->
       <div class="patient-drawer__footer">
         <a href="/pasien/profil.html" class="patient-drawer__pill-cta" id="drawerBottomPill">
           <span id="drawerBottomPillLabel">PROFIL SAYA</span>
@@ -172,34 +161,231 @@
     </div>
   </div>
 
-  <main id="main-content" class="container">
-    <div class="mb-4">
-      <h1 class="page-title">Jadwal Kontrol</h1>
-      <p class="text-sm text-muted">Jadwal kunjungan ulang dari dokter Anda.</p>
+  <main id="main-content" class="medical-history-container control-page-container">
+    <nav class="booking-breadcrumb" aria-label="Breadcrumb">
+      <a href="/index.html">Beranda</a>
+      <span class="breadcrumb-sep" aria-hidden="true">&rsaquo;</span>
+      <span aria-current="page" class="breadcrumb-current">Jadwal Kontrol</span>
+    </nav>
+
+    <div class="control-page-header">
+      <div>
+        <h1 class="medical-history-title">Jadwal Kontrol</h1>
+        <p class="medical-history-sub control-page-subtitle">Jadwal kunjungan ulang terencana dari dokter pemeriksa Anda.</p>
+      </div>
+      <a href="/pasien/janji-temu.html" class="control-header-cta">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="16"></line>
+          <line x1="8" y1="12" x2="16" y2="12"></line>
+        </svg>
+        <span>Buat Janji Baru</span>
+      </a>
     </div>
 
-    <section class="card" aria-label="Tabel jadwal kontrol">
-      <div class="table-responsive">
-        <table>
-          <thead>
-            <tr>
-              <th>Tanggal Kontrol</th>
-              <th>Poliklinik</th>
-              <th>Dokter</th>
-              <th>Arahan Dokter</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody id="controlTableBody" aria-live="polite">
-            <tr>
-              <td colspan="5" class="text-muted text-center" style="padding: var(--space-6);">
-                Memuat jadwal kontrol…
-              </td>
-            </tr>
-          </tbody>
-        </table>
+    <div id="controlScheduleAlert" class="alert" role="status" aria-live="polite"></div>
+
+    <section class="control-summary-banner" aria-label="Ringkasan jadwal kontrol pasien">
+      <div class="control-summary-main">
+        <div class="control-summary-copy">
+          <span class="control-summary-kicker">Pengingat Medis Pasien</span>
+          <p class="control-summary-heading" id="controlSummaryText">
+            Halo, <strong id="controlPatientGreeting">Pasien</strong>! Memeriksa jadwal kontrol Anda.
+          </p>
+          <p class="control-summary-hint" id="controlSummaryHint">
+            Siapkan dokumen pemeriksaan sebelumnya dan hadir 15 menit sebelum jadwal sesi dimulai.
+          </p>
+        </div>
       </div>
     </section>
+
+    <section class="control-main-card" aria-labelledby="controlListHeading">
+      <div class="control-card-toolbar">
+        <div>
+          <h2 id="controlListHeading" class="control-section-title">Daftar Jadwal Kontrol</h2>
+          <p class="control-section-sub">Kunjungan poliklinik lanjutan yang tercatat pada rekam medis akun Anda.</p>
+        </div>
+
+        <div class="control-filter-tabs" role="tablist" aria-label="Filter status jadwal kontrol">
+          <button type="button" role="tab" aria-selected="true" class="control-filter-tab is-active" data-control-filter="all">
+            Semua Status
+          </button>
+          <button type="button" role="tab" aria-selected="false" class="control-filter-tab" data-control-filter="terjadwal">
+            Terjadwal
+          </button>
+          <button type="button" role="tab" aria-selected="false" class="control-filter-tab" data-control-filter="selesai">
+            Selesai
+          </button>
+        </div>
+      </div>
+
+      <div id="controlStateBox" class="control-state-box" aria-live="polite">
+        <p class="control-state-title">Memuat jadwal kontrol...</p>
+        <p class="control-state-desc">Mengambil data kunjungan kontrol terbaru dari server klinik.</p>
+      </div>
+
+      <div class="control-table-wrap table-responsive" id="controlTableWrap" hidden>
+        <table class="control-table">
+          <thead>
+            <tr>
+              <th scope="col">Tanggal &amp; Waktu</th>
+              <th scope="col">Poliklinik</th>
+              <th scope="col">Dokter Pemeriksa</th>
+              <th scope="col">Arahan Dokter</th>
+              <th scope="col">Status</th>
+              <th scope="col" class="control-col-actions">Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="controlTableBody"></tbody>
+        </table>
+      </div>
+
+      <div id="controlCardsList" class="control-cards-list" aria-live="polite" hidden></div>
+    </section>
   </main>
+
+  <footer class="site-footer">
+    <div class="site-footer__grid">
+      <div>
+        <div class="footer-heading">Kontak &amp; Alamat</div>
+        <ul class="footer-info-list">
+          <li><strong>Alamat:</strong> <span id="footerClinicAddress">Jl. Kesehatan Raya No. 45, Jakarta Pusat</span></li>
+          <li><strong>WhatsApp:</strong> <span id="footerClinicContact">+62 811-2345-6789</span></li>
+          <li><strong>Layanan Bantuan:</strong> bantuan@nuvacare.id</li>
+        </ul>
+      </div>
+
+      <div>
+        <div class="footer-heading">Jam Layanan Klinik</div>
+        <ul class="footer-info-list">
+          <li>Senin sampai Jumat: 08.00 - 16.00 WIB</li>
+          <li>Sabtu: 08.00 - 13.00 WIB</li>
+          <li>Minggu &amp; Libur Nasional: Tutup</li>
+        </ul>
+      </div>
+
+      <div>
+        <div class="footer-heading">Tautan Portal</div>
+        <ul class="site-footer__links">
+          <li><a href="/index.html">Beranda</a></li>
+          <li><a href="/pasien/janji-temu.html">Buat Janji Temu</a></li>
+          <li><a href="/pasien/riwayat.html">Riwayat Pemeriksaan</a></li>
+          <li><a href="/pasien/profil.html">Profil Pasien</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="site-footer__bottom">
+      <span>&copy; 2026 <span translate="no">Nuvacare</span>.</span>
+    </div>
+  </footer>
+
+  <!-- Modal E-Tiket Kontrol -->
+  <div id="controlTicketModal" class="medical-modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="controlTicketTitle">
+    <div class="medical-modal-dialog control-modal-dialog">
+      <div class="medical-modal-header">
+        <div>
+          <h3 class="medical-modal-title" id="controlTicketTitle">E-Tiket Jadwal Kontrol</h3>
+          <p class="medical-modal-subtitle" id="controlTicketCode">NO. REG: NC-KONTROL</p>
+        </div>
+        <button type="button" class="medical-modal-close control-modal-close" id="closeControlTicketBtn" aria-label="Tutup tiket">&times;</button>
+      </div>
+      <div class="medical-modal-body control-modal-body">
+        <div class="medical-qr-container" id="controlTicketQrBox"></div>
+        <div class="medical-modal-info">
+          <div class="medical-modal-info-row">
+            <span class="medical-modal-info-label">Pasien</span>
+            <span class="medical-modal-info-value" id="ticketPatientName">-</span>
+          </div>
+          <div class="medical-modal-info-row">
+            <span class="medical-modal-info-label">Poliklinik</span>
+            <span class="medical-modal-info-value" id="ticketPoliName">-</span>
+          </div>
+          <div class="medical-modal-info-row">
+            <span class="medical-modal-info-label">Lokasi</span>
+            <span class="medical-modal-info-value" id="ticketRoomLabel">-</span>
+          </div>
+          <div class="medical-modal-info-row">
+            <span class="medical-modal-info-label">Dokter</span>
+            <span class="medical-modal-info-value" id="ticketDoctorName">-</span>
+          </div>
+          <div class="medical-modal-info-row">
+            <span class="medical-modal-info-label">Waktu Kunjungan</span>
+            <span class="medical-modal-info-value" id="ticketDateTime">-</span>
+          </div>
+        </div>
+        <p class="control-ticket-instruction">Hadir 15 menit sebelum sesi dan tunjukkan e-tiket ini di loket pendaftaran klinik.</p>
+        <div class="control-modal-actions">
+          <button type="button" class="control-btn-secondary" id="printControlTicketBtn">Cetak Tiket</button>
+          <button type="button" class="control-btn-primary" id="closeControlTicketBottomBtn">Tutup</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Catatan / Arahan Dokter -->
+  <div id="controlNoteModal" class="medical-modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="controlNoteTitle">
+    <div class="medical-modal-dialog control-modal-dialog">
+      <div class="medical-modal-header">
+        <div>
+          <h3 class="medical-modal-title" id="controlNoteTitle">Catatan Kontrol Medis</h3>
+          <p class="medical-modal-subtitle" id="controlNoteMeta">-</p>
+        </div>
+        <button type="button" class="medical-modal-close control-modal-close" id="closeControlNoteBtn" aria-label="Tutup catatan">&times;</button>
+      </div>
+      <div class="medical-modal-body control-modal-body control-modal-body--left">
+        <div class="medical-modal-info">
+          <div class="medical-modal-info-row">
+            <span class="medical-modal-info-label">Dokter Penanggung Jawab</span>
+            <span class="medical-modal-info-value" id="controlNoteDoctor">-</span>
+          </div>
+          <div class="medical-modal-info-row">
+            <span class="medical-modal-info-label">Lokasi</span>
+            <span class="medical-modal-info-value" id="controlNoteRoom">-</span>
+          </div>
+        </div>
+        <div class="control-note-detail-box">
+          <span class="control-note-detail-label">Arahan &amp; Catatan Pemeriksaan</span>
+          <p class="control-note-detail-text" id="controlNoteText">-</p>
+        </div>
+        <div class="control-modal-actions control-modal-actions--split">
+          <a href="/pasien/riwayat.html" class="control-note-history-link">Buka Riwayat Lengkap</a>
+          <button type="button" class="control-btn-primary" id="closeControlNoteBottomBtn">Tutup</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Batalkan Jadwal Kontrol -->
+  <div id="controlManageModal" class="medical-modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="controlManageTitle">
+    <div class="medical-modal-dialog control-modal-dialog control-manage-dialog">
+      <div class="medical-modal-header">
+        <div>
+          <h3 class="medical-modal-title" id="controlManageTitle">Batalkan Jadwal</h3>
+          <p class="medical-modal-subtitle">Pembatalan mandiri atau ubah via resepsionis.</p>
+        </div>
+        <button type="button" class="medical-modal-close control-modal-close" id="closeControlManageBtn" aria-label="Tutup modal">&times;</button>
+      </div>
+      <div class="medical-modal-body control-modal-body control-modal-body--left">
+        <div id="controlManageAlert" class="alert" role="alert" aria-live="polite"></div>
+        <p class="control-manage-summary" id="controlManageSummary">-</p>
+        <div class="control-manage-notice">
+          Ingin ubah tanggal? Hubungi resepsionis maksimal H-1 kunjungan.
+        </div>
+        <input type="hidden" id="controlManageAppointmentId" value="">
+        <div class="control-modal-actions control-modal-actions--stack">
+          <a id="controlManageWaLink" href="https://wa.me/6281123456789" target="_blank" rel="noopener noreferrer" class="control-btn-wa control-btn-full">
+            Ubah via WhatsApp
+          </a>
+          <button type="button" class="control-btn-danger control-btn-full" id="confirmControlCancelBtn">
+            Batalkan Jadwal
+          </button>
+          <button type="button" class="control-btn-secondary control-btn-full" id="cancelControlManageBtn">
+            Kembali
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 </body>
 </html>

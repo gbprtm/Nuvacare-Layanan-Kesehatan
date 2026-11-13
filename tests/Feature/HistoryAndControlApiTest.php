@@ -28,7 +28,20 @@ class HistoryAndControlApiTest extends TestCase
             'doctor_notes' => 'Migrain ringan, hindari begadang dan konsumsi obat teratur.',
         ]);
 
-        // 2. Buat data appointment terjadwal (tidak boleh muncul di riwayat)
+        // 2. Buat data appointment dibatalkan (harus masuk riwayat, tidak boleh di /api/janji-temu)
+        $cancelledApp = Appointment::create([
+            'user_id' => $patient->id,
+            'polyclinic_id' => $doctor->polyclinic_id,
+            'doctor_id' => $doctor->id,
+            'appointment_date' => now()->subDays(2)->format('Y-m-d'),
+            'appointment_time' => '09:00',
+            'type' => 'janji_baru',
+            'status' => 'dibatalkan',
+            'complaint' => 'Demam ringan',
+            'doctor_notes' => 'Dibatalkan oleh pasien.',
+        ]);
+
+        // 3. Buat data appointment terjadwal (tidak boleh muncul di riwayat)
         $scheduledApp = Appointment::create([
             'user_id' => $patient->id,
             'polyclinic_id' => $doctor->polyclinic_id,
@@ -47,9 +60,19 @@ class HistoryAndControlApiTest extends TestCase
 
         $ids = collect($response->json('data'))->pluck('id')->all();
         $this->assertContains($completedApp->id, $ids);
+        $this->assertContains($cancelledApp->id, $ids);
         $this->assertNotContains($scheduledApp->id, $ids);
 
+        $activeResponse = $this->withHeader('Authorization', 'Bearer '.$token)
+            ->getJson('/api/janji-temu');
+
+        $activeResponse->assertStatus(200);
+        $activeIds = collect($activeResponse->json('data'))->pluck('id')->all();
+        $this->assertContains($scheduledApp->id, $activeIds);
+        $this->assertNotContains($cancelledApp->id, $activeIds);
+
         $completedApp->delete();
+        $cancelledApp->delete();
         $scheduledApp->delete();
     }
 

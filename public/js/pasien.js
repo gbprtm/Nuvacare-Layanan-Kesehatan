@@ -194,6 +194,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (document.getElementById('appointmentTableBody')) {
     initPatientCancelModal();
+    initPatientDeleteModal();
     const reloadPatientBtn = document.getElementById('reloadPatientAppointmentsBtn');
     if (reloadPatientBtn) {
       reloadPatientBtn.addEventListener('click', loadPatientAppointments);
@@ -228,15 +229,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const filterChips = document.querySelectorAll('.medical-filter-chip');
     filterChips.forEach(chip => {
       chip.addEventListener('click', () => {
-        filterChips.forEach(c => c.classList.remove('is-active'));
+        filterChips.forEach(c => {
+          c.classList.remove('is-active');
+          c.setAttribute('aria-pressed', 'false');
+        });
         chip.classList.add('is-active');
+        chip.setAttribute('aria-pressed', 'true');
         filterAndRenderHistory();
       });
     });
   }
 
-  if (document.getElementById('controlTableBody')) {
-    loadControlSchedules();
+  if (document.getElementById('controlTableBody') || document.getElementById('controlCardsList')) {
+    initControlSchedulePage();
   }
 });
 
@@ -1274,85 +1279,112 @@ async function initBookingPage() {
   }
 }
 
+const PATIENT_APPT_VISIBLE_LIMIT = 5;
 let patientAppointmentsCache = [];
+
+function getStoredIdList(storageKey) {
+  try {
+    const raw = localStorage.getItem(storageKey);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function appendStoredId(storageKey, id) {
+  try {
+    const list = getStoredIdList(storageKey);
+    const strId = String(id);
+    if (!list.includes(strId)) {
+      list.push(strId);
+      localStorage.setItem(storageKey, JSON.stringify(list));
+    }
+  } catch {}
+}
+
+function getHiddenAppointmentsStorageKey() {
+  return `nuvacare_hidden_appointments_${api.getUser()?.id || 'guest'}`;
+}
+
+function getHiddenAppointmentIds() {
+  return getStoredIdList(getHiddenAppointmentsStorageKey());
+}
+
+function saveHiddenAppointmentId(id) {
+  appendStoredId(getHiddenAppointmentsStorageKey(), id);
+}
+
+function renderPatientAppointmentsTable() {
+  const tableBody = document.getElementById('appointmentTableBody');
+  const subtitleEl = document.getElementById('patientAppointmentsSub');
+  if (!tableBody) return;
+
+  const hiddenIds = getHiddenAppointmentIds();
+  const visiblePool = patientAppointmentsCache.filter(
+    a => a.status === 'terjadwal' && !hiddenIds.includes(String(a.id))
+  );
+
+  if (subtitleEl) {
+    subtitleEl.textContent = visiblePool.length > PATIENT_APPT_VISIBLE_LIMIT
+      ? `Menampilkan ${PATIENT_APPT_VISIBLE_LIMIT} dari ${visiblePool.length} janji temu aktif.`
+      : 'Pantau status kunjungan poliklinik Anda.';
+  }
+
+  if (visiblePool.length === 0) {
+    tableBody.innerHTML = '<tr><td colspan="5" class="text-muted text-center" style="padding: var(--space-6);">Belum ada janji temu aktif. Buat janji pertama Anda di formulir atas.</td></tr>';
+    return;
+  }
+
+  const displayedAppointments = visiblePool.slice(0, PATIENT_APPT_VISIBLE_LIMIT);
+
+  tableBody.innerHTML = displayedAppointments.map(a => {
+    const mobileComplaint = a.complaint
+      ? `<span class="appt-mobile-complaint">${escapeHtml(a.complaint)}</span>`
+      : '';
+    const notesSub = a.doctor_notes
+      ? `<div class="appt-notes-sub">Catatan: ${escapeHtml(a.doctor_notes)}</div>`
+      : '';
+    const actionCell = a.status === 'terjadwal'
+      ? `<button type="button" class="appt-btn-cancel" onclick="openPatientCancelModal(${a.id})">Batalkan</button>`
+      : `<button type="button" class="appt-btn-remove" onclick="openPatientDeleteModal(${a.id})">Hapus</button>`;
+
+    return `
+      <tr>
+        <td>
+          <span class="appt-date-primary">${escapeHtml(api.formatDate(a.appointment_date))}</span>
+          <span class="appt-time-sub">${escapeHtml(a.appointment_time || '09:00')} WIB</span>
+        </td>
+        <td>
+          <span class="appt-poli-name">${escapeHtml(a.polyclinic?.name || '-')}</span>
+          <span class="appt-doctor-sub">${escapeHtml(a.doctor?.name || '-')}</span>
+          ${mobileComplaint}
+        </td>
+        <td class="appt-col-notes">
+          <div class="appt-notes-main">${escapeHtml(a.complaint || '-')}</div>
+          ${notesSub}
+        </td>
+        <td>
+          <span class="appt-status-text appt-status-text--${escapeHtml(a.status)}">
+            <span class="appt-status-dot" aria-hidden="true"></span>
+            <span>${escapeHtml(getStatusLabel(a.status))}</span>
+          </span>
+        </td>
+        <td class="appt-col-actions">${actionCell}</td>
+      </tr>
+    `;
+  }).join('');
+}
 
 async function loadPatientAppointments() {
   const tableBody = document.getElementById('appointmentTableBody');
-  const cardsEl = document.getElementById('patientAppointmentCards');
-  if (!tableBody && !cardsEl) return;
-
-  const tableWrap = tableBody ? tableBody.closest('.table-responsive') : null;
-  if (tableWrap && cardsEl) {
-    tableWrap.classList.add('has-mobile-cards');
-  }
+  if (!tableBody) return;
 
   try {
     const res = await api.request('/janji-temu', { priority: 'high' });
-    const appointments = res.data || [];
-    patientAppointmentsCache = appointments;
-
-    if (appointments.length === 0) {
-      if (tableBody) {
-        tableBody.innerHTML = '<tr><td colspan="7" class="text-muted text-center" style="padding: var(--space-6);">Belum ada janji. Buat janji pertamamu di formulir atas.</td></tr>';
-      }
-      if (cardsEl) {
-        cardsEl.innerHTML = '<div class="portal-state-box"><p class="text-muted">Belum ada janji temu. Buat janji pertamamu di formulir atas.</p></div>';
-      }
-      return;
-    }
-
-    if (tableBody) {
-      tableBody.innerHTML = appointments.map(a => `
-        <tr>
-          <td>
-            <strong>${escapeHtml(api.formatDate(a.appointment_date))}</strong>
-            <div class="text-muted text-sm">Pukul ${escapeHtml(a.appointment_time || '09:00')} WIB</div>
-          </td>
-          <td>${escapeHtml(a.polyclinic?.name || '-')}</td>
-          <td>${escapeHtml(a.doctor?.name || '-')}</td>
-          <td>${escapeHtml(a.complaint || '-')}</td>
-          <td><span class="badge badge-${escapeHtml(a.status)}">${escapeHtml(getStatusLabel(a.status))}</span></td>
-          <td>${escapeHtml(a.doctor_notes || '-')}</td>
-          <td>
-            ${a.status === 'terjadwal'
-              ? `<button type="button" class="btn btn-danger btn-touch" onclick="openPatientCancelModal(${a.id})">Batalkan Janji</button>`
-              : '<span class="text-muted text-sm">-</span>'}
-          </td>
-        </tr>
-      `).join('');
-    }
-
-    if (cardsEl) {
-      cardsEl.innerHTML = appointments.map(a => `
-        <article class="mobile-data-card">
-          <div class="mobile-data-card__head">
-            <div>
-              <strong>${escapeHtml(api.formatDate(a.appointment_date))}</strong>
-              <div class="text-muted text-sm">Pukul ${escapeHtml(a.appointment_time || '09:00')} WIB</div>
-            </div>
-            <span class="badge badge-${escapeHtml(a.status)}">${escapeHtml(getStatusLabel(a.status))}</span>
-          </div>
-          <div class="mobile-data-card__meta">
-            <div><strong>Poliklinik:</strong> ${escapeHtml(a.polyclinic?.name || '-')}</div>
-            <div><strong>Dokter:</strong> ${escapeHtml(a.doctor?.name || '-')}</div>
-            ${a.complaint ? `<div><strong>Keluhan:</strong> ${escapeHtml(a.complaint)}</div>` : ''}
-            ${a.doctor_notes ? `<div><strong>Catatan Dokter:</strong> ${escapeHtml(a.doctor_notes)}</div>` : ''}
-          </div>
-          ${a.status === 'terjadwal'
-            ? `<div class="mobile-data-card__actions">
-                <button type="button" class="btn btn-danger btn-touch" onclick="openPatientCancelModal(${a.id})">Batalkan Janji</button>
-              </div>`
-            : ''}
-        </article>
-      `).join('');
-    }
+    patientAppointmentsCache = Array.isArray(res.data) ? res.data : [];
+    renderPatientAppointmentsTable();
   } catch {
-    if (tableBody) {
-      tableBody.innerHTML = '<tr><td colspan="7" class="text-center" style="color: var(--color-danger-ink); padding: var(--space-6);">Gagal memuat data. Coba muat ulang halaman.</td></tr>';
-    }
-    if (cardsEl) {
-      cardsEl.innerHTML = '<div class="portal-state-box portal-state-box--error"><p>Gagal memuat daftar janji temu. Coba muat ulang.</p></div>';
-    }
+    tableBody.innerHTML = '<tr><td colspan="5" class="text-center" style="color: var(--color-danger-ink); padding: var(--space-6);">Gagal memuat data. Coba muat ulang halaman.</td></tr>';
   }
 }
 
@@ -1396,7 +1428,7 @@ function initPatientCancelModal() {
           body: JSON.stringify({})
         });
         closeModal();
-        api.showAlert('patientAppointmentsAlert', res.message || 'Janji temu Anda berhasil dibatalkan.', 'success');
+        api.showAlert('patientAppointmentsAlert', res.message || 'Janji temu dibatalkan dan dipindahkan ke Riwayat Pemeriksaan.', 'success');
         await loadPatientAppointments();
       } catch (err) {
         api.showAlert('patientCancelModalAlert', err.message || 'Gagal membatalkan janji temu.', 'danger');
@@ -1429,6 +1461,63 @@ function openPatientCancelModal(appointmentId) {
 }
 
 window.openPatientCancelModal = openPatientCancelModal;
+
+function initPatientDeleteModal() {
+  const modal = document.getElementById('patientDeleteConfirmModal');
+  if (!modal) return;
+
+  const closeBtn = document.getElementById('closePatientDeleteModalBtn');
+  const cancelBtn = document.getElementById('cancelPatientDeleteBtn');
+  const confirmBtn = document.getElementById('confirmPatientDeleteBtn');
+
+  const closeModal = () => {
+    modal.hidden = true;
+    modal.style.display = 'none';
+  };
+
+  if (closeBtn) closeBtn.addEventListener('click', closeModal);
+  if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeModal();
+  });
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !modal.hidden && modal.style.display === 'flex') {
+      closeModal();
+    }
+  });
+
+  if (confirmBtn) {
+    confirmBtn.addEventListener('click', () => {
+      const apptId = Number(document.getElementById('patientDeleteAppointmentId')?.value || 0);
+      if (!apptId) return;
+      saveHiddenAppointmentId(apptId);
+      closeModal();
+      api.showAlert('patientAppointmentsAlert', 'Baris janji temu dihapus dari tampilan daftar.', 'success');
+      renderPatientAppointmentsTable();
+    });
+  }
+}
+
+function openPatientDeleteModal(appointmentId) {
+  const modal = document.getElementById('patientDeleteConfirmModal');
+  if (!modal) return;
+
+  const idInput = document.getElementById('patientDeleteAppointmentId');
+  const summaryEl = document.getElementById('patientDeleteSummary');
+  const item = patientAppointmentsCache.find(a => Number(a.id) === Number(appointmentId));
+
+  if (idInput) idInput.value = String(appointmentId);
+  if (summaryEl && item) {
+    summaryEl.textContent = `Hapus catatan janji temu ${item.polyclinic?.name || 'Poliklinik'} dengan ${item.doctor?.name || 'Dokter'} (${api.formatDate(item.appointment_date)}) dari daftar tampilan Anda?`;
+  }
+
+  modal.hidden = false;
+  modal.style.display = 'flex';
+  const cancelBtn = document.getElementById('cancelPatientDeleteBtn');
+  if (cancelBtn) setTimeout(() => cancelBtn.focus(), 40);
+}
+
+window.openPatientDeleteModal = openPatientDeleteModal;
 
 let examinationHistoryData = [];
 
@@ -1505,19 +1594,42 @@ function renderHistoryCards(items) {
           </svg>
         </div>
         <h3 style="font-size: 16px; font-weight: 700; color: #0F172A; margin: 0 0 4px 0;">Tidak Ada Riwayat Pemeriksaan</h3>
-        <p style="font-size: 13.5px; color: #64748B; margin: 0 0 16px 0;">Tidak ditemukan catatan rekam medis yang sesuai dengan pencarian Anda.</p>
+        <p style="font-size: 13.5px; color: #64748B; margin: 0 0 16px 0;">Belum ada catatan kunjungan selesai atau janji temu yang dibatalkan sesuai filter Anda.</p>
         <a href="/pasien/janji-temu.html" class="medical-btn-rebook" style="display: inline-flex;">Buat Janji Baru</a>
       </div>
     `;
     return;
   }
 
-  cardsContainer.innerHTML = items.map(a => `
+  cardsContainer.innerHTML = items.map(a => {
+    const isCancelled = a.status === 'dibatalkan';
+    const badgeHtml = isCancelled
+      ? `<span class="clinical-badge-cancelled"><span class="clinical-status-dot clinical-status-dot--cancelled" aria-hidden="true">&bull;</span><span>Dibatalkan</span></span>`
+      : `<span class="clinical-badge-completed"><span class="clinical-status-dot" aria-hidden="true">&bull;</span><span>Kunjungan Selesai</span></span>`;
+    const summaryTitle = isCancelled ? 'Catatan Pembatalan' : 'Ringkasan Klinis';
+    const summaryText = isCancelled
+      ? ([a.complaint, a.doctor_notes].filter(Boolean).join(' - ') || 'Janji temu ini telah dibatalkan.')
+      : `${a.complaint || 'Evaluasi rutin kondisi kesehatan pasien.'}${a.doctor_notes ? ` ${a.doctor_notes}` : ''}`;
+    const qrButtonHtml = isCancelled
+      ? ''
+      : `
+          <button type="button" class="clinical-btn-qr" onclick="openMedicalQrModal('${a.id}')">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3" y="3" width="7" height="7"></rect>
+              <rect x="14" y="3" width="7" height="7"></rect>
+              <rect x="14" y="14" width="7" height="7"></rect>
+              <rect x="3" y="14" width="7" height="7"></rect>
+            </svg>
+            <span>QR Medis</span>
+          </button>`;
+    const rebookLabel = isCancelled ? 'Buat Janji Baru' : 'Buat Jadwal Kontrol';
+
+    return `
     <article class="clinical-card">
       <!-- Baris 1: Header Poliklinik & Tanggal/Status -->
       <div class="clinical-card-header">
         <div class="clinical-poli-info">
-          <div class="clinical-poli-icon" aria-hidden="true">
+          <div class="clinical-poli-icon${isCancelled ? ' clinical-poli-icon--cancelled' : ''}" aria-hidden="true">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <rect x="2" y="4" width="20" height="16" rx="4"></rect>
               <path d="M6 12h3l2-3 3 6 2-3h3"></path>
@@ -1537,25 +1649,22 @@ function renderHistoryCards(items) {
 
         <div class="clinical-meta-right">
           <span class="clinical-datetime">${escapeHtml(api.formatDate(a.appointment_date))} &bull; ${escapeHtml(a.appointment_time || '09:40')} WIB</span>
-          <span class="clinical-badge-completed">
-            <span class="clinical-status-dot" aria-hidden="true">&bull;</span>
-            <span>Kunjungan Selesai</span>
-          </span>
+          ${badgeHtml}
         </div>
       </div>
 
       <!-- Baris 2: Profil Dokter -->
       <div class="clinical-doctor-row">
-        <div class="clinical-doctor-avatar">${escapeHtml(getDoctorInitials(a.doctor?.name))}</div>
+        <div class="clinical-doctor-avatar${isCancelled ? ' clinical-doctor-avatar--cancelled' : ''}">${escapeHtml(getDoctorInitials(a.doctor?.name))}</div>
         <div class="clinical-doctor-details">
           <h3 class="clinical-doctor-name">${escapeHtml(a.doctor?.name || 'dr. Dokter Spesialis')}</h3>
           <p class="clinical-doctor-spec">&bull; ${escapeHtml(a.doctor?.specialization || 'Spesialis Medis')}</p>
         </div>
       </div>
 
-      <!-- Baris 3: Kotak Ringkasan Klinis -->
-      <div class="clinical-summary-box">
-        <div class="clinical-summary-title">
+      <!-- Baris 3: Kotak Ringkasan Klinis / Catatan Pembatalan -->
+      <div class="clinical-summary-box${isCancelled ? ' clinical-summary-box--cancelled' : ''}">
+        <div class="clinical-summary-title${isCancelled ? ' clinical-summary-title--cancelled' : ''}">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
             <polyline points="14 2 14 8 20 8"></polyline>
@@ -1563,27 +1672,16 @@ function renderHistoryCards(items) {
             <line x1="16" y1="17" x2="8" y2="17"></line>
             <polyline points="10 9 9 9 8 9"></polyline>
           </svg>
-          <span>Ringkasan Klinis</span>
+          <span>${summaryTitle}</span>
         </div>
-        <p class="clinical-summary-text">
-          ${escapeHtml(a.complaint || 'Evaluasi rutin kondisi kesehatan pasien.')}
-          ${a.doctor_notes ? ` ${escapeHtml(a.doctor_notes)}` : ''}
-        </p>
+        <p class="clinical-summary-text">${escapeHtml(summaryText)}</p>
       </div>
 
       <!-- Baris 4: Footer Tombol Aksi -->
       <div class="clinical-actions-row">
         <div class="clinical-actions-left">
-          <button type="button" class="clinical-btn-qr" onclick="openMedicalQrModal('${a.id}')">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <rect x="3" y="3" width="7" height="7"></rect>
-              <rect x="14" y="3" width="7" height="7"></rect>
-              <rect x="14" y="14" width="7" height="7"></rect>
-              <rect x="3" y="14" width="7" height="7"></rect>
-            </svg>
-            <span>QR Medis</span>
-          </button>
-          <button type="button" class="clinical-btn-delete" onclick="confirmDeleteHistory('${a.id}')" title="Hapus riwayat pemeriksaan ini dari tampilan">
+          ${qrButtonHtml}
+          <button type="button" class="clinical-btn-delete" onclick="confirmDeleteHistory('${a.id}')" title="Hapus catatan ini dari tampilan">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <polyline points="3 6 5 6 21 6"></polyline>
               <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -1601,32 +1699,22 @@ function renderHistoryCards(items) {
             <line x1="12" y1="14" x2="12" y2="18"></line>
             <line x1="10" y1="16" x2="14" y2="16"></line>
           </svg>
-          <span>Buat Jadwal Kontrol</span>
+          <span>${rebookLabel}</span>
         </a>
       </div>
     </article>
-  `).join('');
+  `;
+  }).join('');
 }
 
 let pendingDeleteHistoryId = null;
 
 function getDeletedHistoryIds() {
-  try {
-    const raw = localStorage.getItem('nuvacare_deleted_records');
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
+  return getStoredIdList('nuvacare_deleted_records');
 }
 
 function saveDeletedHistoryId(id) {
-  try {
-    const list = getDeletedHistoryIds();
-    if (!list.includes(String(id))) {
-      list.push(String(id));
-      localStorage.setItem('nuvacare_deleted_records', JSON.stringify(list));
-    }
-  } catch {}
+  appendStoredId('nuvacare_deleted_records', id);
 }
 
 function confirmDeleteHistory(id) {
@@ -1704,10 +1792,14 @@ function populateYearDropdown(items) {
 function filterAndRenderHistory() {
   const query = (document.getElementById('medicalSearchInput')?.value || '').toLowerCase().trim();
   const yearSelect = document.getElementById('medicalYearSelect');
-  const activeChip = document.querySelector('.medical-filter-chip.is-active');
-  const filterYear = yearSelect ? yearSelect.value : (activeChip ? activeChip.dataset.filter : 'all');
+  const activeChip = document.querySelector('#medicalStatusFilters .medical-filter-chip.is-active, .medical-filter-chip.is-active');
+  const filterYear = yearSelect ? yearSelect.value : 'all';
+  const filterStatus = activeChip?.dataset?.status || 'all';
 
   const filtered = examinationHistoryData.filter(item => {
+    if (filterStatus !== 'all' && item.status !== filterStatus) {
+      return false;
+    }
     if (filterYear !== 'all') {
       const apptYear = (item.appointment_date || '').split('-')[0];
       if (apptYear !== filterYear) return false;
@@ -1778,32 +1870,544 @@ async function loadExaminationHistory() {
   }
 }
 
-async function loadControlSchedules() {
-  const tableBody = document.getElementById('controlTableBody');
-  if (!tableBody) return;
+const controlScheduleState = {
+  items: [],
+  filter: 'all',
+  clinicWhatsappDigits: '6281123456789',
+  activeModal: null,
+  lastModalTrigger: null,
+  initialized: false,
+};
 
-  try {
-    const res = await api.request('/jadwal-kontrol', { priority: 'high' });
-    const items = res.data || [];
+function formatControlItemView(item) {
+  const isCompleted = item.status === 'selesai';
+  return {
+    id: String(item.id),
+    isCompleted,
+    dateFormatted: api.formatDate(item.appointment_date),
+    timeLabel: `${item.appointment_time || '08:00'} WIB`,
+    poliName: item.polyclinic?.name || 'Poliklinik',
+    roomLabel: item.polyclinic?.room_label || 'Gedung Utama Klinik',
+    doctorName: item.doctor?.name || 'Dokter Pemeriksa',
+    doctorInitials: getDoctorInitials(item.doctor?.name),
+    doctorSpec: item.doctor?.specialization || 'Dokter Poliklinik',
+    notes: item.doctor_notes || (isCompleted
+      ? 'Pemeriksaan kontrol telah selesai dilaksanakan.'
+      : 'Kontrol evaluasi rutin sesuai arahan dokter.'),
+    statusLabel: isCompleted ? 'Selesai' : 'Terjadwal',
+    statusClass: isCompleted ? 'control-status-pill--selesai' : 'control-status-pill--terjadwal',
+  };
+}
 
-    if (items.length === 0) {
-      tableBody.innerHTML = '<tr><td colspan="5" class="text-muted text-center" style="padding: var(--space-6);">Belum ada jadwal kontrol dari dokter.</td></tr>';
-      return;
-    }
+function buildControlActionButtons(view) {
+  if (view.isCompleted) {
+    return `
+      <button type="button" class="control-btn-secondary" data-control-action="note" data-control-id="${escapeHtml(view.id)}">
+        Lihat Catatan
+      </button>
+    `;
+  }
 
-    tableBody.innerHTML = items.map(a => `
-      <tr>
-        <td><strong>${escapeHtml(api.formatDate(a.appointment_date))}</strong></td>
-        <td>${escapeHtml(a.polyclinic?.name || '-')}</td>
-        <td>${escapeHtml(a.doctor?.name || '-')}</td>
-        <td>${escapeHtml(a.doctor_notes || 'Kontrol evaluasi rutin')}</td>
-        <td><span class="badge badge-terjadwal">Terjadwal</span></td>
-      </tr>
-    `).join('');
-  } catch {
-    tableBody.innerHTML = '<tr><td colspan="5" class="text-center" style="color: var(--color-danger-ink); padding: var(--space-6);">Gagal memuat data. Coba muat ulang halaman.</td></tr>';
+  return `
+    <button type="button" class="control-btn-primary" data-control-action="ticket" data-control-id="${escapeHtml(view.id)}">
+      Lihat Tiket
+    </button>
+    <button type="button" class="control-btn-secondary" data-control-action="manage" data-control-id="${escapeHtml(view.id)}">
+      Batalkan
+    </button>
+  `;
+}
+
+function renderControlTableRow(view) {
+  const iconClass = view.isCompleted ? 'control-cell-date-icon control-cell-date-icon--done' : 'control-cell-date-icon';
+  return `
+    <tr>
+      <td>
+        <div class="control-cell-date">
+          <div class="${iconClass}" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+          </div>
+          <div>
+            <span class="control-date-primary">${escapeHtml(view.dateFormatted)}</span>
+            <span class="control-time-sub">${escapeHtml(view.timeLabel)}</span>
+            <span class="control-room-sub">${escapeHtml(view.roomLabel)}</span>
+          </div>
+        </div>
+      </td>
+      <td><span class="control-poli-chip">${escapeHtml(view.poliName)}</span></td>
+      <td>
+        <div class="control-doctor-cell">
+          <div class="control-doctor-avatar" aria-hidden="true">${escapeHtml(view.doctorInitials)}</div>
+          <div>
+            <span class="control-doctor-name">${escapeHtml(view.doctorName)}</span>
+            <span class="control-doctor-meta">${escapeHtml(view.doctorSpec)}</span>
+          </div>
+        </div>
+      </td>
+      <td><p class="control-notes-snippet">${escapeHtml(view.notes)}</p></td>
+      <td><span class="control-status-pill ${view.statusClass}">${escapeHtml(view.statusLabel)}</span></td>
+      <td class="control-col-actions">
+        <div class="control-row-actions">
+          ${buildControlActionButtons(view)}
+        </div>
+      </td>
+    </tr>
+  `;
+}
+
+function renderControlMobileCard(view) {
+  const notesClass = view.isCompleted
+    ? 'control-visit-card__notes control-visit-card__notes--done'
+    : 'control-visit-card__notes';
+  const actionsClass = view.isCompleted
+    ? 'control-visit-card__actions control-visit-card__actions--single'
+    : 'control-visit-card__actions';
+
+  return `
+    <article class="control-visit-card">
+      <div class="control-visit-card__top">
+        <span class="control-visit-card__datetime">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="16" y1="2" x2="16" y2="6"></line>
+            <line x1="8" y1="2" x2="8" y2="6"></line>
+            <line x1="3" y1="10" x2="21" y2="10"></line>
+          </svg>
+          <span>${escapeHtml(view.dateFormatted)}, ${escapeHtml(view.timeLabel)}</span>
+        </span>
+        <span class="control-status-pill ${view.statusClass}">${escapeHtml(view.statusLabel)}</span>
+      </div>
+
+      <div class="control-visit-card__location">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+          <circle cx="12" cy="10" r="3"></circle>
+        </svg>
+        <span>${escapeHtml(view.roomLabel)}</span>
+      </div>
+
+      <div class="control-visit-card__doctor-box">
+        <div class="control-doctor-avatar" aria-hidden="true">${escapeHtml(view.doctorInitials)}</div>
+        <div>
+          <span class="control-visit-card__poli">${escapeHtml(view.poliName)}</span>
+          <span class="control-doctor-name">${escapeHtml(view.doctorName)}</span>
+          <span class="control-doctor-meta">${escapeHtml(view.doctorSpec)}</span>
+        </div>
+      </div>
+
+      <div class="${notesClass}">
+        <strong>Arahan Dokter:</strong> ${escapeHtml(view.notes)}
+      </div>
+
+      <div class="${actionsClass}">
+        ${buildControlActionButtons(view)}
+      </div>
+    </article>
+  `;
+}
+
+function renderControlStateBox({ mode, title, description, showRetry = false, showCreateCta = false }) {
+  const stateBox = document.getElementById('controlStateBox');
+  const tableWrap = document.getElementById('controlTableWrap');
+  const cardsList = document.getElementById('controlCardsList');
+  if (!stateBox) return;
+
+  if (tableWrap) tableWrap.hidden = true;
+  if (cardsList) cardsList.hidden = true;
+  stateBox.hidden = false;
+
+  const isError = mode === 'error';
+  const iconClass = isError ? 'control-state-icon control-state-icon--error' : 'control-state-icon';
+  const iconSvg = isError
+    ? `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>`
+    : `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>`;
+
+  const actionHtml = showRetry
+    ? `<button type="button" class="control-btn-secondary" id="retryControlLoadBtn">Muat Ulang Data</button>`
+    : (showCreateCta ? `<a href="/pasien/janji-temu.html" class="control-btn-primary">Buat Janji Temu Baru</a>` : '');
+
+  stateBox.innerHTML = `
+    <div class="${iconClass}">${iconSvg}</div>
+    <p class="control-state-title">${escapeHtml(title)}</p>
+    <p class="control-state-desc">${escapeHtml(description)}</p>
+    ${actionHtml}
+  `;
+
+  const retryBtn = document.getElementById('retryControlLoadBtn');
+  if (retryBtn) {
+    retryBtn.addEventListener('click', () => {
+      fetchControlScheduleData();
+    });
   }
 }
+
+function updateControlBannerAndCounts(scheduledItems, completedItems) {
+  const userName = api.getUser()?.name || 'Pasien';
+
+  const summaryTextEl = document.getElementById('controlSummaryText');
+  const summaryHintEl = document.getElementById('controlSummaryHint');
+
+  if (scheduledItems.length > 0) {
+    const nextVisit = scheduledItems[0];
+    if (summaryTextEl) {
+      summaryTextEl.innerHTML = `Halo, <strong id="controlPatientGreeting">${escapeHtml(userName)}</strong>! Jadwal kontrol terdekat Anda pada <strong>${escapeHtml(api.formatDate(nextVisit.appointment_date))}</strong> pukul <strong>${escapeHtml(nextVisit.appointment_time || '08:00')} WIB</strong>.`;
+    }
+    if (summaryHintEl) {
+      summaryHintEl.textContent = `${nextVisit.polyclinic?.name || 'Poliklinik'} bersama ${nextVisit.doctor?.name || 'Dokter Pemeriksa'}. Hadir 15 menit sebelum sesi dimulai.`;
+    }
+  } else if (completedItems.length > 0) {
+    if (summaryTextEl) {
+      summaryTextEl.innerHTML = `Halo, <strong id="controlPatientGreeting">${escapeHtml(userName)}</strong>! Belum ada jadwal kontrol aktif saat ini.`;
+    }
+    if (summaryHintEl) {
+      summaryHintEl.textContent = `Anda memiliki ${completedItems.length} riwayat kunjungan kontrol yang telah selesai.`;
+    }
+  } else {
+    if (summaryTextEl) {
+      summaryTextEl.innerHTML = `Halo, <strong id="controlPatientGreeting">${escapeHtml(userName)}</strong>! Belum ada jadwal kontrol dari dokter.`;
+    }
+    if (summaryHintEl) {
+      summaryHintEl.textContent = 'Jika membutuhkan pemeriksaan baru, Anda dapat membuat janji temu poliklinik secara langsung.';
+    }
+  }
+}
+
+function renderControlScheduleViews() {
+  const stateBox = document.getElementById('controlStateBox');
+  const tableWrap = document.getElementById('controlTableWrap');
+  const tableBody = document.getElementById('controlTableBody');
+  const cardsList = document.getElementById('controlCardsList');
+  if (!tableBody || !cardsList) return;
+
+  const filtered = controlScheduleState.items.filter(item => {
+    if (controlScheduleState.filter === 'all') return true;
+    return item.status === controlScheduleState.filter;
+  });
+
+  if (filtered.length === 0) {
+    tableBody.innerHTML = '';
+    cardsList.innerHTML = '';
+
+    if (controlScheduleState.filter === 'terjadwal') {
+      renderControlStateBox({
+        mode: 'empty',
+        title: 'Belum ada jadwal kontrol terjadwal',
+        description: 'Saat ini tidak ada kunjungan kontrol rutin yang berstatus terjadwal.',
+        showCreateCta: true,
+      });
+    } else if (controlScheduleState.filter === 'selesai') {
+      renderControlStateBox({
+        mode: 'empty',
+        title: 'Belum ada riwayat kontrol selesai',
+        description: 'Kunjungan kontrol rutin yang sudah diselesaikan dokter akan tampil di tab ini.',
+        showCreateCta: false,
+      });
+    } else {
+      renderControlStateBox({
+        mode: 'empty',
+        title: 'Belum ada jadwal kontrol dari dokter',
+        description: 'Anda dapat membuat janji temu baru jika membutuhkan konsultasi poliklinik.',
+        showCreateCta: true,
+      });
+    }
+    return;
+  }
+
+  const views = filtered.map(formatControlItemView);
+  if (stateBox) stateBox.hidden = true;
+  if (tableWrap) tableWrap.hidden = false;
+  cardsList.hidden = false;
+
+  tableBody.innerHTML = views.map(renderControlTableRow).join('');
+  cardsList.innerHTML = views.map(renderControlMobileCard).join('');
+}
+
+function openControlModal(modalEl, triggerEl) {
+  if (!modalEl) return;
+  controlScheduleState.lastModalTrigger = triggerEl || document.activeElement;
+  controlScheduleState.activeModal = modalEl;
+  modalEl.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+
+  requestAnimationFrame(() => {
+    const closeBtn = modalEl.querySelector('.control-modal-close') || modalEl.querySelector('button, a');
+    if (closeBtn) closeBtn.focus();
+  });
+}
+
+function closeControlModal(modalEl, restoreFocus = true) {
+  if (!modalEl || modalEl.classList.contains('hidden')) return;
+  modalEl.classList.add('hidden');
+  document.body.style.overflow = '';
+  if (controlScheduleState.activeModal === modalEl) {
+    controlScheduleState.activeModal = null;
+  }
+
+  if (restoreFocus && controlScheduleState.lastModalTrigger && typeof controlScheduleState.lastModalTrigger.focus === 'function') {
+    controlScheduleState.lastModalTrigger.focus();
+  }
+  controlScheduleState.lastModalTrigger = null;
+}
+
+function openControlTicketModal(item, triggerEl) {
+  const modal = document.getElementById('controlTicketModal');
+  if (!modal || !item) return;
+
+  const view = formatControlItemView(item);
+  const dateCompact = String(item.appointment_date || '').replace(/[^0-9]/g, '');
+  const ticketCode = `NC-KONTROL-${dateCompact || 'JADWAL'}-${view.id}`;
+  const patientName = api.getUser()?.name || 'Pasien Nuvacare';
+
+  const codeEl = document.getElementById('controlTicketCode');
+  const patientEl = document.getElementById('ticketPatientName');
+  const poliEl = document.getElementById('ticketPoliName');
+  const roomEl = document.getElementById('ticketRoomLabel');
+  const doctorEl = document.getElementById('ticketDoctorName');
+  const dateTimeEl = document.getElementById('ticketDateTime');
+  const qrBox = document.getElementById('controlTicketQrBox');
+
+  if (codeEl) codeEl.textContent = `NO. REG: ${ticketCode}`;
+  if (patientEl) patientEl.textContent = patientName;
+  if (poliEl) poliEl.textContent = view.poliName;
+  if (roomEl) roomEl.textContent = view.roomLabel;
+  if (doctorEl) doctorEl.textContent = view.doctorName;
+  if (dateTimeEl) dateTimeEl.textContent = `${view.dateFormatted}, ${view.timeLabel}`;
+
+  if (qrBox) {
+    const qrPayload = JSON.stringify({
+      code: ticketCode,
+      appointment_id: item.id,
+      date: item.appointment_date,
+      time: item.appointment_time || '08:00',
+      type: 'kontrol_rutin',
+    });
+
+    if (typeof QRCode !== 'undefined' && typeof QRCode.generateSvg === 'function') {
+      qrBox.innerHTML = QRCode.generateSvg(qrPayload, { cellSize: 4, margin: 1 });
+    } else {
+      qrBox.innerHTML = `<p class="control-state-desc">Kode Tiket: ${escapeHtml(ticketCode)}</p>`;
+    }
+  }
+
+  openControlModal(modal, triggerEl);
+}
+
+function openControlNoteModal(item, triggerEl) {
+  const modal = document.getElementById('controlNoteModal');
+  if (!modal || !item) return;
+
+  const view = formatControlItemView(item);
+  const metaEl = document.getElementById('controlNoteMeta');
+  const doctorEl = document.getElementById('controlNoteDoctor');
+  const roomEl = document.getElementById('controlNoteRoom');
+  const textEl = document.getElementById('controlNoteText');
+
+  if (metaEl) metaEl.textContent = `${view.poliName} | ${view.dateFormatted}, ${view.timeLabel}`;
+  if (doctorEl) doctorEl.textContent = `${view.doctorName} (${view.doctorSpec})`;
+  if (roomEl) roomEl.textContent = view.roomLabel;
+  if (textEl) textEl.textContent = view.notes;
+
+  openControlModal(modal, triggerEl);
+}
+
+function openControlManageModal(item, triggerEl) {
+  const modal = document.getElementById('controlManageModal');
+  if (!modal || !item) return;
+
+  const view = formatControlItemView(item);
+  api.hideAlert('controlManageAlert');
+
+  const idInput = document.getElementById('controlManageAppointmentId');
+  const summaryEl = document.getElementById('controlManageSummary');
+  const waLinkEl = document.getElementById('controlManageWaLink');
+
+  if (idInput) idInput.value = view.id;
+  if (summaryEl) {
+    summaryEl.textContent = `${view.poliName} | ${view.doctorName} | ${view.dateFormatted}, ${view.timeLabel}`;
+  }
+  if (waLinkEl) {
+    const waText = encodeURIComponent(
+      `Halo Resepsionis Nuvacare, saya ingin mengajukan perubahan jadwal kontrol ${view.poliName} dengan ${view.doctorName} pada ${view.dateFormatted} (${view.timeLabel}).`
+    );
+    waLinkEl.href = `https://wa.me/${controlScheduleState.clinicWhatsappDigits}?text=${waText}`;
+  }
+
+  openControlModal(modal, triggerEl);
+}
+
+function bindControlScheduleInteractions() {
+  if (controlScheduleState.initialized) return;
+  controlScheduleState.initialized = true;
+
+  document.querySelectorAll('.control-filter-tab[data-control-filter]').forEach(tab => {
+    tab.addEventListener('click', () => {
+      const nextFilter = tab.dataset.controlFilter || 'all';
+      controlScheduleState.filter = nextFilter;
+
+      document.querySelectorAll('.control-filter-tab[data-control-filter]').forEach(btn => {
+        const isSelected = btn === tab;
+        btn.classList.toggle('is-active', isSelected);
+        btn.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+      });
+
+      renderControlScheduleViews();
+    });
+  });
+
+  const handleActionClick = (event) => {
+    const actionBtn = event.target.closest('[data-control-action]');
+    if (!actionBtn) return;
+
+    const action = actionBtn.dataset.controlAction;
+    const itemId = actionBtn.dataset.controlId;
+    const item = controlScheduleState.items.find(entry => String(entry.id) === String(itemId));
+    if (!item) return;
+
+    if (action === 'ticket') {
+      openControlTicketModal(item, actionBtn);
+    } else if (action === 'note') {
+      openControlNoteModal(item, actionBtn);
+    } else if (action === 'manage') {
+      openControlManageModal(item, actionBtn);
+    }
+  };
+
+  document.getElementById('controlTableBody')?.addEventListener('click', handleActionClick);
+  document.getElementById('controlCardsList')?.addEventListener('click', handleActionClick);
+
+  const ticketModal = document.getElementById('controlTicketModal');
+  const noteModal = document.getElementById('controlNoteModal');
+  const manageModal = document.getElementById('controlManageModal');
+
+  document.getElementById('closeControlTicketBtn')?.addEventListener('click', () => closeControlModal(ticketModal));
+  document.getElementById('closeControlTicketBottomBtn')?.addEventListener('click', () => closeControlModal(ticketModal));
+  document.getElementById('printControlTicketBtn')?.addEventListener('click', () => window.print());
+
+  document.getElementById('closeControlNoteBtn')?.addEventListener('click', () => closeControlModal(noteModal));
+  document.getElementById('closeControlNoteBottomBtn')?.addEventListener('click', () => closeControlModal(noteModal));
+
+  document.getElementById('closeControlManageBtn')?.addEventListener('click', () => closeControlModal(manageModal));
+  document.getElementById('cancelControlManageBtn')?.addEventListener('click', () => closeControlModal(manageModal));
+
+  [ticketModal, noteModal, manageModal].forEach(modal => {
+    modal?.addEventListener('click', (event) => {
+      if (event.target === modal) {
+        closeControlModal(modal);
+      }
+    });
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && controlScheduleState.activeModal) {
+      closeControlModal(controlScheduleState.activeModal);
+    }
+  });
+
+  const confirmCancelBtn = document.getElementById('confirmControlCancelBtn');
+  confirmCancelBtn?.addEventListener('click', async () => {
+    const id = document.getElementById('controlManageAppointmentId')?.value;
+    if (!id) return;
+
+    api.hideAlert('controlManageAlert');
+    confirmCancelBtn.disabled = true;
+    confirmCancelBtn.textContent = 'Membatalkan...';
+
+    try {
+      await api.request(`/janji-temu/${encodeURIComponent(id)}/batal`, {
+        method: 'POST',
+        body: JSON.stringify({}),
+      });
+      closeControlModal(manageModal);
+      api.showAlert('controlScheduleAlert', 'Jadwal kontrol berhasil dibatalkan.', 'success');
+      await fetchControlScheduleData();
+    } catch (err) {
+      api.showAlert('controlManageAlert', err.message || 'Gagal membatalkan jadwal kontrol. Coba lagi nanti.', 'error');
+    } finally {
+      confirmCancelBtn.disabled = false;
+      confirmCancelBtn.textContent = 'Batalkan Jadwal';
+    }
+  });
+}
+
+async function loadControlClinicInfo() {
+  try {
+    const info = await api.request('/public-info');
+    if (info?.clinic_address) {
+      const footerAddr = document.getElementById('footerClinicAddress');
+      if (footerAddr) footerAddr.textContent = info.clinic_address;
+    }
+
+    if (info?.clinic_contact) {
+      const footerContact = document.getElementById('footerClinicContact');
+      if (footerContact) footerContact.textContent = info.clinic_contact;
+
+      const rawDigits = String(info.clinic_contact).replace(/[^0-9]/g, '');
+      const waDigits = rawDigits.startsWith('0') ? `62${rawDigits.slice(1)}` : rawDigits;
+      if (waDigits.length >= 8) {
+        controlScheduleState.clinicWhatsappDigits = waDigits;
+      }
+    }
+  } catch {
+    // Abaikan error non-kritis agar data kontak fallback tetap tampil.
+  }
+}
+
+async function fetchControlScheduleData() {
+  renderControlStateBox({
+    mode: 'loading',
+    title: 'Memuat jadwal kontrol...',
+    description: 'Mengambil data kunjungan kontrol terbaru dari server klinik.',
+  });
+
+  try {
+    const [controlRes, historyRes] = await Promise.all([
+      api.request('/jadwal-kontrol', { priority: 'high' }),
+      api.request('/riwayat-pemeriksaan'),
+    ]);
+
+    const scheduledItems = (Array.isArray(controlRes?.data) ? controlRes.data : []).map(item => ({
+      ...item,
+      status: item.status || 'terjadwal',
+    }));
+
+    const completedItems = (Array.isArray(historyRes?.data) ? historyRes.data : []).filter(
+      item => item.type === 'kontrol_rutin' && item.status === 'selesai'
+    );
+
+    controlScheduleState.items = [...scheduledItems, ...completedItems];
+    updateControlBannerAndCounts(scheduledItems, completedItems);
+    renderControlScheduleViews();
+  } catch {
+    renderControlStateBox({
+      mode: 'error',
+      title: 'Gagal memuat jadwal kontrol',
+      description: 'Periksa koneksi internet Anda lalu coba muat ulang data.',
+      showRetry: true,
+    });
+  }
+}
+
+async function initControlSchedulePage() {
+  const tableBody = document.getElementById('controlTableBody');
+  const cardsList = document.getElementById('controlCardsList');
+  if (!tableBody || !cardsList) return;
+
+  const greetingEl = document.getElementById('controlPatientGreeting');
+  if (greetingEl) {
+    greetingEl.textContent = api.getUser()?.name || 'Pasien';
+  }
+
+  bindControlScheduleInteractions();
+  loadControlClinicInfo();
+  await fetchControlScheduleData();
+}
+
+window.initControlSchedulePage = initControlSchedulePage;
 
 function getStatusLabel(status) {
   switch (status) {

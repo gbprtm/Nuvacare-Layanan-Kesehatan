@@ -13,7 +13,7 @@ class HistoryController extends Controller
     {
         $history = Appointment::with(['polyclinic', 'doctor'])
             ->where('user_id', $request->user()->id)
-            ->where('status', 'selesai')
+            ->whereIn('status', ['selesai', 'dibatalkan'])
             ->orderBy('appointment_date', 'desc')
             ->orderBy('id', 'desc')
             ->get();

@@ -48,11 +48,11 @@ class AppointmentController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        // Include 'dibatalkan' so patients can read doctor_notes when admin cancels due to a schedule conflict
+        // Only active scheduled appointments appear on janji-temu; cancelled items move to /riwayat-pemeriksaan
         $appointments = Appointment::with(['polyclinic', 'doctor'])
             ->where('user_id', $request->user()->id)
             ->where('type', 'janji_baru')
-            ->whereIn('status', ['terjadwal', 'dibatalkan'])
+            ->where('status', 'terjadwal')
             ->orderBy('appointment_date', 'asc')
             ->orderBy('appointment_time', 'asc')
             ->orderBy('id', 'asc')
