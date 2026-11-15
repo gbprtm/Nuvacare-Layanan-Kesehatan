@@ -380,16 +380,28 @@ async function initBookingPage() {
   let lastLoadedSlots = [];
   let currentActiveStep = 1;
 
+  const step1Subtitle = document.getElementById('step1Subtitle');
+  const submitBookingHint = document.getElementById('submitBookingHint');
+  const mobileStepCurrent = document.getElementById('mobileStepCurrent');
+  const mobileStepTitle = document.getElementById('mobileStepTitle');
+  const mobileProgressFill = document.getElementById('mobileProgressFill');
+  const STEP_TITLES = {
+    1: 'Pilih Dokter',
+    2: 'Pilih Tanggal',
+    3: 'Pilih Jam',
+    4: 'Keluhan & WA'
+  };
+
   if (dateInput) {
     dateInput.min = todayStr;
     dateInput.removeAttribute('max');
-    // Keep empty initially so step 1 must be completed by patient selection
+    // Keep empty initially so date step must be completed by patient selection
     dateInput.value = '';
   }
 
   // Navigate to specific step (single active step wizard)
   const goToStep = (stepNumber) => {
-    currentActiveStep = Math.max(1, Math.min(5, stepNumber));
+    currentActiveStep = Math.max(1, Math.min(4, stepNumber));
     syncStepProgression();
     const targetCard = document.getElementById(`stepCard${currentActiveStep}`);
     if (targetCard && typeof targetCard.scrollIntoView === 'function') {
@@ -397,26 +409,23 @@ async function initBookingPage() {
     }
   };
 
-  // Progressive Disclosure: Sync Step Visibility & Stepper States
+  // Progressive Disclosure: Sync Step Visibility & Stepper States (Poli & Dokter -> Tanggal -> Jam -> Keluhan & WA)
   const syncStepProgression = () => {
-    const step1Done = Boolean(dateInput && dateInput.value && dateInput.value >= todayStr);
-    const step2Done = step1Done && Boolean(doctorSelect && doctorSelect.value);
+    const step1Done = Boolean(poliSelect && poliSelect.value && doctorSelect && doctorSelect.value);
+    const step2Done = step1Done && Boolean(dateInput && dateInput.value && dateInput.value >= todayStr);
     const step3Done = step2Done && Boolean(timeSelect && timeSelect.value);
-    const step4Done = step3Done; // WhatsApp connected
-    const step5Done = step3Done; // Ready to submit
+    const step4Done = step3Done;
 
     // Boundary check: cannot skip ahead to incomplete prerequisite steps
     if (currentActiveStep === 2 && !step1Done) currentActiveStep = 1;
     if (currentActiveStep === 3 && !step2Done) currentActiveStep = step1Done ? 2 : 1;
     if (currentActiveStep === 4 && !step3Done) currentActiveStep = step2Done ? 3 : (step1Done ? 2 : 1);
-    if (currentActiveStep === 5 && !step3Done) currentActiveStep = step2Done ? 3 : (step1Done ? 2 : 1);
 
     const stepCards = [
       document.getElementById('stepCard1'),
       document.getElementById('stepCard2'),
       document.getElementById('stepCard3'),
-      document.getElementById('stepCard4'),
-      document.getElementById('stepCard5')
+      document.getElementById('stepCard4')
     ];
 
     stepCards.forEach((card, idx) => {
@@ -433,25 +442,29 @@ async function initBookingPage() {
 
     // Dynamic Back Button Labels
     const backToStep1Label = document.getElementById('backToStep1Label');
-    if (backToStep1Label && dateInput && dateInput.value) {
-      backToStep1Label.textContent = `Ubah Tanggal (${formatFullDateId(dateInput.value)})`;
-    }
-
-    const backToStep2Label = document.getElementById('backToStep2Label');
-    if (backToStep2Label) {
+    if (backToStep1Label) {
       const selectedDocId = parseInt(doctorSelect?.value || '0', 10);
       const selectedPoliId = parseInt(poliSelect?.value || '0', 10);
       const pObj = Array.isArray(poliData) ? poliData.find((p) => p.id === selectedPoliId) : null;
       const dObj = pObj ? (pObj.doctors || []).find((d) => d.id === selectedDocId) : null;
-      backToStep2Label.textContent = dObj ? `Ubah Dokter (${dObj.name})` : 'Ubah Dokter Spesialis';
+      backToStep1Label.textContent = dObj ? `Ubah Dokter (${dObj.name})` : 'Ubah Dokter';
+    }
+
+    const backToStep2Label = document.getElementById('backToStep2Label');
+    if (backToStep2Label) {
+      backToStep2Label.textContent = (dateInput && dateInput.value)
+        ? `Ubah Tanggal (${formatFullDateId(dateInput.value)})`
+        : 'Ubah Tanggal';
     }
 
     const backToStep3Label = document.getElementById('backToStep3Label');
-    if (backToStep3Label && timeSelect && timeSelect.value) {
-      backToStep3Label.textContent = `Ubah Jam Kunjungan (${timeSelect.value} WIB)`;
+    if (backToStep3Label) {
+      backToStep3Label.textContent = (timeSelect && timeSelect.value)
+        ? `Ubah Jam Kunjungan (${timeSelect.value} WIB)`
+        : 'Ubah Jam Kunjungan';
     }
 
-    // Stepper Items (1-5)
+    // Stepper Items (1-4)
     const updateStepperItem = (stepId, stepNum, isDone) => {
       const el = document.getElementById(stepId);
       if (!el) return;
@@ -469,14 +482,20 @@ async function initBookingPage() {
     updateStepperItem('stepperStep2', 2, step2Done);
     updateStepperItem('stepperStep3', 3, step3Done);
     updateStepperItem('stepperStep4', 4, step4Done);
-    updateStepperItem('stepperStep5', 5, step5Done);
+
+    if (mobileStepCurrent) mobileStepCurrent.textContent = String(currentActiveStep);
+    if (mobileStepTitle) mobileStepTitle.textContent = STEP_TITLES[currentActiveStep] || 'Pilih Dokter';
+    if (mobileProgressFill) mobileProgressFill.style.width = `${(currentActiveStep / 4) * 100}%`;
 
     if (submitBookingBtn) {
       submitBookingBtn.disabled = !step3Done;
     }
+    if (submitBookingHint) {
+      submitBookingHint.hidden = step3Done;
+    }
   };
 
-  // Wire step back and next buttons
+  // Wire step back buttons
   const backToStep1Btn = document.getElementById('backToStep1Btn');
   if (backToStep1Btn) {
     backToStep1Btn.addEventListener('click', () => goToStep(1));
@@ -487,24 +506,14 @@ async function initBookingPage() {
     backToStep2Btn.addEventListener('click', () => goToStep(2));
   }
 
-  const changeDateFromStep3Btn = document.getElementById('changeDateFromStep3Btn');
-  if (changeDateFromStep3Btn) {
-    changeDateFromStep3Btn.addEventListener('click', () => goToStep(1));
+  const changeDoctorFromStep3Btn = document.getElementById('changeDoctorFromStep3Btn');
+  if (changeDoctorFromStep3Btn) {
+    changeDoctorFromStep3Btn.addEventListener('click', () => goToStep(1));
   }
 
   const backToStep3Btn = document.getElementById('backToStep3Btn');
   if (backToStep3Btn) {
     backToStep3Btn.addEventListener('click', () => goToStep(3));
-  }
-
-  const nextToStep5Btn = document.getElementById('nextToStep5Btn');
-  if (nextToStep5Btn) {
-    nextToStep5Btn.addEventListener('click', () => goToStep(5));
-  }
-
-  const backToStep4Btn = document.getElementById('backToStep4Btn');
-  if (backToStep4Btn) {
-    backToStep4Btn.addEventListener('click', () => goToStep(4));
   }
 
   // Wire click to navigate stepper (only for unlocked/completed steps or active)
@@ -557,22 +566,12 @@ async function initBookingPage() {
       : null;
 
     if (summaryPoli) {
-      if (selectedDate && poliObj) {
-        summaryPoli.textContent = poliObj.name;
-      } else if (selectedDate) {
-        summaryPoli.textContent = 'Pilih dokter spesialis pada Langkah 2';
-      } else {
-        summaryPoli.textContent = 'Belum dipilih';
-      }
+      summaryPoli.textContent = poliObj ? poliObj.name : 'Belum dipilih';
     }
     if (summaryDoctor) {
-      if (selectedDate && docObj) {
-        summaryDoctor.textContent = docObj.name;
-      } else if (selectedDate) {
-        summaryDoctor.textContent = 'Pilih dokter spesialis pada Langkah 2';
-      } else {
-        summaryDoctor.textContent = 'Pilih tanggal kunjungan terlebih dahulu';
-      }
+      summaryDoctor.textContent = docObj
+        ? docObj.name
+        : (poliObj ? 'Pilih dokter pada Langkah 1' : 'Pilih dokter pada Langkah 1');
     }
     if (summaryRoom) {
       summaryRoom.textContent = poliObj
@@ -580,7 +579,9 @@ async function initBookingPage() {
         : 'Gedung Utama Rawat Jalan';
     }
     if (summaryDate) {
-      summaryDate.textContent = selectedDate ? formatFullDateId(selectedDate) : 'Pilih tanggal kunjungan';
+      summaryDate.textContent = selectedDate
+        ? formatFullDateId(selectedDate)
+        : (docObj ? 'Pilih tanggal pada Langkah 2' : 'Pilih setelah menentukan dokter');
     }
     if (summaryTime) {
       if (selectedTime) {
@@ -588,13 +589,20 @@ async function initBookingPage() {
         const sessionLabel = hour < 12 ? 'Sesi Pagi' : hour < 15 ? 'Sesi Siang' : 'Sesi Sore';
         summaryTime.textContent = `Pukul ${selectedTime} WIB (${sessionLabel})`;
       } else {
-        summaryTime.textContent = selectedDate && docObj ? 'Pilih sesi jam pada Langkah 3' : 'Pilih setelah menentukan dokter';
+        summaryTime.textContent = selectedDate && docObj
+          ? 'Pilih jam pada Langkah 3'
+          : 'Pilih setelah menentukan tanggal';
       }
     }
+    if (step1Subtitle) {
+      step1Subtitle.textContent = poliObj
+        ? `Menampilkan dokter aktif di ${poliObj.name}`
+        : 'Filter poliklinik dan pilih dokter spesialis aktif';
+    }
     if (step2Subtitle) {
-      step2Subtitle.textContent = selectedDate
-        ? `Poliklinik aktif pada ${formatFullDateId(selectedDate)}`
-        : 'Filter poliklinik dan pilih dokter yang aktif bertugas';
+      step2Subtitle.textContent = docObj
+        ? `Pilih tanggal kunjungan untuk ${docObj.name}`
+        : 'Pilih tanggal kunjungan yang tersedia';
     }
 
     syncStepProgression();
@@ -696,7 +704,7 @@ async function initBookingPage() {
         renderMonthCalendar(currentCalYear, currentCalMonth);
         renderDateStrip();
         updateBookingSummary();
-        goToStep(2);
+        goToStep(3);
       });
     });
   };
@@ -767,12 +775,28 @@ async function initBookingPage() {
         renderMonthCalendar(currentCalYear, currentCalMonth);
         renderDateStrip();
         updateBookingSummary();
-        goToStep(2);
+        goToStep(3);
       });
     });
   };
 
   // Apply session visibility filters (Morning, Afternoon, Evening)
+  const mobileSessionTabs = document.getElementById('mobileSessionTabs');
+  if (mobileSessionTabs && timeSlotColumns) {
+    timeSlotColumns.setAttribute('data-mobile-session', 'all');
+    mobileSessionTabs.querySelectorAll('.session-mobile-tab').forEach((tabBtn) => {
+      tabBtn.addEventListener('click', () => {
+        const chosen = tabBtn.getAttribute('data-session-tab') || 'all';
+        timeSlotColumns.setAttribute('data-mobile-session', chosen);
+        mobileSessionTabs.querySelectorAll('.session-mobile-tab').forEach((btn) => {
+          const active = btn === tabBtn;
+          btn.classList.toggle('is-active', active);
+          btn.setAttribute('aria-selected', active ? 'true' : 'false');
+        });
+      });
+    });
+  }
+
   const applySessionFilters = () => {
     const pagiChecked = (filterSessionPagi ? filterSessionPagi.checked : true);
     const soreChecked = (filterSessionSore ? filterSessionSore.checked : true);
@@ -975,7 +999,7 @@ async function initBookingPage() {
         }
         doctorSelect.value = targetDocId;
         doctorSelect.dispatchEvent(new Event('change'));
-        goToStep(3);
+        goToStep(2);
       });
     });
   };
@@ -1031,7 +1055,7 @@ async function initBookingPage() {
         timeSelect.innerHTML = '<option value="">Pilih dokter dan tanggal terlebih dahulu…</option>';
         timeSelect.disabled = true;
         if (slotCountBadge) slotCountBadge.textContent = 'Pilih dokter & tanggal';
-        renderTimeSlotColumns([], 'Pilih dokter spesialis pada Langkah 2 untuk melihat jam kunjungan.');
+        renderTimeSlotColumns([], 'Pilih dokter dan tanggal terlebih dahulu untuk melihat jam kunjungan.');
         updateBookingSummary();
         return;
       }
@@ -1172,15 +1196,22 @@ async function initBookingPage() {
     const requestedDoctorId = urlParams.get('doctor_id');
 
     if (requestedPoliId && poliData.some((p) => String(p.id) === String(requestedPoliId))) {
+      const parsedPoliId = parseInt(requestedPoliId, 10);
       poliSelect.value = String(requestedPoliId);
-      populateDoctorSelectOptions(parseInt(requestedPoliId, 10));
+      const activeDoctors = populateDoctorSelectOptions(parsedPoliId);
 
-      if (requestedDoctorId) {
+      const hasValidDoctor = requestedDoctorId && activeDoctors.some((d) => String(d.id) === String(requestedDoctorId));
+      if (hasValidDoctor) {
         doctorSelect.value = String(requestedDoctorId);
       }
+
       renderPoliPillsAndDoctorCards();
       updateBookingSummary();
       refreshAvailableSlots();
+
+      if (hasValidDoctor) {
+        goToStep(2);
+      }
     }
 
     const bookingForm = document.getElementById('bookingForm');
@@ -1235,7 +1266,7 @@ async function initBookingPage() {
           timeSelect.innerHTML = '<option value="">Pilih dokter dan tanggal terlebih dahulu…</option>';
           timeSelect.disabled = true;
         }
-        dateInput.value = todayStr;
+        dateInput.value = '';
         stripStartStr = todayStr;
         currentCalYear = todayObj.getFullYear();
         currentCalMonth = todayObj.getMonth();
@@ -1245,7 +1276,7 @@ async function initBookingPage() {
         renderMonthCalendar(currentCalYear, currentCalMonth);
         renderDateStrip();
         renderPoliPillsAndDoctorCards();
-        renderTimeSlotColumns([], 'Pilih dokter spesialis pada Langkah 2 untuk melihat jam kunjungan.');
+        renderTimeSlotColumns([], 'Pilih dokter dan tanggal terlebih dahulu untuk melihat jam kunjungan.');
         if (slotCountBadge) slotCountBadge.textContent = 'Pilih dokter & tanggal';
         syncSymptomChipStates();
         updateBookingSummary();
@@ -1264,13 +1295,13 @@ async function initBookingPage() {
         await refreshAvailableSlots();
       } finally {
         if (submitBtn) {
-          submitBtn.disabled = false;
           if (defaultBtnHtml) {
             submitBtn.innerHTML = defaultBtnHtml;
           } else {
             submitBtn.textContent = 'Konfirmasi & Buat Janji Temu';
           }
         }
+        syncStepProgression();
       }
     });
 
@@ -1323,6 +1354,12 @@ function renderPatientAppointmentsTable() {
   const visiblePool = patientAppointmentsCache.filter(
     a => a.status === 'terjadwal' && !hiddenIds.includes(String(a.id))
   );
+
+  const quickCountEl = document.getElementById('activeApptsQuickCount');
+  if (quickCountEl) {
+    quickCountEl.textContent = String(visiblePool.length);
+    quickCountEl.hidden = visiblePool.length === 0;
+  }
 
   if (subtitleEl) {
     subtitleEl.textContent = visiblePool.length > PATIENT_APPT_VISIBLE_LIMIT

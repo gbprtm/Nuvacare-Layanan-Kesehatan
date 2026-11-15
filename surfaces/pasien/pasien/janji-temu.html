@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -14,7 +15,8 @@
   <link rel="stylesheet" href="/css/style.css" fetchpriority="high">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400..800;1,400..800&display=swap">
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Rethink+Sans:wght@600;700&display=swap">
   <script src="/js/api.js" defer fetchpriority="high"></script>
   <script src="/js/qrcode.min.js" defer></script>
   <script src="/js/pasien.js" defer></script>
@@ -27,6 +29,7 @@
   }
   </script>
 </head>
+
 <body class="booking-page-body" data-surface="pasien">
   <a href="#main-content" class="skip-link">Langsung ke isi utama</a>
 
@@ -37,9 +40,11 @@
       </a>
 
       <!-- Mobile Drawer Trigger Button -->
-      <button type="button" class="patient-drawer-btn" id="mobileMenuBtn" aria-expanded="false" aria-controls="patientDrawerPanel" aria-label="Buka navigasi">
+      <button type="button" class="patient-drawer-btn" id="mobileMenuBtn" aria-expanded="false"
+        aria-controls="patientDrawerPanel" aria-label="Buka navigasi">
         <span class="patient-drawer-btn__label">MENU</span>
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" aria-hidden="true">
           <path d="M4 7h16M4 12h16M4 17h16" />
         </svg>
       </button>
@@ -54,16 +59,22 @@
         </ul>
 
         <div class="patient-nav-auth">
-          <button type="button" class="patient-theme-toggle" data-theme-toggle aria-label="Ganti ke tema gelap" title="Ganti tema">
-            <svg class="theme-icon theme-icon--sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <button type="button" class="patient-theme-toggle" data-theme-toggle aria-label="Ganti ke tema gelap"
+            title="Ganti tema">
+            <svg class="theme-icon theme-icon--sun" width="18" height="18" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <circle cx="12" cy="12" r="4"></circle>
-              <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
+              <path
+                d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41">
+              </path>
             </svg>
-            <svg class="theme-icon theme-icon--moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <svg class="theme-icon theme-icon--moon" width="18" height="18" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
             </svg>
           </button>
-          <button type="button" id="logoutBtn" class="patient-nav-link" style="background: none; border: none; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer;">KELUAR</button>
+          <button type="button" id="logoutBtn" class="patient-nav-link"
+            style="background: none; border: none; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer;">KELUAR</button>
           <a href="/pasien/profil.html" class="patient-pill-cta">
             <span id="navUserName">Profil</span>
             <span class="patient-arrow" aria-hidden="true">&#x2197;</span>
@@ -104,7 +115,8 @@
         <div class="patient-drawer__item patient-drawer__item--expandable" id="drawerRowJadwalKontrol">
           <div class="patient-drawer__row">
             <a href="/pasien/jadwal-kontrol.html" class="patient-drawer__link">JADWAL KONTROL</a>
-            <button type="button" class="patient-drawer__toggle-expand" id="drawerExpandBtn" aria-expanded="false" aria-controls="drawerSubInfo" aria-label="Tampilkan info jadwal kontrol">+</button>
+            <button type="button" class="patient-drawer__toggle-expand" id="drawerExpandBtn" aria-expanded="false"
+              aria-controls="drawerSubInfo" aria-label="Tampilkan info jadwal kontrol">+</button>
           </div>
           <div class="patient-drawer__subinfo" id="drawerSubInfo" hidden>
             <p class="patient-drawer__subtext">Kunjungan ulang terjadwal dari dokter Anda.</p>
@@ -131,13 +143,20 @@
         <!-- Row: Ganti Tema -->
         <div class="patient-drawer__item">
           <div class="patient-drawer__row">
-            <button type="button" class="patient-drawer__link patient-drawer__theme-btn" data-theme-toggle aria-label="Ganti tema">
+            <button type="button" class="patient-drawer__link patient-drawer__theme-btn" data-theme-toggle
+              aria-label="Ganti tema">
               <span class="patient-drawer__theme-left">
-                <svg class="theme-icon theme-icon--sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <svg class="theme-icon theme-icon--sun" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                  aria-hidden="true">
                   <circle cx="12" cy="12" r="4"></circle>
-                  <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
+                  <path
+                    d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41">
+                  </path>
                 </svg>
-                <svg class="theme-icon theme-icon--moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <svg class="theme-icon theme-icon--moon" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                  aria-hidden="true">
                   <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
                 </svg>
                 <span data-theme-label>TEMA GELAP</span>
@@ -150,7 +169,8 @@
         <!-- Row 5: Logout Action -->
         <div class="patient-drawer__item">
           <div class="patient-drawer__row">
-            <button type="button" id="mobileLogoutBtn" class="patient-drawer__link" style="background: none; border: none; text-align: left; width: 100%; cursor: pointer;">KELUAR</button>
+            <button type="button" id="mobileLogoutBtn" class="patient-drawer__link"
+              style="background: none; border: none; text-align: left; width: 100%; cursor: pointer;">KELUAR</button>
             <span class="patient-arrow" aria-hidden="true">&#x2197;</span>
           </div>
         </div>
@@ -184,17 +204,34 @@
       </nav>
       <div class="booking-header-copy">
         <h1 class="page-title">Buat Janji Temu Poliklinik</h1>
-        <p class="booking-page-subtitle">Pilih tanggal, dokter, dan jam kunjungan.</p>
+        <p class="booking-page-subtitle">Pilih poliklinik, dokter, tanggal, dan jam kunjungan.</p>
       </div>
+      <nav class="booking-quick-tabs" aria-label="Akses cepat halaman janji temu">
+        <a href="#bookingForm" class="booking-quick-tab is-active">Buat Janji Baru</a>
+        <a href="#patientAppointmentsSection" class="booking-quick-tab" id="jumpToActiveApptsBtn">
+          <span>Janji Aktif Saya</span>
+          <span class="booking-quick-count" id="activeApptsQuickCount" hidden>0</span>
+        </a>
+      </nav>
     </div>
 
     <div id="bookingAlert" class="alert" role="status" aria-live="polite"></div>
 
     <form id="bookingForm" novalidate>
-      <div class="booking-workspace booking-workspace-5steps">
-        <!-- Kolom Kiri: Vertical Stepper Navigation -->
+      <div class="booking-workspace booking-workspace-4steps">
+        <!-- Kolom Kiri: Stepper Navigation (Desktop) & Progress Ringkas (Mobile) -->
         <aside class="booking-stepper-nav booking-stepper-col" aria-label="Tahapan Pemesanan">
           <div class="booking-stepper-card">
+            <div class="booking-mobile-progress" aria-live="polite">
+              <div class="booking-mobile-progress-top">
+                <span class="booking-mobile-progress-step">Langkah <span id="mobileStepCurrent">1</span> dari 4</span>
+                <strong class="booking-mobile-progress-title" id="mobileStepTitle">Pilih Dokter</strong>
+              </div>
+              <div class="booking-mobile-progress-track" aria-hidden="true">
+                <div class="booking-mobile-progress-fill" id="mobileProgressFill" style="width: 25%;"></div>
+              </div>
+            </div>
+
             <div class="booking-stepper-header stepper-header">
               <span class="booking-stepper-sub stepper-eyebrow">ALUR PENDAFTARAN</span>
               <h2 class="booking-stepper-title stepper-main-title">Tahapan Reservasi</h2>
@@ -207,7 +244,7 @@
                 </div>
                 <div class="booking-stepper-content stepper-info">
                   <span class="booking-stepper-name stepper-label">Langkah 1</span>
-                  <span class="booking-stepper-desc stepper-name">Pilih Tanggal</span>
+                  <span class="booking-stepper-desc stepper-name">Pilih Dokter</span>
                 </div>
               </li>
               <li class="booking-stepper-item stepper-step is-upcoming is-disabled" data-step="2" id="stepperStep2">
@@ -217,7 +254,7 @@
                 </div>
                 <div class="booking-stepper-content stepper-info">
                   <span class="booking-stepper-name stepper-label">Langkah 2</span>
-                  <span class="booking-stepper-desc stepper-name">Pilih Dokter</span>
+                  <span class="booking-stepper-desc stepper-name">Pilih Tanggal</span>
                 </div>
               </li>
               <li class="booking-stepper-item stepper-step is-upcoming is-disabled" data-step="3" id="stepperStep3">
@@ -237,84 +274,23 @@
                 </div>
                 <div class="booking-stepper-content stepper-info">
                   <span class="booking-stepper-name stepper-label">Langkah 4</span>
-                  <span class="booking-stepper-desc stepper-name">WhatsApp</span>
-                </div>
-              </li>
-              <li class="booking-stepper-item stepper-step is-upcoming is-disabled" data-step="5" id="stepperStep5">
-                <div class="booking-stepper-marker stepper-marker">
-                  <span class="stepper-num">5</span>
-                  <span class="stepper-check" aria-hidden="true">&#10003;</span>
-                </div>
-                <div class="booking-stepper-content stepper-info">
-                  <span class="booking-stepper-name stepper-label">Langkah 5</span>
-                  <span class="booking-stepper-desc stepper-name">Keluhan</span>
+                  <span class="booking-stepper-desc stepper-name">Keluhan &amp; WA</span>
                 </div>
               </li>
             </ol>
           </div>
         </aside>
 
-        <!-- Kolom Tengah: Form 5 Langkah -->
+        <!-- Kolom Tengah: Form 4 Langkah -->
         <div class="booking-steps-col">
-          <!-- Step 1: Pilih Tanggal (Kalender Interaktif Minimalis) -->
+          <!-- Step 1: Pilih Poliklinik & Dokter Spesialis -->
           <section class="booking-step-card is-step-active" id="stepCard1" aria-labelledby="step1Title">
             <div class="booking-step-header">
               <div class="booking-step-title-group">
                 <span class="step-num-badge" aria-hidden="true">1</span>
                 <div>
-                  <h2 id="step1Title" class="booking-step-title">Pilih Tanggal</h2>
-                </div>
-              </div>
-              <div class="calendar-nav-controls">
-                <button type="button" id="calendarPrevMonth" class="calendar-nav-btn" aria-label="Bulan sebelumnya">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
-                </button>
-                <span id="calendarMonthLabel" class="calendar-month-heading">Bulan Tahun</span>
-                <button type="button" id="calendarNextMonth" class="calendar-nav-btn" aria-label="Bulan berikutnya">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                </button>
-              </div>
-            </div>
-
-            <div class="calendar-card-body">
-              <div class="calendar-weekdays-row" aria-hidden="true">
-                <span class="calendar-weekday">Min</span>
-                <span class="calendar-weekday">Sen</span>
-                <span class="calendar-weekday">Sel</span>
-                <span class="calendar-weekday">Rab</span>
-                <span class="calendar-weekday">Kam</span>
-                <span class="calendar-weekday">Jum</span>
-                <span class="calendar-weekday">Sab</span>
-              </div>
-              <div id="calendarDaysGrid" class="calendar-days-grid" role="grid" aria-label="Kalender tanggal reservasi"></div>
-            </div>
-
-            <div class="sr-only">
-              <label for="appointment_date">Tanggal Kunjungan</label>
-              <input type="date" id="appointment_date" name="appointment_date" required autocomplete="off">
-              <span id="dateStripMonthLabel"></span>
-              <button type="button" id="dateStripPrev" aria-label="Sebelumnya"></button>
-              <button type="button" id="dateStripNext" aria-label="Berikutnya"></button>
-              <div id="dateStripContainer"></div>
-            </div>
-          </section>
-
-          <!-- Step 2: Pilih Poliklinik & Dokter Spesialis -->
-          <section class="booking-step-card is-step-hidden" id="stepCard2" aria-labelledby="step2Title">
-            <div class="step-back-bar">
-              <button type="button" class="step-back-btn" id="backToStep1Btn">
-                <span aria-hidden="true">&larr;</span>
-                <span id="backToStep1Label">Ubah Tanggal</span>
-              </button>
-              <span class="step-back-hint">Langkah 2 dari 5</span>
-            </div>
-
-            <div class="booking-step-header">
-              <div class="booking-step-title-group">
-                <span class="step-num-badge" aria-hidden="true">2</span>
-                <div>
-                  <h2 id="step2Title" class="booking-step-title">Pilih Dokter</h2>
-                  <p id="step2Subtitle" class="booking-step-sub">Pilih dokter spesialis yang tersedia</p>
+                  <h2 id="step1Title" class="booking-step-title">Pilih Poliklinik &amp; Dokter</h2>
+                  <p id="step1Subtitle" class="booking-step-sub">Filter poliklinik dan pilih dokter spesialis aktif</p>
                 </div>
               </div>
               <span id="activeDoctorCount" class="step-meta-badge">Memuat dokter...</span>
@@ -338,15 +314,74 @@
             </div>
           </section>
 
+          <!-- Step 2: Pilih Tanggal (Kalender Interaktif) -->
+          <section class="booking-step-card is-step-hidden" id="stepCard2" aria-labelledby="step2Title">
+            <div class="step-back-bar">
+              <button type="button" class="step-back-btn" id="backToStep1Btn">
+                <span aria-hidden="true">&larr;</span>
+                <span id="backToStep1Label">Ubah Dokter</span>
+              </button>
+              <span class="step-back-hint">Langkah 2 dari 4</span>
+            </div>
+
+            <div class="booking-step-header">
+              <div class="booking-step-title-group">
+                <span class="step-num-badge" aria-hidden="true">2</span>
+                <div>
+                  <h2 id="step2Title" class="booking-step-title">Pilih Tanggal</h2>
+                  <p id="step2Subtitle" class="booking-step-sub">Pilih tanggal kunjungan yang tersedia</p>
+                </div>
+              </div>
+              <div class="calendar-nav-controls">
+                <button type="button" id="calendarPrevMonth" class="calendar-nav-btn" aria-label="Bulan sebelumnya">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                  </svg>
+                </button>
+                <span id="calendarMonthLabel" class="calendar-month-heading">Bulan Tahun</span>
+                <button type="button" id="calendarNextMonth" class="calendar-nav-btn" aria-label="Bulan berikutnya">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="calendar-card-body">
+              <div class="calendar-weekdays-row" aria-hidden="true">
+                <span class="calendar-weekday">Min</span>
+                <span class="calendar-weekday">Sen</span>
+                <span class="calendar-weekday">Sel</span>
+                <span class="calendar-weekday">Rab</span>
+                <span class="calendar-weekday">Kam</span>
+                <span class="calendar-weekday">Jum</span>
+                <span class="calendar-weekday">Sab</span>
+              </div>
+              <div id="calendarDaysGrid" class="calendar-days-grid" role="grid" aria-label="Kalender tanggal reservasi">
+              </div>
+            </div>
+
+            <div class="sr-only">
+              <label for="appointment_date">Tanggal Kunjungan</label>
+              <input type="date" id="appointment_date" name="appointment_date" required autocomplete="off">
+              <span id="dateStripMonthLabel"></span>
+              <button type="button" id="dateStripPrev" aria-label="Sebelumnya"></button>
+              <button type="button" id="dateStripNext" aria-label="Berikutnya"></button>
+              <div id="dateStripContainer"></div>
+            </div>
+          </section>
+
           <!-- Step 3: Pilih Sesi Jam Kunjungan -->
           <section class="booking-step-card is-step-hidden" id="stepCard3" aria-labelledby="step3Title">
             <div class="step-back-bar">
               <button type="button" class="step-back-btn" id="backToStep2Btn">
                 <span aria-hidden="true">&larr;</span>
-                <span id="backToStep2Label">Ubah Dokter</span>
+                <span id="backToStep2Label">Ubah Tanggal</span>
               </button>
-              <button type="button" class="step-back-btn" id="changeDateFromStep3Btn">
-                <span>Ubah Tanggal</span>
+              <button type="button" class="step-back-btn" id="changeDoctorFromStep3Btn">
+                <span>Ubah Dokter</span>
               </button>
             </div>
 
@@ -355,7 +390,7 @@
                 <span class="step-num-badge" aria-hidden="true">3</span>
                 <div>
                   <h2 id="step3Title" class="booking-step-title">Pilih Jam Kunjungan</h2>
-                  <p class="booking-step-sub">Pilih jam konsultasi yang tersedia</p>
+                  <p class="booking-step-sub">Pilih sesi dan jam konsultasi yang tersedia</p>
                 </div>
               </div>
               <span id="slotCountBadge" class="step-meta-badge">Pilih dokter &amp; tanggal</span>
@@ -373,6 +408,13 @@
                   <span class="session-chip-text">Siang &amp; Sore</span>
                 </label>
               </div>
+            </div>
+
+            <div class="session-mobile-tabs" id="mobileSessionTabs" role="tablist" aria-label="Pilih sesi jam kunjungan">
+              <button type="button" class="session-mobile-tab is-active" data-session-tab="all" role="tab" aria-selected="true">Semua</button>
+              <button type="button" class="session-mobile-tab" data-session-tab="morning" role="tab" aria-selected="false">Pagi</button>
+              <button type="button" class="session-mobile-tab" data-session-tab="afternoon" role="tab" aria-selected="false">Siang</button>
+              <button type="button" class="session-mobile-tab" data-session-tab="evening" role="tab" aria-selected="false">Sore</button>
             </div>
 
             <div id="timeSlotColumns" class="time-slot-columns" aria-live="polite">
@@ -414,74 +456,23 @@
             </div>
           </section>
 
-          <!-- Step 4: Notifikasi Jadwal & Tiket via WhatsApp -->
-          <section class="booking-step-card booking-step-card--wa is-step-hidden" id="stepCard4" aria-labelledby="step4Title">
+          <!-- Step 4: Keluhan Medis & Konfirmasi WhatsApp -->
+          <section class="booking-step-card booking-step-card--wa is-step-hidden" id="stepCard4"
+            aria-labelledby="step4Title">
             <div class="step-back-bar">
               <button type="button" class="step-back-btn" id="backToStep3Btn">
                 <span aria-hidden="true">&larr;</span>
                 <span id="backToStep3Label">Ubah Jam Kunjungan</span>
               </button>
-              <span class="step-back-hint">Langkah 4 dari 5</span>
+              <span class="step-back-hint">Langkah 4 dari 4</span>
             </div>
 
             <div class="booking-step-header">
               <div class="booking-step-title-group">
-                <span class="step-num-badge step-num-badge--wa" aria-hidden="true">4</span>
+                <span class="step-num-badge" aria-hidden="true">4</span>
                 <div>
-                  <div class="wa-title-row">
-                    <h2 id="step4Title" class="booking-step-title">Notifikasi WhatsApp</h2>
-                    <span class="wa-status-pill">Otomatis Aktif</span>
-                  </div>
-                  <p class="booking-step-sub">Konfirmasi tiket dan pengingat dikirim ke nomor ini.</p>
-                </div>
-              </div>
-            </div>
-
-            <div class="wa-info-box">
-              <div class="wa-preview-header">
-                <span class="wa-preview-label">Nomor WhatsApp Terdaftar</span>
-                <span class="wa-connected-badge">Tersambung &amp; Terverifikasi</span>
-              </div>
-              <div class="wa-preview-body">
-                <div class="wa-preview-icon" aria-hidden="true">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
-                  </svg>
-                </div>
-                <div class="wa-preview-number" id="bookingWhatsappPreview">Memuat nomor WhatsApp...</div>
-              </div>
-              <input type="hidden" id="bookingWhatsappDisplay" name="bookingWhatsappDisplay" value="">
-              <p class="wa-preview-hint">Tiket reservasi dikirim via WhatsApp ke nomor ini.</p>
-              <label class="wa-checkbox-label" for="waReminderCheck">
-                <input type="checkbox" id="waReminderCheck" checked>
-                <span>Kirim konfirmasi dan pengingat jadwal</span>
-              </label>
-            </div>
-
-            <div class="mt-4" style="display: flex; justify-content: flex-end;">
-              <button type="button" class="btn btn-primary" id="nextToStep5Btn" style="min-height: 44px; padding: 0 20px;">
-                <span>Lanjut ke Keluhan</span>
-                <span aria-hidden="true">&rarr;</span>
-              </button>
-            </div>
-          </section>
-
-          <!-- Step 5: Keluhan Medis Pasien -->
-          <section class="booking-step-card is-step-hidden" id="stepCard5" aria-labelledby="step5Title">
-            <div class="step-back-bar">
-              <button type="button" class="step-back-btn" id="backToStep4Btn">
-                <span aria-hidden="true">&larr;</span>
-                <span>Ubah WhatsApp</span>
-              </button>
-              <span class="step-back-hint">Langkah 5 dari 5</span>
-            </div>
-
-            <div class="booking-step-header">
-              <div class="booking-step-title-group">
-                <span class="step-num-badge" aria-hidden="true">5</span>
-                <div>
-                  <h2 id="step5Title" class="booking-step-title">Keluhan Medis</h2>
-                  <p class="booking-step-sub">Tulis keluhan atau gejala yang dirasakan (opsional).</p>
+                  <h2 id="step4Title" class="booking-step-title">Keluhan &amp; Notifikasi WhatsApp</h2>
+                  <p class="booking-step-sub">Tulis keluhan (opsional) dan periksa nomor WhatsApp penerima tiket.</p>
                 </div>
               </div>
             </div>
@@ -496,12 +487,36 @@
 
             <div class="form-group booking-complaint-group">
               <label class="form-label" for="complaint">Keluhan Utama (Opsional, maks. 500 karakter)</label>
-              <textarea id="complaint" name="complaint" class="form-textarea" maxlength="500" rows="3" autocomplete="off" placeholder="Contoh: Sakit gigi ngilu sejak 2 hari lalu..."></textarea>
+              <textarea id="complaint" name="complaint" class="form-textarea" maxlength="500" rows="3"
+                autocomplete="off" placeholder="Contoh: Sakit gigi ngilu sejak 2 hari lalu..."></textarea>
+            </div>
+
+            <div class="wa-info-box booking-wa-inline">
+              <div class="wa-preview-header">
+                <span class="wa-preview-label">Nomor WhatsApp Terdaftar</span>
+                <span class="wa-connected-badge">Tersambung &amp; Terverifikasi</span>
+              </div>
+              <div class="wa-preview-body">
+                <div class="wa-preview-icon" aria-hidden="true">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path
+                      d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z">
+                    </path>
+                  </svg>
+                </div>
+                <div class="wa-preview-number" id="bookingWhatsappPreview">Memuat nomor WhatsApp...</div>
+              </div>
+              <input type="hidden" id="bookingWhatsappDisplay" name="bookingWhatsappDisplay" value="">
+              <label class="wa-checkbox-label" for="waReminderCheck">
+                <input type="checkbox" id="waReminderCheck" checked>
+                <span>Kirim konfirmasi e-tiket dan pengingat jadwal ke WhatsApp ini</span>
+              </label>
             </div>
           </section>
         </div>
 
-        <!-- Kolom Kanan: Sticky Reservation Summary Slip -->
+        <!-- Kolom Kanan: Sticky Reservation Summary Slip (Desktop) -->
         <aside class="booking-summary-col" aria-labelledby="summaryTitle">
           <div class="booking-summary-card">
             <div class="booking-summary-head">
@@ -514,29 +529,42 @@
             <div class="summary-items-list">
               <div class="summary-item-row">
                 <div class="summary-item-icon" aria-hidden="true">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
+                  </svg>
                 </div>
                 <div class="summary-item-body">
                   <span class="summary-item-label">Poliklinik &amp; Dokter</span>
                   <p id="summaryPoli" class="summary-item-primary">Belum dipilih</p>
-                  <p id="summaryDoctor" class="summary-item-secondary">Pilih dokter spesialis pada Langkah 2</p>
+                  <p id="summaryDoctor" class="summary-item-secondary">Pilih dokter pada Langkah 1</p>
                 </div>
               </div>
 
               <div class="summary-item-row">
                 <div class="summary-item-icon" aria-hidden="true">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                  </svg>
                 </div>
                 <div class="summary-item-body">
                   <span class="summary-item-label">Tanggal &amp; Sesi Jam</span>
-                  <p id="summaryDate" class="summary-item-primary">Pilih tanggal</p>
-                  <p id="summaryTime" class="summary-item-secondary">Pilih sesi jam pada Langkah 3</p>
+                  <p id="summaryDate" class="summary-item-primary">Pilih tanggal pada Langkah 2</p>
+                  <p id="summaryTime" class="summary-item-secondary">Pilih jam pada Langkah 3</p>
                 </div>
               </div>
 
               <div class="summary-item-row">
                 <div class="summary-item-icon" aria-hidden="true">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                    <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                  </svg>
                 </div>
                 <div class="summary-item-body">
                   <span class="summary-item-label">Lokasi Klinik</span>
@@ -547,12 +575,17 @@
 
               <div class="summary-item-row">
                 <div class="summary-item-icon summary-item-icon--patient" aria-hidden="true">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                  </svg>
                 </div>
                 <div class="summary-item-body">
                   <span class="summary-item-label">Data Pasien</span>
                   <p id="summaryPatientName" class="summary-item-primary">Memuat nama pasien...</p>
-                  <p id="summaryPatientPhone" class="summary-item-secondary summary-item-secondary--wa">WhatsApp terhubung</p>
+                  <p id="summaryPatientPhone" class="summary-item-secondary summary-item-secondary--wa">WhatsApp
+                    terhubung</p>
                 </div>
               </div>
             </div>
@@ -565,13 +598,19 @@
               <p class="summary-payment-note">Bayar di loket klinik saat kunjungan (Tunai / QRIS / Asuransi).</p>
             </div>
 
-            <button type="submit" id="submitBookingBtn" class="btn btn-primary booking-submit-btn">
+            <p id="submitBookingHint" class="summary-submit-hint">Lengkapi dokter, tanggal, dan jam untuk mengaktifkan konfirmasi.</p>
+
+            <button type="submit" id="submitBookingBtn" class="btn btn-primary booking-submit-btn" disabled>
               <span>Konfirmasi &amp; Buat Janji Temu</span>
               <span class="submit-arrow" aria-hidden="true">&rarr;</span>
             </button>
 
             <p class="summary-privacy-note">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+              </svg>
               <span>Tersimpan aman di rekam medis klinik.</span>
             </p>
           </div>
@@ -603,7 +642,8 @@
           </thead>
           <tbody id="appointmentTableBody" aria-live="polite">
             <tr>
-              <td colspan="5" class="text-muted text-center" style="padding: var(--space-6);">Memuat daftar janji temu...</td>
+              <td colspan="5" class="text-muted text-center" style="padding: var(--space-6);">Memuat daftar janji
+                temu...</td>
             </tr>
           </tbody>
         </table>
@@ -612,10 +652,12 @@
   </main>
 
   <!-- Modal Konfirmasi Berhasil (Sesuai Desain E-Tiket Gambar 3) -->
-  <div id="bookingSuccessModal" class="booking-modal-overlay" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="modalSuccessTitle">
+  <div id="bookingSuccessModal" class="booking-modal-overlay" aria-hidden="true" role="dialog" aria-modal="true"
+    aria-labelledby="modalSuccessTitle">
     <div class="booking-modal-card" role="document">
       <button type="button" class="booking-modal-close-btn" id="closeSuccessModalBtn" aria-label="Tutup tiket">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <line x1="18" y1="6" x2="6" y2="18"></line>
           <line x1="6" y1="6" x2="18" y2="18"></line>
         </svg>
@@ -623,12 +665,14 @@
 
       <div class="booking-modal-hero">
         <div class="booking-modal-check-icon" aria-hidden="true">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+            stroke-linecap="round" stroke-linejoin="round">
             <polyline points="20 6 9 17 4 12"></polyline>
           </svg>
         </div>
         <div class="booking-modal-verified-pill">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <polyline points="20 6 9 17 4 12"></polyline>
           </svg>
           <span>Terverifikasi &amp; Terjadwal</span>
@@ -654,8 +698,11 @@
 
         <div class="booking-ticket-doctor-row">
           <div class="booking-ticket-avatar-icon" aria-hidden="true">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.2.2 0 1 0 .3.3"></path>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path
+                d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.2.2 0 1 0 .3.3">
+              </path>
               <path d="M8 15v1a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6v-4"></path>
               <circle cx="20" cy="10" r="2"></circle>
             </svg>
@@ -670,7 +717,13 @@
         <div class="booking-ticket-grid-2">
           <div class="booking-ticket-grid-cell">
             <span class="booking-ticket-cell-title">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+              </svg>
               <span>Waktu &amp; Sesi</span>
             </span>
             <span class="booking-ticket-cell-val" id="modalDateVal">Rabu, 11 Nov 2026</span>
@@ -679,7 +732,11 @@
 
           <div class="booking-ticket-grid-cell">
             <span class="booking-ticket-cell-title">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
               <span>Nama Pasien (No. RM)</span>
             </span>
             <span class="booking-ticket-cell-val" id="modalPatientNameVal">Nama Pasien</span>
@@ -696,7 +753,8 @@
 
       <!-- Info Box Instruksi Kedatangan -->
       <div class="booking-modal-instruction-box">
-        <svg class="booking-modal-instruction-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <svg class="booking-modal-instruction-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <circle cx="12" cy="12" r="10"></circle>
           <line x1="12" y1="16" x2="12" y2="12"></line>
           <line x1="12" y1="8" x2="12.01" y2="8"></line>
@@ -720,36 +778,48 @@
   </div>
 
   <!-- Modal Konfirmasi Pembatalan Mandiri Pasien -->
-  <div id="patientCancelConfirmModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="patientCancelModalTitle" hidden>
+  <div id="patientCancelConfirmModal" class="modal-backdrop" role="dialog" aria-modal="true"
+    aria-labelledby="patientCancelModalTitle" hidden>
     <div class="modal-content" style="border-radius: 16px;">
       <div class="flex-between mb-4">
         <h2 id="patientCancelModalTitle" class="card-title" style="margin-bottom: 0;">Batalkan Janji Temu</h2>
-        <button type="button" id="closePatientCancelModalBtn" class="btn btn-secondary btn-touch" style="border-radius: 8px;">Tutup</button>
+        <button type="button" id="closePatientCancelModalBtn" class="btn btn-secondary btn-touch"
+          style="border-radius: 8px;">Tutup</button>
       </div>
       <div id="patientCancelModalAlert" class="alert" role="alert" aria-live="polite"></div>
-      <p id="patientCancelSummary" class="text-sm mb-4">Apakah Anda yakin ingin membatalkan janji temu ini? Slot akan dibuka kembali untuk pasien lain.</p>
+      <p id="patientCancelSummary" class="text-sm mb-4">Apakah Anda yakin ingin membatalkan janji temu ini? Slot akan
+        dibuka kembali untuk pasien lain.</p>
       <input type="hidden" id="patientCancelAppointmentId">
       <div style="display: flex; justify-content: flex-end; gap: var(--space-2); flex-wrap: wrap;">
-        <button type="button" id="cancelPatientCancelBtn" class="btn btn-secondary btn-touch" style="border-radius: 8px;">Tidak, Kembali</button>
-        <button type="button" id="confirmPatientCancelBtn" class="btn btn-danger btn-touch" style="border-radius: 8px;">Ya, Batalkan Janji</button>
+        <button type="button" id="cancelPatientCancelBtn" class="btn btn-secondary btn-touch"
+          style="border-radius: 8px;">Tidak, Kembali</button>
+        <button type="button" id="confirmPatientCancelBtn" class="btn btn-danger btn-touch"
+          style="border-radius: 8px;">Ya, Batalkan Janji</button>
       </div>
     </div>
   </div>
 
   <!-- Modal Konfirmasi Hapus Tampilan Baris Janji Temu -->
-  <div id="patientDeleteConfirmModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="patientDeleteModalTitle" hidden>
+  <div id="patientDeleteConfirmModal" class="modal-backdrop" role="dialog" aria-modal="true"
+    aria-labelledby="patientDeleteModalTitle" hidden>
     <div class="modal-content" style="border-radius: 12px;">
       <div class="flex-between mb-4">
-        <h2 id="patientDeleteModalTitle" class="card-title" style="margin-bottom: 0; font-size: 16px;">Hapus dari Daftar</h2>
-        <button type="button" id="closePatientDeleteModalBtn" class="btn btn-secondary btn-touch" style="border-radius: 8px;">Tutup</button>
+        <h2 id="patientDeleteModalTitle" class="card-title" style="margin-bottom: 0; font-size: 16px;">Hapus dari Daftar
+        </h2>
+        <button type="button" id="closePatientDeleteModalBtn" class="btn btn-secondary btn-touch"
+          style="border-radius: 8px;">Tutup</button>
       </div>
-      <p id="patientDeleteSummary" class="text-sm mb-4">Hapus baris janji temu ini dari tampilan daftar? Catatan riwayat medis tetap tersimpan aman.</p>
+      <p id="patientDeleteSummary" class="text-sm mb-4">Hapus baris janji temu ini dari tampilan daftar? Catatan riwayat
+        medis tetap tersimpan aman.</p>
       <input type="hidden" id="patientDeleteAppointmentId">
       <div style="display: flex; justify-content: flex-end; gap: var(--space-2); flex-wrap: wrap;">
-        <button type="button" id="cancelPatientDeleteBtn" class="btn btn-secondary btn-touch" style="border-radius: 8px;">Batal</button>
-        <button type="button" id="confirmPatientDeleteBtn" class="btn btn-danger btn-touch" style="border-radius: 8px;">Hapus</button>
+        <button type="button" id="cancelPatientDeleteBtn" class="btn btn-secondary btn-touch"
+          style="border-radius: 8px;">Batal</button>
+        <button type="button" id="confirmPatientDeleteBtn" class="btn btn-danger btn-touch"
+          style="border-radius: 8px;">Hapus</button>
       </div>
     </div>
   </div>
 </body>
+
 </html>

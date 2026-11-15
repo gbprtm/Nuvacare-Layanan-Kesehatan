@@ -1,6 +1,6 @@
 # Aturan kerja agen
 
-Website janji temu klinik untuk **pasien**, **admin**, dan **dokter (baca-saja)** dengan pemisahan dua permukaan (`APP_SURFACE`: `pasien` dan `staf`). Bahasa UI Indonesia; nama kode Inggris.
+Website janji temu klinik untuk **pasien**, **admin**, dan **dokter (akses terbatas)** dengan pemisahan dua permukaan (`APP_SURFACE`: `pasien` dan `staf`). Bahasa UI Indonesia; nama kode Inggris.
 
 ## Sumber kebenaran
 
@@ -28,9 +28,11 @@ Jangan menyunting atau memindahkannya.
   `surfaces/pasien/` dan halaman HTML staf (`staf/login.html`, `admin/*`,
   `dokter/*`) di `surfaces/staf/`, disajikan murni oleh `routes/web.php`
   sesuai `APP_SURFACE` (`pasien`, `staf`, atau `combined` untuk lokal/test).
-  Tanpa Blade, tanpa framework UI, tanpa langkah build.
+  Pola URL halaman dan pengalihan JavaScript harus konsisten di semua mode
+  `APP_SURFACE` sesuai definisi rute di RANCANGAN FINAL. Tanpa Blade, tanpa
+  framework UI, tanpa langkah build.
 - Uji: PHPUnit (feature test API) dan Pint. Playwright Chrome opsional.
-- Standar kualitas UI, teks, dan kode: **Wajib selalu memuat dan menerapkan skill `antislop`** beserta sub-skill terkait (`antislop-ui`, `antislop-human`, `antislop-layoutmobile`, `antislop-copywriting`, `antislop-code`) pada setiap pembuatan maupun revisi halaman, komponen, teks UI, dan kode. Setiap perubahan antarmuka wajib melewati pemeriksaan *Anti-Slop Delivery Gate* (satu titik fokus utama per layar, tanpa *em dash*, kontras WCAG AA minimal 4.5:1 untuk teks dan 3:1 untuk tepi kontrol, target sentuh minimal 44x44px, serta tidak ada elemen generik yang berlebihan).
+- Standar kualitas frontend & UI: **Wajib selalu memuat dan menerapkan skill `hallmark` (`/hallmark`)** pada setiap pembuatan halaman/komponen baru maupun revisi antarmuka (`redesign <path>` atau `audit <path>` sesuai `hallmark`), dengan mengacu pada token dan sistem terkunci di [DESIGN.md](DESIGN.md). Setiap perubahan antarmuka wajib memenuhi *The Floor* & *Hallmark Gates* (token warna/font melalui `:root`, satu titik fokus utama per layar, tanpa *em dash*, tanpa *eyebrow* atau teks *all-caps* ber-tracking lebar, `overflow-x: clip` pada `html`/`body`, `:focus-visible` instan, fallback `prefers-reduced-motion: reduce`, kontras WCAG AA minimal 4.5:1 untuk teks dan 3:1 untuk tepi kontrol, target sentuh minimal 44x44px, serta verifikasi `sloplint --render` bila Node tersedia).
 
 Dependensi baru perlu alasan dan izin pemilik.
 
@@ -40,16 +42,17 @@ Mengikuti RANCANGAN FINAL §1.3: antrean/check-in, usulan perubahan jadwal
 (reschedule proposal) dengan slot/TTL, resep dan katalog Fornas, kebiasaan
 harian, konten statis, audit log kompleks di luar perubahan status janji dan
 pengajuan pembatalan (log sederhana `status_change_logs` diizinkan). Tidak ada
-registrasi publik untuk staf/dokter maupun data NIK/KK. Dokter bersifat
-baca-saja dan dilarang menulis atau mengubah data apa pun selain pengajuan
-pembatalannya sendiri. Jangan membangunnya kembali.
+registrasi publik untuk staf/dokter maupun data NIK/KK. Dokter hanya memiliki
+akses baca pada jadwal dan dilarang menulis atau mengubah data apa pun selain
+membuat pengajuan pembatalannya sendiri. Jangan membangunnya kembali.
 
 ## Menjalankan satu tahap
 
 1. Ambil tahap `todo` berikutnya di [status tugas](docs/status-tugas.md);
    ubah ke `doing`.
 2. Kerjakan sesuai baris tahap di RANCANGAN FINAL §5.
-3. Tulis feature test untuk endpoint tahap itu, lalu jalankan:
+3. Tulis feature test untuk endpoint tahap itu (gunakan `DatabaseTransactions`,
+   dilarang memakai `RefreshDatabase` pada koneksi utama), lalu jalankan:
    `php artisan test` dan `vendor/bin/pint --test`.
 4. Periksa halaman HTML terkait di browser.
 5. Tulis bukti singkat di `docs/bukti/Tn.md`, lalu ubah ke `done` hanya bila
@@ -71,9 +74,9 @@ pembatalannya sendiri. Jangan membangunnya kembali.
 - Endpoint dokter (`/api/dokter/*`): hanya untuk role `dokter` dengan akun
   aktif (`disabled_at` null) yang terhubung ke baris `doctors` aktif dan
   valid; `doctor_id` diambil dari akun dokter (bukan dari input), janji atau
-  pengajuan milik dokter lain mengembalikan 404, kontak pasien wajib
-  disamarkan, serta `complaint` dan `doctor_notes` tidak boleh dikirim ke
-  dokter.
+  pengajuan milik dokter lain mengembalikan 404. Demi privasi administratif,
+  kontak pasien wajib disamarkan serta atribut `complaint` dan `doctor_notes`
+  secara sengaja dilarang dikirim ke respon endpoint dokter.
 - Tanpa hard delete & wajib log status: tidak ada penghapusan permanen untuk
   janji temu, pengajuan pembatalan, maupun log; setiap perubahan status janji
   temu dan pengajuan pembatalan (termasuk melalui endpoint admin lama) wajib
@@ -81,8 +84,9 @@ pembatalannya sendiri. Jangan membangunnya kembali.
 - Rahasia hanya di `.env` melalui `config/*`. Jangan menyalin `.env` ke
   dokumen, log, bukti, atau JavaScript.
 - Database: migrasi (4 tabel inti dan migrasi aditif skema `klinik`)
-  dijalankan pada **database/branch Neon terisolasi**. Dilarang
-  `migrate:fresh`, `db:wipe`, atau drop pada database lama/produksi.
+  dijalankan pada **database/branch Neon terisolasi**. Dilarang menjalankan
+  `migrate:fresh`, `db:wipe`, drop tabel, atau menggunakan trait
+  `RefreshDatabase` pada database lama, pengembangan utama, maupun produksi.
 - Data seeder fiktif.
 
 ## Laporan hasil
