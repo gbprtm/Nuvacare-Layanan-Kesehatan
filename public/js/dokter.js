@@ -5,6 +5,7 @@ let doctorMasterPoliCache = [];
 let selectedDoctorAppointmentId = null;
 let pendingWithdrawRequestId = null;
 let batchPreviewSeq = 0;
+let activeDoctorTabName = 'appointments';
 
 function getDoctorEl(...ids) {
   for (const id of ids) {
@@ -14,23 +15,213 @@ function getDoctorEl(...ids) {
   return null;
 }
 
+function updateDoctorSyncTime() {
+  const el = document.getElementById('staffSidebarSyncTime');
+  if (!el) return;
+  el.textContent = new Date().toLocaleTimeString('id-ID', {
+    hour: '2-digit',
+    minute: '2-digit'
+  }) + ' WIB';
+}
+
+function formatCompactDateDoc(dateStr) {
+  if (!dateStr) return '-';
+  const parsed = new Date(`${String(dateStr).slice(0, 10)}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return String(dateStr);
+  return new Intl.DateTimeFormat('id-ID', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric'
+  }).format(parsed);
+}
+
+function getDoctorSearchQuery() {
+  return (document.getElementById('staffSearchInput')?.value || '').trim().toLowerCase();
+}
+
+function handleDoctorLogout(e) {
+  if (e) e.preventDefault();
+  if (confirm('Keluar dari portal dokter sekarang?')) {
+    api.logout();
+  }
+}
+
+function renderDoctorSidebarSummary() {
+  const container = document.getElementById('docSidebarSummaryMetrics');
+  if (!container) return;
+
+  const total = doctorAppointmentsCache.length;
+  const scheduled = doctorAppointmentsCache.filter((a) => a.status === 'terjadwal').length;
+  const completed = doctorAppointmentsCache.filter((a) => a.status === 'selesai').length;
+  const openReqs = doctorRequestsCache.filter((r) => r.status === 'diajukan').length;
+
+  container.innerHTML = `
+    <div class="staff-rail-metric-row"><span class="portal-summary-label">Total rentang</span><strong class="portal-summary-value">${total}</strong></div>
+    <div class="staff-rail-metric-row"><span class="portal-summary-label">Terjadwal</span><strong class="portal-summary-value">${scheduled}</strong></div>
+    <div class="staff-rail-metric-row"><span class="portal-summary-label">Selesai</span><strong class="portal-summary-value">${completed}</strong></div>
+    <div class="staff-rail-metric-row"><span class="portal-summary-label">Pengajuan aktif</span><strong class="portal-summary-value">${openReqs}</strong></div>
+  `;
+}
+
+function initDoctorDrawer() {
+  const menuBtn = document.getElementById('mobileMenuBtn');
+  const overlay = document.getElementById('staffDrawerOverlay');
+  const panel = document.getElementById('staffDrawerPanel');
+  const closeBtn = document.getElementById('drawerCloseBtn');
+  const expandBtn = document.getElementById('drawerQuickFilterExpandBtn');
+  const subList = document.getElementById('drawerQuickFilterSub');
+  const slotBtn = document.getElementById('drawerSlotRequestBtn');
+  const primaryCta = document.getElementById('drawerPrimaryCta');
+
+  if (!menuBtn || !overlay || !panel) return;
+
+  const openDrawer = () => {
+    overlay.hidden = false;
+    overlay.setAttribute('aria-hidden', 'false');
+    menuBtn.setAttribute('aria-expanded', 'true');
+    requestAnimationFrame(() => overlay.classList.add('is-open'));
+    document.body.style.overflow = 'hidden';
+    if (closeBtn) setTimeout(() => closeBtn.focus(), 40);
+  };
+
+  const closeDrawer = () => {
+    overlay.classList.remove('is-open');
+    overlay.setAttribute('aria-hidden', 'true');
+    menuBtn.setAttribute('aria-expanded', 'false');
+    document.body.style.overflow = '';
+    setTimeout(() => {
+      if (!overlay.classList.contains('is-open')) {
+        overlay.hidden = true;
+      }
+    }, 200);
+  };
+
+  window.closeDoctorStaffDrawer = closeDrawer;
+
+  menuBtn.addEventListener('click', openDrawer);
+  if (closeBtn) closeBtn.addEventListener('click', closeDrawer);
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) closeDrawer();
+  });
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && overlay.classList.contains('is-open')) {
+      closeDrawer();
+    }
+  });
+
+  if (expandBtn && subList) {
+    expandBtn.addEventListener('click', () => {
+      const nextExpanded = expandBtn.getAttribute('aria-expanded') !== 'true';
+      expandBtn.setAttribute('aria-expanded', nextExpanded ? 'true' : 'false');
+      subList.hidden = !nextExpanded;
+      const plusEl = expandBtn.querySelector('.patient-drawer__plus');
+      if (plusEl) plusEl.textContent = nextExpanded ? '-' : '+';
+    });
+  }
+
+  document.querySelectorAll('[data-drawer-doc-tab]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const tab = btn.getAttribute('data-drawer-doc-tab');
+      switchDoctorTab(tab);
+      if (tab === 'requests') loadDoctorRequests();
+      else if (tab === 'slotRequests') loadDoctorSlotRequests();
+      closeDrawer();
+    });
+  });
+
+  if (slotBtn) {
+    slotBtn.addEventListener('click', () => {
+      closeDrawer();
+      const origSlotBtn = document.getElementById('openSlotRequestBtn');
+      if (origSlotBtn) origSlotBtn.click();
+    });
+  }
+
+  if (primaryCta) {
+    primaryCta.addEventListener('click', () => {
+      closeDrawer();
+      const origBatchBtn = document.getElementById('openBatchCancelBtn');
+      if (origBatchBtn) origBatchBtn.click();
+    });
+  }
+}
+
+function applyDoctorSearchForCurrentTab() {
+  if (activeDoctorTabName === 'requests') {
+    renderFilteredDoctorRequests();
+  } else if (activeDoctorTabName === 'slotRequests') {
+    renderFilteredDoctorSlotRequests();
+  } else {
+    renderFilteredDoctorAppointments();
+  }
+}
+
+function initDoctorSearch() {
+  const form = document.getElementById('staffSearchForm');
+  const input = document.getElementById('staffSearchInput');
+  const clearBtn = document.getElementById('staffSearchClearBtn');
+  if (!input) return;
+
+  const syncClear = () => {
+    if (clearBtn) clearBtn.hidden = input.value.trim() === '';
+  };
+
+  if (form) {
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      applyDoctorSearchForCurrentTab();
+    });
+  }
+
+  input.addEventListener('input', () => {
+    syncClear();
+    applyDoctorSearchForCurrentTab();
+  });
+
+  if (clearBtn) {
+    clearBtn.addEventListener('click', () => {
+      input.value = '';
+      syncClear();
+      applyDoctorSearchForCurrentTab();
+      input.focus();
+    });
+  }
+
+  syncClear();
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   if (!api.requireAuth('dokter')) return;
 
   const initialUser = api.getUser();
   syncDoctorHeader(initialUser);
 
-  const logoutBtn = document.getElementById('logoutBtn');
-  if (logoutBtn) {
-    logoutBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      if (confirm('Keluar dari portal dokter sekarang?')) {
-        api.logout();
-      }
+  ['logoutBtn', 'logoutBtnTop', 'drawerLogoutBtn'].forEach((id) => {
+    const btn = document.getElementById(id);
+    if (btn) btn.addEventListener('click', handleDoctorLogout);
+  });
+
+  const notifBtn = document.getElementById('topbarNotifBtn');
+  if (notifBtn) {
+    notifBtn.addEventListener('click', () => {
+      switchDoctorTab('requests');
+      loadDoctorRequests();
+    });
+  }
+
+  const headerBatchCancelBtn = document.getElementById('headerBatchCancelBtn');
+  if (headerBatchCancelBtn) {
+    headerBatchCancelBtn.addEventListener('click', () => {
+      const origBatchBtn = document.getElementById('openBatchCancelBtn');
+      if (origBatchBtn) origBatchBtn.click();
     });
   }
 
   initDoctorTabs();
+  initDoctorDrawer();
+  initDoctorSearch();
   initDoctorFilters();
   initDoctorModals();
   setupDoctorEscapeHandler();
@@ -42,13 +233,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     loadDoctorSlotRequests(),
     loadDoctorMasterPoli()
   ]);
+  renderDoctorSidebarSummary();
 });
 
 function syncDoctorHeader(userObj) {
   if (!userObj) return;
-  const nameEl = document.getElementById('navDoctorName');
-  const poliEl = document.getElementById('navDoctorPoli');
-
   const doctorName = userObj.doctor?.name || userObj.name || '';
   const poliName =
     userObj.doctor?.polyclinic?.name ||
@@ -56,11 +245,17 @@ function syncDoctorHeader(userObj) {
     userObj.polyclinic_name ||
     '';
 
-  if (nameEl && doctorName) {
-    nameEl.textContent = doctorName;
+  if (doctorName) {
+    ['navDoctorName', 'navDoctorNameTop', 'drawerDoctorName'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = doctorName;
+    });
   }
-  if (poliEl && poliName) {
-    poliEl.textContent = poliName;
+  if (poliName) {
+    ['navDoctorPoli', 'drawerDoctorPoli'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = poliName;
+    });
   }
 }
 
@@ -111,6 +306,7 @@ function initDoctorTabs() {
 }
 
 function switchDoctorTab(tabName) {
+  activeDoctorTabName = tabName;
   const tabAppointmentsBtn = document.getElementById('tabBtnAppointments');
   const tabRequestsBtn = document.getElementById('tabBtnRequests');
   const tabSlotRequestsBtn = document.getElementById('tabBtnSlotRequests');
@@ -134,6 +330,11 @@ function switchDoctorTab(tabName) {
     tabSlotRequestsBtn.classList.toggle('is-active', isSlotRequests);
     tabSlotRequestsBtn.setAttribute('aria-selected', isSlotRequests ? 'true' : 'false');
   }
+
+  document.querySelectorAll('[data-drawer-doc-tab]').forEach((btn) => {
+    btn.classList.toggle('is-active', btn.getAttribute('data-drawer-doc-tab') === tabName);
+  });
+
   if (viewAppointments) {
     viewAppointments.hidden = !isAppointments;
     viewAppointments.style.display = isAppointments ? '' : 'none';
@@ -146,13 +347,20 @@ function switchDoctorTab(tabName) {
     viewSlotRequests.hidden = !isSlotRequests;
     viewSlotRequests.style.display = isSlotRequests ? '' : 'none';
   }
+
+  if (getDoctorSearchQuery()) {
+    applyDoctorSearchForCurrentTab();
+  }
 }
 
 function initDoctorFilters() {
   const dateFrom = document.getElementById('filterDocDateFrom');
   const dateTo = document.getElementById('filterDocDateTo');
   const statusSelect = document.getElementById('filterDocStatus');
+  const typeSelect = document.getElementById('filterDocType');
+  const sortSelect = document.getElementById('filterDocSort');
   const refreshApptsBtn = document.getElementById('refreshDocAppointmentsBtn');
+  const resetBtn = document.getElementById('resetDocFiltersBtn');
 
   const today = getLocalIsoDate(0);
   const plusSeven = getLocalIsoDate(7);
@@ -180,12 +388,74 @@ function initDoctorFilters() {
     if (dateTo) dateTo.addEventListener('change', loadDoctorAppointments);
   }
 
-  if (statusSelect) {
-    statusSelect.addEventListener('change', loadDoctorAppointments);
+  if (statusSelect) statusSelect.addEventListener('change', loadDoctorAppointments);
+  if (typeSelect) typeSelect.addEventListener('change', renderFilteredDoctorAppointments);
+  if (sortSelect) sortSelect.addEventListener('change', renderFilteredDoctorAppointments);
+  if (refreshApptsBtn) refreshApptsBtn.addEventListener('click', loadDoctorAppointments);
+
+  const resetDoctorFilters = () => {
+    if (dateFrom) dateFrom.value = today;
+    if (dateTo) {
+      dateTo.min = today;
+      dateTo.value = plusSeven;
+    }
+    if (statusSelect) statusSelect.value = '';
+    if (typeSelect) typeSelect.value = '';
+    if (sortSelect) sortSelect.value = 'date_asc';
+    const searchInput = document.getElementById('staffSearchInput');
+    const clearBtn = document.getElementById('staffSearchClearBtn');
+    if (searchInput) searchInput.value = '';
+    if (clearBtn) clearBtn.hidden = true;
+    document.querySelectorAll('[data-doc-quick]').forEach((el) => el.classList.remove('is-active'));
+    loadDoctorAppointments();
+  };
+
+  if (resetBtn) {
+    resetBtn.addEventListener('click', resetDoctorFilters);
   }
-  if (refreshApptsBtn) {
-    refreshApptsBtn.addEventListener('click', loadDoctorAppointments);
-  }
+
+  document.querySelectorAll('[data-doc-quick]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const preset = btn.getAttribute('data-doc-quick');
+      document.querySelectorAll('[data-doc-quick]').forEach((el) => {
+        el.classList.toggle('is-active', el.getAttribute('data-doc-quick') === preset);
+      });
+      switchDoctorTab('appointments');
+
+      if (preset === 'today') {
+        if (dateFrom) dateFrom.value = today;
+        if (dateTo) {
+          dateTo.min = today;
+          dateTo.value = today;
+        }
+        if (statusSelect) statusSelect.value = '';
+        loadDoctorAppointments();
+      } else if (preset === 'week') {
+        if (dateFrom) dateFrom.value = today;
+        if (dateTo) {
+          dateTo.min = today;
+          dateTo.value = plusSeven;
+        }
+        if (statusSelect) statusSelect.value = '';
+        loadDoctorAppointments();
+      } else if (preset === 'scheduled') {
+        if (dateFrom) dateFrom.value = '';
+        if (dateTo) dateTo.value = '';
+        if (statusSelect) statusSelect.value = 'terjadwal';
+        loadDoctorAppointments();
+      } else {
+        if (dateFrom) dateFrom.value = '';
+        if (dateTo) dateTo.value = '';
+        if (statusSelect) statusSelect.value = '';
+        if (typeSelect) typeSelect.value = '';
+        loadDoctorAppointments();
+      }
+
+      if (typeof window.closeDoctorStaffDrawer === 'function') {
+        window.closeDoctorStaffDrawer();
+      }
+    });
+  });
 
   const reqStatusFilter = getDoctorEl('filterReqStatus', 'filterDocReqStatus', 'filterRequestStatus');
   if (reqStatusFilter) {
@@ -198,6 +468,69 @@ function initDoctorFilters() {
   }
 }
 
+function renderFilteredDoctorAppointments() {
+  const stateEl = document.getElementById('doctorAppointmentsState');
+  const tableBody = document.getElementById('doctorAppointmentsBody');
+  const cardsEl = document.getElementById('doctorAppointmentsCards');
+  const resultInfo = document.getElementById('docAppointmentsResultInfo');
+  const tableWrap = document.getElementById('doctorAppointmentsTableWrap') || (tableBody ? tableBody.closest('.table-responsive') : null);
+  if (!tableBody && !cardsEl) return;
+
+  const typeFilter = document.getElementById('filterDocType')?.value || '';
+  const sortMode = document.getElementById('filterDocSort')?.value || 'date_asc';
+  const query = getDoctorSearchQuery();
+
+  let filtered = (doctorAppointmentsCache || []).filter((a) => {
+    if (typeFilter && a.type !== typeFilter) return false;
+    if (query) {
+      const haystack = [
+        a.patient?.name,
+        a.patient?.masked_phone,
+        a.polyclinic?.name,
+        a.type,
+        a.status,
+        a.appointment_date
+      ].filter(Boolean).join(' ').toLowerCase();
+      if (!haystack.includes(query)) return false;
+    }
+    return true;
+  });
+
+  filtered = filtered.slice().sort((a, b) => {
+    if (sortMode === 'date_desc') {
+      const da = `${a.appointment_date || ''} ${a.appointment_time || ''}`;
+      const db = `${b.appointment_date || ''} ${b.appointment_time || ''}`;
+      return db.localeCompare(da);
+    }
+    if (sortMode === 'patient_asc') {
+      return (a.patient?.name || '').localeCompare(b.patient?.name || '', 'id');
+    }
+    const da = `${a.appointment_date || ''} ${a.appointment_time || ''}`;
+    const db = `${b.appointment_date || ''} ${b.appointment_time || ''}`;
+    return da.localeCompare(db);
+  });
+
+  if (resultInfo) {
+    resultInfo.textContent = `Menampilkan ${filtered.length} dari ${doctorAppointmentsCache.length} jadwal`;
+  }
+
+  renderDoctorSidebarSummary();
+
+  if (filtered.length === 0) {
+    const emptyMsg = doctorAppointmentsCache.length === 0
+      ? 'Belum ada janji pada rentang ini.'
+      : 'Tidak ada janji yang cocok dengan filter atau pencarian ini.';
+    setDoctorListState(stateEl, tableWrap, cardsEl, 'empty', emptyMsg);
+    if (doctorAppointmentsCache.length === 0) {
+      resetDoctorDetailPanel();
+    }
+    return;
+  }
+
+  hideDoctorListState(stateEl, tableWrap, cardsEl);
+  renderDoctorAppointments(filtered, tableBody, cardsEl);
+}
+
 async function loadDoctorAppointments() {
   const stateEl = document.getElementById('doctorAppointmentsState');
   const tableBody = document.getElementById('doctorAppointmentsBody');
@@ -208,7 +541,7 @@ async function loadDoctorAppointments() {
     tableWrap.classList.add('has-mobile-cards');
   }
 
-  setDoctorListState(stateEl, tableWrap, cardsEl, 'loading', 'Memuat jadwal janji temu…');
+  setDoctorListState(stateEl, tableWrap, cardsEl, 'loading', 'Memuat jadwal janji temu...');
 
   const dateFrom = document.getElementById('filterDocDateFrom')?.value || '';
   const dateTo = document.getElementById('filterDocDateTo')?.value || '';
@@ -228,20 +561,18 @@ async function loadDoctorAppointments() {
       syncDoctorHeader({ doctor: res.meta.doctor });
     } else if (doctorAppointmentsCache.length > 0) {
       const poliEl = document.getElementById('navDoctorPoli');
-      if (poliEl && (!poliEl.textContent || poliEl.textContent === '-')) {
+      if (poliEl && (!poliEl.textContent || poliEl.textContent === '-' || poliEl.textContent === 'Poliklinik')) {
         const firstPoli = doctorAppointmentsCache[0]?.polyclinic?.name;
-        if (firstPoli) poliEl.textContent = firstPoli;
+        if (firstPoli) {
+          poliEl.textContent = firstPoli;
+          const drawerPoliEl = document.getElementById('drawerDoctorPoli');
+          if (drawerPoliEl) drawerPoliEl.textContent = firstPoli;
+        }
       }
     }
 
-    if (doctorAppointmentsCache.length === 0) {
-      setDoctorListState(stateEl, tableWrap, cardsEl, 'empty', 'Belum ada janji pada rentang ini.');
-      resetDoctorDetailPanel();
-      return;
-    }
-
-    hideDoctorListState(stateEl, tableWrap, cardsEl);
-    renderDoctorAppointments(doctorAppointmentsCache, tableBody, cardsEl);
+    renderFilteredDoctorAppointments();
+    updateDoctorSyncTime();
 
     if (selectedDoctorAppointmentId && doctorAppointmentsCache.some((item) => item.id === selectedDoctorAppointmentId)) {
       await selectDoctorAppointment(selectedDoctorAppointmentId, { scrollToDetail: false });
@@ -310,14 +641,16 @@ function renderDoctorAppointments(items, tableBody, cardsEl) {
       const maskedPhone = a.patient?.masked_phone || '-';
       const poliName = a.polyclinic?.name || '-';
       const openBadge = a.open_request
-        ? '<div class="mt-2"><span class="badge badge-diajukan">Pengajuan menunggu</span></div>'
+        ? '<div class="mt-1"><span class="badge badge-diajukan">Pengajuan menunggu</span></div>'
         : '';
 
       return `
         <tr data-appointment-id="${a.id}" class="doctor-row ${isSelected ? 'is-selected' : ''}">
           <td>
-            <strong>${escapeHtml(api.formatDate(a.appointment_date))}</strong>
-            <div class="text-muted text-sm">${escapeHtml(a.appointment_time || '09:00')} WIB</div>
+            <div class="staff-date-compact">
+              <strong>${escapeHtml(formatCompactDateDoc(a.appointment_date))}</strong>
+              <span class="text-muted text-sm">${escapeHtml(a.appointment_time || '09:00')} WIB</span>
+            </div>
           </td>
           <td>
             <strong>${escapeHtml(patientName)}</strong>
@@ -325,16 +658,18 @@ function renderDoctorAppointments(items, tableBody, cardsEl) {
           </td>
           <td>
             <span>${escapeHtml(poliName)}</span>
-            <div class="mt-2"><span class="badge badge-${escapeHtml(a.type)}">${escapeHtml(getAppointmentTypeLabel(a.type))}</span></div>
+            <div class="mt-1"><span class="badge badge-${escapeHtml(a.type)}">${escapeHtml(getAppointmentTypeLabel(a.type))}</span></div>
           </td>
           <td>
             <span class="badge badge-${escapeHtml(a.status)}">${escapeHtml(getAppointmentStatusLabel(a.status))}</span>
             ${openBadge}
           </td>
           <td>
-            <button type="button" class="btn btn-secondary btn-touch" data-view-detail-id="${a.id}">
-              Lihat rincian
-            </button>
+            <div class="staff-row-actions">
+              <button type="button" class="btn btn-secondary btn-sm btn-touch" data-view-detail-id="${a.id}">
+                Rincian
+              </button>
+            </div>
           </td>
         </tr>
       `;
@@ -378,7 +713,7 @@ function renderDoctorAppointments(items, tableBody, cardsEl) {
             <span class="badge badge-${escapeHtml(a.status)}">${escapeHtml(getAppointmentStatusLabel(a.status))}</span>
           </div>
           <div class="mobile-data-card__meta">
-            <div><strong>Jadwal:</strong> ${escapeHtml(api.formatDate(a.appointment_date))}, ${escapeHtml(a.appointment_time || '09:00')} WIB</div>
+            <div><strong>Jadwal:</strong> ${escapeHtml(formatCompactDateDoc(a.appointment_date))}, ${escapeHtml(a.appointment_time || '09:00')} WIB</div>
             <div><strong>Poli:</strong> ${escapeHtml(poliName)}</div>
             <div class="mobile-data-card__badges">
               <span class="badge badge-${escapeHtml(a.type)}">${escapeHtml(getAppointmentTypeLabel(a.type))}</span>
@@ -1122,6 +1457,41 @@ function openWithdrawModal(requestId, requestOrAppt = null) {
   openDoctorModal(modal, focusTarget);
 }
 
+function renderFilteredDoctorRequests() {
+  const stateEl = document.getElementById('doctorRequestsState');
+  const tableBody = document.getElementById('doctorRequestsBody');
+  const cardsEl = document.getElementById('doctorRequestsCards');
+  const tableWrap = tableBody ? tableBody.closest('.table-responsive') : null;
+  if (!tableBody && !cardsEl) return;
+
+  const query = getDoctorSearchQuery();
+  const filtered = (doctorRequestsCache || []).filter((r) => {
+    if (!query) return true;
+    const appt = r.appointment || {};
+    const haystack = [
+      appt.patient?.name,
+      appt.user?.name,
+      appt.polyclinic?.name,
+      r.reason,
+      r.reason_category,
+      r.status,
+      r.admin_note
+    ].filter(Boolean).join(' ').toLowerCase();
+    return haystack.includes(query);
+  });
+
+  if (filtered.length === 0) {
+    const emptyMsg = query
+      ? 'Tidak ada pengajuan yang cocok dengan pencarian Anda.'
+      : 'Belum ada pengajuan pembatalan.';
+    setDoctorListState(stateEl, tableWrap, cardsEl, 'empty', emptyMsg);
+    return;
+  }
+
+  hideDoctorListState(stateEl, tableWrap, cardsEl);
+  renderDoctorRequests(filtered, tableBody, cardsEl);
+}
+
 async function loadDoctorRequests() {
   const stateEl = document.getElementById('doctorRequestsState');
   const tableBody = document.getElementById('doctorRequestsBody');
@@ -1132,7 +1502,7 @@ async function loadDoctorRequests() {
     tableWrap.classList.add('has-mobile-cards');
   }
 
-  setDoctorListState(stateEl, tableWrap, cardsEl, 'loading', 'Memuat daftar pengajuan pembatalan…');
+  setDoctorListState(stateEl, tableWrap, cardsEl, 'loading', 'Memuat daftar pengajuan pembatalan...');
 
   const reqStatusFilter = getDoctorEl('filterReqStatus', 'filterDocReqStatus', 'filterRequestStatus');
   const statusVal = reqStatusFilter ? reqStatusFilter.value : '';
@@ -1146,23 +1516,15 @@ async function loadDoctorRequests() {
     doctorRequestsCache = Array.isArray(res.data) ? res.data : [];
 
     updateDoctorRequestTabBadge(doctorRequestsCache, statusVal);
-
-    if (doctorRequestsCache.length === 0) {
-      setDoctorListState(stateEl, tableWrap, cardsEl, 'empty', 'Belum ada pengajuan pembatalan.');
-      return;
-    }
-
-    hideDoctorListState(stateEl, tableWrap, cardsEl);
-    renderDoctorRequests(doctorRequestsCache, tableBody, cardsEl);
+    renderFilteredDoctorRequests();
+    renderDoctorSidebarSummary();
+    updateDoctorSyncTime();
   } catch {
     setDoctorListState(stateEl, tableWrap, cardsEl, 'error', 'Gagal memuat data. Coba lagi.', loadDoctorRequests);
   }
 }
 
 async function updateDoctorRequestTabBadge(items, currentFilter = '') {
-  const badgeEl = getDoctorEl('openRequestNavCount', 'doctorRequestsBadge');
-  if (!badgeEl) return;
-
   let pendingCount = items.filter((item) => item.status === 'diajukan').length;
   if (currentFilter && currentFilter !== 'diajukan') {
     try {
@@ -1175,9 +1537,13 @@ async function updateDoctorRequestTabBadge(items, currentFilter = '') {
     }
   }
 
-  badgeEl.textContent = String(pendingCount);
-  badgeEl.hidden = pendingCount === 0;
-  badgeEl.style.display = pendingCount > 0 ? 'inline-flex' : 'none';
+  ['openRequestNavCount', 'doctorRequestsBadge', 'topbarNotifCount', 'drawerOpenReqBadge'].forEach((id) => {
+    const badgeEl = document.getElementById(id);
+    if (!badgeEl) return;
+    badgeEl.textContent = String(pendingCount);
+    badgeEl.hidden = pendingCount === 0;
+    badgeEl.style.display = pendingCount > 0 ? 'inline-flex' : 'none';
+  });
 }
 
 function renderDoctorRequests(items, tableBody, cardsEl) {
@@ -1397,7 +1763,7 @@ function initQuickCancelModal() {
     const originalText = submitBtn ? submitBtn.textContent : '';
     if (submitBtn) {
       submitBtn.disabled = true;
-      submitBtn.textContent = 'Membatalkan...';
+      submitBtn.textContent = 'Membatalkan…';
     }
 
     try {
@@ -1518,7 +1884,7 @@ function initCompleteAppointmentModal() {
     const originalText = submitBtn ? submitBtn.textContent : '';
     if (submitBtn) {
       submitBtn.disabled = true;
-      submitBtn.textContent = 'Menyimpan...';
+      submitBtn.textContent = 'Menyimpan…';
     }
 
     try {
@@ -1546,7 +1912,7 @@ function initCompleteAppointmentModal() {
     } finally {
       if (submitBtn) {
         submitBtn.disabled = false;
-        submitBtn.textContent = originalText || 'Simpan & Tandai Selesai';
+        submitBtn.textContent = originalText || 'Simpan & Selesai';
       }
     }
   });
@@ -1613,12 +1979,8 @@ async function openCompleteAppointmentModal(d) {
 }
 
 function initSlotRequestModal() {
-  const openBtns = [
-    document.getElementById('openSlotRequestBtn'),
-    document.getElementById('slotTabOpenModalBtn')
-  ];
-  openBtns.forEach((btn) => {
-    if (btn) btn.addEventListener('click', openSlotRequestModal);
+  document.querySelectorAll('#openSlotRequestBtn, #slotTabOpenModalBtn, [data-open-slot-modal]').forEach((btn) => {
+    btn.addEventListener('click', openSlotRequestModal);
   });
 
   const reloadBtn = document.getElementById('reloadSlotRequestsBtn');
@@ -1661,7 +2023,7 @@ function initSlotRequestModal() {
     const originalText = submitBtn ? submitBtn.textContent : '';
     if (submitBtn) {
       submitBtn.disabled = true;
-      submitBtn.textContent = 'Mengirim...';
+      submitBtn.textContent = 'Mengirim…';
     }
 
     try {
@@ -1715,6 +2077,72 @@ function openSlotRequestModal() {
   openDoctorModal(modal, dateInput);
 }
 
+function renderFilteredDoctorSlotRequests() {
+  const emptyEl = document.getElementById('slotRequestsEmpty');
+  const tableWrap = document.getElementById('slotRequestsTableWrap');
+  const tableBody = document.getElementById('slotRequestsTableBody');
+  const cardsEl = document.getElementById('slotRequestsCards');
+  if (!tableBody && !cardsEl) return;
+
+  const query = getDoctorSearchQuery();
+  const items = (doctorSlotRequestsCache || []).filter((item) => {
+    if (!query) return true;
+    const haystack = [
+      item.schedule_date,
+      item.reason,
+      item.status,
+      item.admin_note
+    ].filter(Boolean).join(' ').toLowerCase();
+    return haystack.includes(query);
+  });
+
+  if (tableWrap) tableWrap.hidden = items.length === 0;
+  if (emptyEl) emptyEl.hidden = items.length > 0;
+  if (cardsEl) cardsEl.innerHTML = '';
+
+  if (!items.length) return;
+
+  if (tableBody) {
+    tableBody.innerHTML = items.map((item) => {
+      const startLabel = String(item.start_time || '').slice(0, 5);
+      const endLabel = String(item.end_time || '').slice(0, 5);
+      return `
+        <tr>
+          <td><strong>${escapeHtml(formatCompactDateDoc(item.schedule_date))}</strong></td>
+          <td>${escapeHtml(startLabel)} - ${escapeHtml(endLabel)} WIB</td>
+          <td>${escapeHtml(String(item.quota || 0))} pasien</td>
+          <td>${escapeHtml(item.reason || '-')}</td>
+          <td><span class="badge ${getRequestBadgeClass(item.status)}">${escapeHtml(getRequestStatusLabel(item.status))}</span></td>
+          <td>${escapeHtml(item.admin_note || '-')}</td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  if (cardsEl) {
+    cardsEl.innerHTML = items.map((item) => {
+      const startLabel = String(item.start_time || '').slice(0, 5);
+      const endLabel = String(item.end_time || '').slice(0, 5);
+      return `
+        <article class="mobile-data-card">
+          <div class="mobile-data-card__head">
+            <div>
+              <strong>${escapeHtml(formatCompactDateDoc(item.schedule_date))}</strong>
+              <div class="text-sm text-muted">${escapeHtml(startLabel)} - ${escapeHtml(endLabel)} WIB</div>
+            </div>
+            <span class="badge ${getRequestBadgeClass(item.status)}">${escapeHtml(getRequestStatusLabel(item.status))}</span>
+          </div>
+          <div class="mobile-data-card__meta">
+            <div><strong>Kuota:</strong> ${escapeHtml(String(item.quota || 0))} pasien</div>
+            <div><strong>Alasan:</strong> ${escapeHtml(item.reason || '-')}</div>
+            ${item.admin_note ? `<div><strong>Catatan admin:</strong> ${escapeHtml(item.admin_note)}</div>` : ''}
+          </div>
+        </article>
+      `;
+    }).join('');
+  }
+}
+
 async function loadDoctorSlotRequests() {
   const loadingEl = document.getElementById('slotRequestsLoading');
   const emptyEl = document.getElementById('slotRequestsEmpty');
@@ -1742,51 +2170,8 @@ async function loadDoctorSlotRequests() {
 
     if (loadingEl) loadingEl.hidden = true;
 
-    if (!items.length) {
-      if (emptyEl) emptyEl.hidden = false;
-      return;
-    }
-
-    if (tableWrap) tableWrap.hidden = false;
-    if (tableBody) {
-      tableBody.innerHTML = items.map((item) => {
-        const startLabel = String(item.start_time || '').slice(0, 5);
-        const endLabel = String(item.end_time || '').slice(0, 5);
-        return `
-          <tr>
-            <td><strong>${escapeHtml(api.formatDate(item.schedule_date))}</strong></td>
-            <td>${escapeHtml(startLabel)} - ${escapeHtml(endLabel)} WIB</td>
-            <td>${escapeHtml(String(item.quota || 0))} pasien</td>
-            <td>${escapeHtml(item.reason || '-')}</td>
-            <td><span class="badge ${getRequestBadgeClass(item.status)}">${escapeHtml(getRequestStatusLabel(item.status))}</span></td>
-            <td>${escapeHtml(item.admin_note || '-')}</td>
-          </tr>
-        `;
-      }).join('');
-    }
-
-    if (cardsEl) {
-      cardsEl.innerHTML = items.map((item) => {
-        const startLabel = String(item.start_time || '').slice(0, 5);
-        const endLabel = String(item.end_time || '').slice(0, 5);
-        return `
-          <article class="mobile-data-card">
-            <div class="mobile-card-head">
-              <div>
-                <strong>${escapeHtml(api.formatDate(item.schedule_date))}</strong>
-                <div class="text-sm text-muted">${escapeHtml(startLabel)} - ${escapeHtml(endLabel)} WIB</div>
-              </div>
-              <span class="badge ${getRequestBadgeClass(item.status)}">${escapeHtml(getRequestStatusLabel(item.status))}</span>
-            </div>
-            <div class="mobile-card-body">
-              <div><strong>Kuota:</strong> ${escapeHtml(String(item.quota || 0))} pasien</div>
-              <div><strong>Alasan:</strong> ${escapeHtml(item.reason || '-')}</div>
-              ${item.admin_note ? `<div><strong>Catatan admin:</strong> ${escapeHtml(item.admin_note)}</div>` : ''}
-            </div>
-          </article>
-        `;
-      }).join('');
-    }
+    renderFilteredDoctorSlotRequests();
+    updateDoctorSyncTime();
   } catch (err) {
     if (loadingEl) loadingEl.hidden = true;
     if (errorEl) errorEl.hidden = false;

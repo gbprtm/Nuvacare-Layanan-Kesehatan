@@ -1,9 +1,13 @@
 let adminMasterPoli = [];
 let adminDoctorsCatalog = [];
 let adminAppointmentsCache = [];
+let adminAppointmentMeta = null;
 let adminRequestsCache = [];
 let adminSlotRequestsCache = [];
 let activeAdminRequestId = null;
+let selectedAdminAppointmentId = null;
+let activeAdminTabName = 'appointments';
+let masterDataCache = [];
 
 function getAdminEl(...ids) {
   for (const id of ids) {
@@ -20,32 +24,223 @@ function getAdminAlertId(...ids) {
   return ids[0];
 }
 
+function updateStaffSyncTime() {
+  const label = new Date().toLocaleTimeString('id-ID', {
+    hour: '2-digit',
+    minute: '2-digit'
+  }) + ' WIB';
+  const sidebarEl = document.getElementById('staffSidebarSyncTime');
+  const railEl = document.getElementById('staffLastUpdated');
+  if (sidebarEl) sidebarEl.textContent = label;
+  if (railEl) railEl.textContent = label;
+}
+
+function formatCompactDateAdmin(dateStr) {
+  if (!dateStr) return '-';
+  const parsed = new Date(`${String(dateStr).slice(0, 10)}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return String(dateStr);
+  return new Intl.DateTimeFormat('id-ID', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric'
+  }).format(parsed);
+}
+
+function getTodayIsoDate() {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function handleAdminLogout(e) {
+  if (e) e.preventDefault();
+  if (confirm('Keluar dari panel admin sekarang?')) {
+    api.logout();
+  }
+}
+
+function initStaffDrawer() {
+  const menuBtn = document.getElementById('mobileMenuBtn');
+  const overlay = document.getElementById('staffDrawerOverlay');
+  const panel = document.getElementById('staffDrawerPanel');
+  const closeBtn = document.getElementById('drawerCloseBtn');
+  const expandBtn = document.getElementById('drawerQuickFilterExpandBtn');
+  const subList = document.getElementById('drawerQuickFilterSub');
+  const primaryCta = document.getElementById('drawerPrimaryCta');
+
+  if (!menuBtn || !overlay || !panel) return;
+
+  const openDrawer = () => {
+    overlay.hidden = false;
+    overlay.setAttribute('aria-hidden', 'false');
+    menuBtn.setAttribute('aria-expanded', 'true');
+    requestAnimationFrame(() => overlay.classList.add('is-open'));
+    document.body.style.overflow = 'hidden';
+    if (closeBtn) setTimeout(() => closeBtn.focus(), 40);
+  };
+
+  const closeDrawer = () => {
+    overlay.classList.remove('is-open');
+    overlay.setAttribute('aria-hidden', 'true');
+    menuBtn.setAttribute('aria-expanded', 'false');
+    document.body.style.overflow = '';
+    setTimeout(() => {
+      if (!overlay.classList.contains('is-open')) {
+        overlay.hidden = true;
+      }
+    }, 200);
+  };
+
+  window.closeAdminStaffDrawer = closeDrawer;
+
+  menuBtn.addEventListener('click', openDrawer);
+  if (closeBtn) closeBtn.addEventListener('click', closeDrawer);
+
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) closeDrawer();
+  });
+
+  if (expandBtn && subList) {
+    expandBtn.addEventListener('click', () => {
+      const nextExpanded = expandBtn.getAttribute('aria-expanded') !== 'true';
+      expandBtn.setAttribute('aria-expanded', nextExpanded ? 'true' : 'false');
+      subList.hidden = !nextExpanded;
+      const plusEl = expandBtn.querySelector('.patient-drawer__plus');
+      if (plusEl) plusEl.textContent = nextExpanded ? '-' : '+';
+    });
+  }
+
+  document.querySelectorAll('[data-drawer-tab]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const target = btn.getAttribute('data-drawer-tab');
+      if (target === 'appointments') {
+        switchAdminTab('appointments');
+        loadAppointments();
+      } else if (target === 'requests') {
+        switchAdminTab('requests');
+        loadCancellationRequests();
+      } else if (target === 'slot-requests') {
+        switchAdminTab('slotRequests');
+        loadAdminSlotRequests();
+      }
+      closeDrawer();
+    });
+  });
+
+  if (primaryCta) {
+    primaryCta.addEventListener('click', () => {
+      if (typeof switchAdminTab === 'function' && document.getElementById('adminTabAppointments')) {
+        switchAdminTab('appointments');
+      }
+      closeDrawer();
+    });
+  }
+}
+
+function getStaffSearchQuery() {
+  return (document.getElementById('staffSearchInput')?.value || '').trim().toLowerCase();
+}
+
+function applyAdminSearchForCurrentPage() {
+  if (document.getElementById('adminAppointmentTableBody')) {
+    if (activeAdminTabName === 'requests') {
+      renderFilteredAdminRequests();
+    } else if (activeAdminTabName === 'slotRequests') {
+      renderFilteredAdminSlotRequests();
+    } else {
+      renderFilteredAppointments();
+    }
+    return;
+  }
+  if (document.getElementById('poliTableBody')) {
+    renderFilteredMasterData();
+  }
+}
+
+function initStaffSearch() {
+  const form = document.getElementById('staffSearchForm');
+  const input = document.getElementById('staffSearchInput');
+  const clearBtn = document.getElementById('staffSearchClearBtn');
+  if (!input) return;
+
+  const syncClearVisibility = () => {
+    if (clearBtn) {
+      clearBtn.hidden = input.value.trim() === '';
+    }
+  };
+
+  if (form) {
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      applyAdminSearchForCurrentPage();
+    });
+  }
+
+  input.addEventListener('input', () => {
+    syncClearVisibility();
+    applyAdminSearchForCurrentPage();
+  });
+
+  if (clearBtn) {
+    clearBtn.addEventListener('click', () => {
+      input.value = '';
+      syncClearVisibility();
+      applyAdminSearchForCurrentPage();
+      input.focus();
+    });
+  }
+
+  syncClearVisibility();
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   if (!api.requireAuth('admin')) return;
 
   const currentUser = api.getUser();
-  const userNameEl = document.getElementById('navAdminName');
-  if (userNameEl && currentUser) {
-    userNameEl.textContent = currentUser.name;
-  }
-
-  const logoutBtn = document.getElementById('logoutBtn');
-  if (logoutBtn) {
-    logoutBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      if (confirm('Keluar dari panel admin sekarang?')) {
-        api.logout();
-      }
+  if (currentUser) {
+    ['navAdminName', 'navAdminNameTop', 'drawerAdminName'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = currentUser.name;
     });
   }
+
+  ['logoutBtn', 'logoutBtnTop', 'drawerLogoutBtn'].forEach((id) => {
+    const btn = document.getElementById(id);
+    if (btn) btn.addEventListener('click', handleAdminLogout);
+  });
+
+  initStaffDrawer();
+  initStaffSearch();
 
   window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       closeAllAdminModals();
+      if (typeof window.closeAdminStaffDrawer === 'function') {
+        window.closeAdminStaffDrawer();
+      }
     }
   });
 
   initAdminBackdropAndCloseButtons();
+
+  const notifBtn = document.getElementById('topbarNotifBtn');
+  if (notifBtn) {
+    notifBtn.addEventListener('click', () => {
+      switchAdminTab('requests');
+      loadCancellationRequests();
+    });
+  }
+
+  const openPendingInboxBtn = document.getElementById('openPendingInboxBtn');
+  if (openPendingInboxBtn) {
+    openPendingInboxBtn.addEventListener('click', () => {
+      switchAdminTab('requests');
+      loadCancellationRequests();
+    });
+  }
 
   if (document.getElementById('adminAppointmentTableBody')) {
     initAppointmentManagement();
@@ -127,17 +322,82 @@ function hideAdminModal(modal) {
   modal.style.display = 'none';
 }
 
+function populateAppointmentOrganizerOptions() {
+  const poliSelect = document.getElementById('filterPoli');
+  const docSelect = document.getElementById('filterDoctor');
+  if (!poliSelect && !docSelect) return;
+
+  const poliMap = new Map();
+  const docMap = new Map();
+
+  (adminMasterPoli || []).forEach((p) => {
+    if (p?.id) poliMap.set(String(p.id), p.name || `Poli #${p.id}`);
+    (p.doctors || []).forEach((d) => {
+      if (d?.id) {
+        docMap.set(String(d.id), {
+          id: String(d.id),
+          name: d.name || `Dokter #${d.id}`,
+          poliId: String(p.id || '')
+        });
+      }
+    });
+  });
+
+  (adminAppointmentsCache || []).forEach((a) => {
+    const pId = a.polyclinic_id || a.polyclinic?.id;
+    const pName = a.polyclinic?.name;
+    if (pId && pName && !poliMap.has(String(pId))) {
+      poliMap.set(String(pId), pName);
+    }
+    const dId = a.doctor_id || a.doctor?.id;
+    const dName = a.doctor?.name;
+    if (dId && dName && !docMap.has(String(dId))) {
+      docMap.set(String(dId), {
+        id: String(dId),
+        name: dName,
+        poliId: String(pId || '')
+      });
+    }
+  });
+
+  if (poliSelect) {
+    const currentPoli = poliSelect.value;
+    const options = Array.from(poliMap.entries()).sort((a, b) => a[1].localeCompare(b[1], 'id'));
+    poliSelect.innerHTML = '<option value="">Semua Poli</option>' +
+      options.map(([id, name]) => `<option value="${escapeHtml(id)}">${escapeHtml(name)}</option>`).join('');
+    if (currentPoli && poliMap.has(currentPoli)) poliSelect.value = currentPoli;
+  }
+
+  if (docSelect) {
+    const selectedPoli = poliSelect?.value || '';
+    const currentDoc = docSelect.value;
+    const docs = Array.from(docMap.values())
+      .filter((d) => !selectedPoli || d.poliId === selectedPoli)
+      .sort((a, b) => a.name.localeCompare(b.name, 'id'));
+    docSelect.innerHTML = '<option value="">Semua Dokter</option>' +
+      docs.map((d) => `<option value="${escapeHtml(d.id)}">${escapeHtml(d.name)}</option>`).join('');
+    if (currentDoc && docs.some((d) => d.id === currentDoc)) {
+      docSelect.value = currentDoc;
+    }
+  }
+}
+
 async function initAppointmentManagement() {
   const filterDate = document.getElementById('filterDate');
+  const filterPoli = document.getElementById('filterPoli');
+  const filterDoctor = document.getElementById('filterDoctor');
   const filterStatus = document.getElementById('filterStatus');
   const filterType = document.getElementById('filterType');
+  const filterSort = document.getElementById('filterSort');
+  const quickTodayBtn = document.getElementById('quickTodayBtn');
+  const resetBtn = document.getElementById('resetAdminFiltersBtn');
 
   const urlParams = new URLSearchParams(window.location.search);
   if (filterDate && urlParams.get('date')) filterDate.value = urlParams.get('date');
   if (filterStatus && urlParams.get('status')) filterStatus.value = urlParams.get('status');
   if (filterType && urlParams.get('type')) filterType.value = urlParams.get('type');
 
-  const onFilterChange = () => {
+  const syncUrlAndReload = () => {
     const nextParams = new URLSearchParams();
     if (filterDate?.value) nextParams.set('date', filterDate.value);
     if (filterType?.value) nextParams.set('type', filterType.value);
@@ -147,15 +407,358 @@ async function initAppointmentManagement() {
     loadAppointments();
   };
 
-  if (filterDate) filterDate.addEventListener('change', onFilterChange);
-  if (filterStatus) filterStatus.addEventListener('change', onFilterChange);
-  if (filterType) filterType.addEventListener('change', onFilterChange);
+  if (filterDate) filterDate.addEventListener('change', syncUrlAndReload);
+  if (filterStatus) filterStatus.addEventListener('change', syncUrlAndReload);
+  if (filterType) filterType.addEventListener('change', syncUrlAndReload);
+
+  if (filterPoli) {
+    filterPoli.addEventListener('change', () => {
+      populateAppointmentOrganizerOptions();
+      renderFilteredAppointments();
+    });
+  }
+  if (filterDoctor) filterDoctor.addEventListener('change', renderFilteredAppointments);
+  if (filterSort) filterSort.addEventListener('change', renderFilteredAppointments);
+
+  const resetAllFilters = () => {
+    if (filterDate) filterDate.value = '';
+    if (filterPoli) filterPoli.value = '';
+    if (filterDoctor) filterDoctor.value = '';
+    if (filterType) filterType.value = '';
+    if (filterStatus) filterStatus.value = '';
+    if (filterSort) filterSort.value = 'date_desc';
+    const searchInput = document.getElementById('staffSearchInput');
+    const clearBtn = document.getElementById('staffSearchClearBtn');
+    if (searchInput) searchInput.value = '';
+    if (clearBtn) clearBtn.hidden = true;
+    document.querySelectorAll('[data-quick-filter]').forEach((el) => el.classList.remove('is-active'));
+    populateAppointmentOrganizerOptions();
+    syncUrlAndReload();
+  };
+
+  if (quickTodayBtn) {
+    quickTodayBtn.addEventListener('click', () => {
+      if (filterDate) filterDate.value = getTodayIsoDate();
+      document.querySelectorAll('[data-quick-filter]').forEach((el) => {
+        el.classList.toggle('is-active', el.getAttribute('data-quick-filter') === 'today');
+      });
+      syncUrlAndReload();
+    });
+  }
+
+  if (resetBtn) {
+    resetBtn.addEventListener('click', resetAllFilters);
+  }
+
+  document.querySelectorAll('[data-quick-filter]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const preset = btn.getAttribute('data-quick-filter');
+      document.querySelectorAll('[data-quick-filter]').forEach((el) => {
+        el.classList.toggle('is-active', el.getAttribute('data-quick-filter') === preset);
+      });
+
+      if (preset === 'today') {
+        switchAdminTab('appointments');
+        if (filterDate) filterDate.value = getTodayIsoDate();
+        if (filterStatus) filterStatus.value = '';
+        syncUrlAndReload();
+      } else if (preset === 'scheduled') {
+        switchAdminTab('appointments');
+        if (filterDate) filterDate.value = '';
+        if (filterStatus) filterStatus.value = 'terjadwal';
+        syncUrlAndReload();
+      } else if (preset === 'all') {
+        switchAdminTab('appointments');
+        resetAllFilters();
+      } else if (preset === 'overdue') {
+        switchAdminTab('requests');
+        const reqStatus = document.getElementById('reqFilterStatus');
+        const reqOverdue = document.getElementById('reqFilterOverdue');
+        if (reqStatus) reqStatus.value = 'diajukan';
+        if (reqOverdue) {
+          if (reqOverdue.type === 'checkbox') reqOverdue.checked = true;
+          else reqOverdue.value = '1';
+        }
+        loadCancellationRequests();
+      }
+
+      if (typeof window.closeAdminStaffDrawer === 'function') {
+        window.closeAdminStaffDrawer();
+      }
+    });
+  });
 
   await loadAppointments();
 
   const scheduleControlForm = document.getElementById('scheduleControlForm');
   if (scheduleControlForm) {
     initScheduleControlForm();
+  }
+}
+
+function renderAdminFocusCard(items) {
+  const focusBody = document.getElementById('adminFocusBody');
+  const focusBadge = document.getElementById('adminFocusBadge');
+  if (!focusBody) return;
+
+  if (!items || items.length === 0) {
+    if (focusBadge) {
+      focusBadge.className = 'badge badge-neutral';
+      focusBadge.textContent = 'Kosong';
+    }
+    focusBody.innerHTML = '<p class="text-muted text-sm">Belum ada kunjungan sesuai filter saat ini.</p>';
+    return;
+  }
+
+  let selected = items.find((item) => item.id === selectedAdminAppointmentId);
+  if (!selected) {
+    selected = items.find((item) => item.open_cancellation_request || item.open_request) || items[0];
+    selectedAdminAppointmentId = selected.id;
+  }
+
+  const rmId = selected.user?.medical_record_id || `RM-${String(selected.user_id || selected.user?.id || 0).padStart(4, '0')}`;
+  const patientName = selected.user?.initial_name || selected.user?.name || '-';
+  const poliName = selected.polyclinic?.name || '-';
+  const docName = selected.doctor?.name || '-';
+  const dateText = `${formatCompactDateAdmin(selected.appointment_date)}, ${selected.appointment_time || '09:00'} WIB`;
+  const noteText = selected.complaint || selected.doctor_notes || 'Belum ada keluhan atau catatan.';
+
+  if (focusBadge) {
+    focusBadge.className = `badge badge-${escapeHtml(selected.status || 'terjadwal')}`;
+    focusBadge.textContent = getStatusLabel(selected.status);
+  }
+
+  focusBody.innerHTML = `
+    <div class="staff-focus-meta">
+      <div class="staff-focus-kv">
+        <span class="staff-focus-label">Pasien</span>
+        <strong>${escapeHtml(rmId)} (${escapeHtml(patientName)})</strong>
+      </div>
+      <div class="staff-focus-kv">
+        <span class="staff-focus-label">Jadwal</span>
+        <span>${escapeHtml(dateText)}</span>
+      </div>
+      <div class="staff-focus-kv">
+        <span class="staff-focus-label">Poli &amp; Dokter</span>
+        <span>${escapeHtml(poliName)} / ${escapeHtml(docName)}</span>
+      </div>
+    </div>
+    <div class="staff-focus-note">
+      <span class="staff-focus-label">Keluhan / Catatan</span>
+      <p>${escapeHtml(noteText)}</p>
+      <div class="staff-row-actions">
+        <button type="button" class="btn btn-primary btn-sm btn-touch" onclick="prefillControlForAppointment(${selected.id})">Buat jadwal kontrol</button>
+        <button type="button" class="btn btn-secondary btn-sm btn-touch" onclick="openAuditLogModal(${selected.id})">Riwayat Log</button>
+      </div>
+    </div>
+  `;
+}
+
+function updateRightSummaryRail(filteredItems, totalCount) {
+  const metaEl = document.getElementById('adminAppointmentMetaSummary');
+  if (!metaEl) return;
+
+  const hasClientFilter = Boolean(
+    document.getElementById('filterPoli')?.value ||
+    document.getElementById('filterDoctor')?.value ||
+    getStaffSearchQuery()
+  );
+
+  const source = (!hasClientFilter && adminAppointmentMeta && typeof adminAppointmentMeta.total_count === 'number')
+    ? {
+        total: adminAppointmentMeta.total_count,
+        scheduled: adminAppointmentMeta.scheduled_count ?? 0,
+        completed: adminAppointmentMeta.completed_count ?? 0,
+        cancelled: adminAppointmentMeta.cancelled_count ?? 0
+      }
+    : {
+        total: filteredItems.length,
+        scheduled: filteredItems.filter((a) => a.status === 'terjadwal').length,
+        completed: filteredItems.filter((a) => a.status === 'selesai').length,
+        cancelled: filteredItems.filter((a) => a.status === 'dibatalkan').length
+      };
+
+  const pendingReqCount = adminRequestsCache.filter((r) => r.status === 'diajukan').length;
+  const pendingSlotCount = adminSlotRequestsCache.filter((r) => r.status === 'diajukan').length;
+
+  metaEl.hidden = false;
+  metaEl.innerHTML = `
+    <div class="staff-rail-metric-row"><span class="portal-summary-label">${hasClientFilter ? 'Cocok filter' : 'Total kunjungan'}</span><strong class="portal-summary-value">${source.total}</strong></div>
+    <div class="staff-rail-metric-row"><span class="portal-summary-label">Terjadwal</span><strong class="portal-summary-value">${source.scheduled}</strong></div>
+    <div class="staff-rail-metric-row"><span class="portal-summary-label">Selesai</span><strong class="portal-summary-value">${source.completed}</strong></div>
+    <div class="staff-rail-metric-row"><span class="portal-summary-label">Dibatalkan</span><strong class="portal-summary-value">${source.cancelled}</strong></div>
+    <div class="staff-rail-metric-row"><span class="portal-summary-label">Antrean dokter</span><strong class="portal-summary-value">${pendingReqCount + pendingSlotCount}</strong></div>
+  `;
+  void totalCount;
+}
+
+function renderFilteredAppointments() {
+  const tableBody = document.getElementById('adminAppointmentTableBody');
+  const cardsEl = document.getElementById('adminAppointmentCards');
+  const resultInfo = document.getElementById('adminAppointmentsResultInfo');
+  if (!tableBody) return;
+
+  const filterPoliVal = document.getElementById('filterPoli')?.value || '';
+  const filterDoctorVal = document.getElementById('filterDoctor')?.value || '';
+  const sortVal = document.getElementById('filterSort')?.value || 'date_desc';
+  const query = getStaffSearchQuery();
+
+  let filtered = (adminAppointmentsCache || []).filter((a) => {
+    if (filterPoliVal && String(a.polyclinic_id || a.polyclinic?.id || '') !== filterPoliVal) {
+      return false;
+    }
+    if (filterDoctorVal && String(a.doctor_id || a.doctor?.id || '') !== filterDoctorVal) {
+      return false;
+    }
+    if (query) {
+      const rm = a.user?.medical_record_id || `RM-${String(a.user_id || a.user?.id || 0).padStart(4, '0')}`;
+      const haystack = [
+        rm,
+        a.user?.initial_name,
+        a.user?.name,
+        a.polyclinic?.name,
+        a.doctor?.name,
+        a.complaint,
+        a.doctor_notes,
+        a.status,
+        a.type
+      ].filter(Boolean).join(' ').toLowerCase();
+      if (!haystack.includes(query)) return false;
+    }
+    return true;
+  });
+
+  filtered = filtered.slice().sort((a, b) => {
+    if (sortVal === 'date_asc') {
+      const da = `${a.appointment_date || ''} ${a.appointment_time || ''}`;
+      const db = `${b.appointment_date || ''} ${b.appointment_time || ''}`;
+      return da.localeCompare(db);
+    }
+    if (sortVal === 'patient_asc') {
+      const na = a.user?.initial_name || a.user?.name || '';
+      const nb = b.user?.initial_name || b.user?.name || '';
+      return na.localeCompare(nb, 'id');
+    }
+    if (sortVal === 'status_asc') {
+      return (a.status || '').localeCompare(b.status || '', 'id');
+    }
+    const da = `${a.appointment_date || ''} ${a.appointment_time || ''}`;
+    const db = `${b.appointment_date || ''} ${b.appointment_time || ''}`;
+    return db.localeCompare(da);
+  });
+
+  if (resultInfo) {
+    resultInfo.textContent = `Menampilkan ${filtered.length} dari ${adminAppointmentsCache.length} janji`;
+  }
+
+  updateRightSummaryRail(filtered, adminAppointmentsCache.length);
+  renderAdminFocusCard(filtered);
+
+  if (filtered.length === 0) {
+    tableBody.innerHTML = '<tr><td colspan="7" class="text-muted text-center">Belum ada janji yang cocok dengan filter atau pencarian ini.</td></tr>';
+    if (cardsEl) {
+      cardsEl.innerHTML = '<div class="portal-state-box"><p class="text-muted">Belum ada janji yang cocok dengan filter atau pencarian ini.</p></div>';
+    }
+    return;
+  }
+
+  tableBody.innerHTML = filtered.map((a) => {
+    const openReq = a.open_cancellation_request || a.open_request || null;
+    const openReqBadge = openReq
+      ? `<div class="mt-1"><span class="badge badge-diajukan">Pengajuan batal</span>${openReq.is_overdue ? ' <span class="badge badge-overdue-sla">Lewat SLA</span>' : ''}</div>`
+      : '';
+    const patientRm = a.user?.medical_record_id || `RM-${String(a.user_id || a.user?.id || 0).padStart(4, '0')}`;
+    const patientInitial = a.user?.initial_name || a.user?.name || '-';
+    const isSelected = Number(a.id) === Number(selectedAdminAppointmentId);
+
+    return `
+      <tr class="${isSelected ? 'is-selected-row' : ''}" data-appt-row-id="${a.id}" tabindex="0">
+        <td>
+          <strong>${escapeHtml(patientRm)}</strong>
+          <div class="text-muted text-sm">${escapeHtml(patientInitial)}</div>
+        </td>
+        <td>
+          <strong>${escapeHtml(a.polyclinic?.name || '-')}</strong>
+          <div class="text-muted text-sm">${escapeHtml(a.doctor?.name || '-')}</div>
+        </td>
+        <td>
+          <div class="staff-date-compact">
+            <strong>${escapeHtml(formatCompactDateAdmin(a.appointment_date))}</strong>
+            <span class="text-muted text-sm">${escapeHtml(a.appointment_time || '09:00')} WIB</span>
+          </div>
+        </td>
+        <td><span class="badge badge-${escapeHtml(a.type)}">${a.type === 'kontrol_rutin' ? 'Kontrol rutin' : 'Janji baru'}</span></td>
+        <td>
+          <span class="badge badge-${escapeHtml(a.status)}">${escapeHtml(getStatusLabel(a.status))}</span>
+          ${openReqBadge}
+        </td>
+        <td>
+          ${a.complaint ? `<div class="text-sm"><strong>Keluhan:</strong> ${escapeHtml(a.complaint)}</div>` : ''}
+          ${a.doctor_notes ? `<div class="text-sm mt-1"><strong>Catatan:</strong> ${escapeHtml(a.doctor_notes)}</div>` : ''}
+          ${!a.complaint && !a.doctor_notes ? '<span class="text-muted">-</span>' : ''}
+        </td>
+        <td>
+          <div class="staff-row-actions">
+            <button type="button" class="btn btn-secondary btn-sm btn-touch" onclick="event.stopPropagation(); prefillControlForAppointment(${a.id})">Kontrol</button>
+            <button type="button" class="btn btn-ghost btn-sm btn-touch" onclick="event.stopPropagation(); openAuditLogModal(${a.id})">Log</button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  tableBody.querySelectorAll('tr[data-appt-row-id]').forEach((row) => {
+    const selectRow = () => {
+      selectedAdminAppointmentId = Number(row.getAttribute('data-appt-row-id'));
+      tableBody.querySelectorAll('tr[data-appt-row-id]').forEach((tr) => {
+        tr.classList.toggle('is-selected-row', Number(tr.getAttribute('data-appt-row-id')) === selectedAdminAppointmentId);
+      });
+      renderAdminFocusCard(filtered);
+    };
+    row.addEventListener('click', selectRow);
+    row.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        selectRow();
+      }
+    });
+  });
+
+  if (cardsEl) {
+    cardsEl.innerHTML = filtered.map((a) => {
+      const openReq = a.open_cancellation_request || a.open_request || null;
+      const openReqBadge = openReq
+        ? `<span class="badge badge-diajukan">Pengajuan batal</span>${openReq.is_overdue ? '<span class="badge badge-overdue-sla">Lewat SLA</span>' : ''}`
+        : '';
+      const patientRm = a.user?.medical_record_id || `RM-${String(a.user_id || a.user?.id || 0).padStart(4, '0')}`;
+      const patientInitial = a.user?.initial_name || a.user?.name || '-';
+
+      return `
+        <article class="mobile-data-card">
+          <div class="mobile-data-card__head">
+            <div>
+              <strong>${escapeHtml(patientRm)}</strong>
+              <div class="text-muted text-sm">${escapeHtml(patientInitial)}</div>
+            </div>
+            <span class="badge badge-${escapeHtml(a.status)}">${escapeHtml(getStatusLabel(a.status))}</span>
+          </div>
+          <div class="mobile-data-card__meta">
+            <div><strong>Poli &amp; Dokter:</strong> ${escapeHtml(a.polyclinic?.name || '-')} (${escapeHtml(a.doctor?.name || '-')})</div>
+            <div><strong>Jadwal:</strong> ${escapeHtml(formatCompactDateAdmin(a.appointment_date))}, ${escapeHtml(a.appointment_time || '09:00')} WIB</div>
+            <div class="mobile-data-card__badges">
+              <span class="badge badge-${escapeHtml(a.type)}">${a.type === 'kontrol_rutin' ? 'Kontrol rutin' : 'Janji baru'}</span>
+              ${openReqBadge}
+            </div>
+            ${a.complaint ? `<div><strong>Keluhan:</strong> ${escapeHtml(a.complaint)}</div>` : ''}
+            ${a.doctor_notes ? `<div><strong>Catatan:</strong> ${escapeHtml(a.doctor_notes)}</div>` : ''}
+          </div>
+          <div class="mobile-data-card__actions">
+            <button type="button" class="btn btn-secondary btn-sm btn-touch" onclick="prefillControlForAppointment(${a.id})">Buat jadwal kontrol</button>
+            <button type="button" class="btn btn-ghost btn-sm btn-touch" onclick="openAuditLogModal(${a.id})">Riwayat Log</button>
+          </div>
+        </article>
+      `;
+    }).join('');
   }
 }
 
@@ -180,112 +783,29 @@ async function loadAppointments() {
   if (type) params.append('type', type);
 
   try {
-    const res = await api.request(`/admin/janji-temu?${params.toString()}`, { priority: 'high' });
+    const [res] = await Promise.all([
+      api.request(`/admin/janji-temu?${params.toString()}`, { priority: 'high' }),
+      adminMasterPoli.length === 0
+        ? api.request('/master-poli', { priority: 'low' })
+            .then((poliRes) => {
+              adminMasterPoli = poliRes.data || [];
+            })
+            .catch(() => {})
+        : Promise.resolve()
+    ]);
+
     adminAppointmentsCache = res.data || [];
+    adminAppointmentMeta = res.meta || null;
 
-    if (metaEl) {
-      const m = res.meta;
-      if (m && typeof m.total_count === 'number') {
-        metaEl.hidden = false;
-        metaEl.textContent = `Ringkasan: Total ${m.total_count} | Terjadwal ${m.scheduled_count ?? 0} | Selesai ${m.completed_count ?? 0} | Dibatalkan ${m.cancelled_count ?? 0}`;
-      } else {
-        metaEl.hidden = true;
-        metaEl.textContent = '';
-      }
-    }
-
-    if (adminAppointmentsCache.length === 0) {
-      tableBody.innerHTML = '<tr><td colspan="7" class="text-muted text-center" style="padding: var(--space-6);">Belum ada janji pada filter ini.</td></tr>';
-      if (cardsEl) {
-        cardsEl.innerHTML = '<div class="portal-state-box"><p class="text-muted">Belum ada janji pada filter ini.</p></div>';
-      }
-      return;
-    }
-
-    tableBody.innerHTML = adminAppointmentsCache.map(a => {
-      const openReq = a.open_cancellation_request || a.open_request || null;
-      const openReqBadge = openReq
-        ? `<div class="mt-2"><span class="badge badge-diajukan">Ada pengajuan batal</span>${openReq.is_overdue ? ' <span class="badge badge-overdue-sla">[Lewat SLA]</span>' : ''}</div>`
-        : '';
-      const patientRm = a.user?.medical_record_id || `RM-${String(a.user_id || a.user?.id || 0).padStart(4, '0')}`;
-      const patientInitial = a.user?.initial_name || a.user?.name || '-';
-
-      return `
-        <tr>
-          <td>
-            <strong>${escapeHtml(patientRm)}</strong>
-            <div class="text-muted text-sm">${escapeHtml(patientInitial)}</div>
-          </td>
-          <td>
-            <strong>${escapeHtml(a.polyclinic?.name || '-')}</strong>
-            <div class="text-muted text-sm">${escapeHtml(a.doctor?.name || '-')}</div>
-          </td>
-          <td>
-            <strong>${escapeHtml(api.formatDate(a.appointment_date))}</strong>
-            <div class="text-muted text-sm">Pukul ${escapeHtml(a.appointment_time || '09:00')} WIB</div>
-          </td>
-          <td><span class="badge badge-${escapeHtml(a.type)}">${a.type === 'kontrol_rutin' ? 'Kontrol rutin' : 'Janji baru'}</span></td>
-          <td>
-            <span class="badge badge-${escapeHtml(a.status)}">${escapeHtml(getStatusLabel(a.status))}</span>
-            ${openReqBadge}
-          </td>
-          <td>
-            ${a.complaint ? `<div><strong>Keluhan:</strong> ${escapeHtml(a.complaint)}</div>` : ''}
-            ${a.doctor_notes ? `<div class="mt-2"><strong>Catatan:</strong> ${escapeHtml(a.doctor_notes)}</div>` : ''}
-            ${!a.complaint && !a.doctor_notes ? '<span class="text-muted">-</span>' : ''}
-          </td>
-          <td>
-            <div style="display: flex; flex-wrap: wrap; gap: var(--space-2);">
-              <button type="button" class="btn btn-secondary btn-touch" onclick="prefillControlForAppointment(${a.id})">Buat jadwal kontrol</button>
-              <button type="button" class="btn btn-secondary btn-touch" onclick="openAuditLogModal(${a.id})">Riwayat Log</button>
-            </div>
-          </td>
-        </tr>
-      `;
-    }).join('');
-
-    if (cardsEl) {
-      cardsEl.innerHTML = adminAppointmentsCache.map(a => {
-        const openReq = a.open_cancellation_request || a.open_request || null;
-        const openReqBadge = openReq
-          ? `<span class="badge badge-diajukan">Ada pengajuan batal</span>${openReq.is_overdue ? '<span class="badge badge-overdue-sla">[Lewat SLA]</span>' : ''}`
-          : '';
-        const patientRm = a.user?.medical_record_id || `RM-${String(a.user_id || a.user?.id || 0).padStart(4, '0')}`;
-        const patientInitial = a.user?.initial_name || a.user?.name || '-';
-
-        return `
-          <article class="mobile-data-card">
-            <div class="mobile-data-card__head">
-              <div>
-                <strong>${escapeHtml(patientRm)}</strong>
-                <div class="text-muted text-sm">${escapeHtml(patientInitial)}</div>
-              </div>
-              <span class="badge badge-${escapeHtml(a.status)}">${escapeHtml(getStatusLabel(a.status))}</span>
-            </div>
-            <div class="mobile-data-card__meta">
-              <div><strong>Poli &amp; Dokter:</strong> ${escapeHtml(a.polyclinic?.name || '-')} (${escapeHtml(a.doctor?.name || '-')})</div>
-              <div><strong>Jadwal:</strong> ${escapeHtml(api.formatDate(a.appointment_date))}, Pukul ${escapeHtml(a.appointment_time || '09:00')} WIB</div>
-              <div class="mobile-data-card__badges">
-                <span class="badge badge-${escapeHtml(a.type)}">${a.type === 'kontrol_rutin' ? 'Kontrol rutin' : 'Janji baru'}</span>
-                ${openReqBadge}
-              </div>
-              ${a.complaint ? `<div><strong>Keluhan:</strong> ${escapeHtml(a.complaint)}</div>` : ''}
-              ${a.doctor_notes ? `<div><strong>Catatan:</strong> ${escapeHtml(a.doctor_notes)}</div>` : ''}
-            </div>
-            <div class="mobile-data-card__actions">
-              <button type="button" class="btn btn-secondary btn-touch" onclick="prefillControlForAppointment(${a.id})">Buat jadwal kontrol</button>
-              <button type="button" class="btn btn-secondary btn-touch" onclick="openAuditLogModal(${a.id})">Riwayat Log</button>
-            </div>
-          </article>
-        `;
-      }).join('');
-    }
+    populateAppointmentOrganizerOptions();
+    renderFilteredAppointments();
+    updateStaffSyncTime();
   } catch {
     if (metaEl) {
       metaEl.hidden = true;
       metaEl.textContent = '';
     }
-    tableBody.innerHTML = '<tr><td colspan="7" class="text-center" style="color: var(--color-danger-ink); padding: var(--space-6);">Gagal memuat data. Coba muat ulang halaman.</td></tr>';
+    tableBody.innerHTML = '<tr><td colspan="7" class="text-center" style="color: var(--color-danger-ink);">Gagal memuat data. Coba muat ulang halaman.</td></tr>';
     if (cardsEl) {
       cardsEl.innerHTML = '<div class="portal-state-box portal-state-box--error"><p>Gagal memuat data. Coba muat ulang halaman.</p></div>';
     }
@@ -467,6 +987,12 @@ async function initAdminCancellationInbox() {
     });
   }
 
+  document.querySelectorAll('a[href="#controlFormSection"]').forEach((link) => {
+    link.addEventListener('click', () => {
+      switchAdminTab('appointments');
+    });
+  });
+
   const reqFilterStatus = document.getElementById('reqFilterStatus');
   const reqFilterDoctor = document.getElementById('reqFilterDoctor');
   const reqFilterOverdue = document.getElementById('reqFilterOverdue');
@@ -520,6 +1046,7 @@ function getAdminTabPanel(btn, fallbackIds) {
 }
 
 function switchAdminTab(tabName) {
+  activeAdminTabName = tabName;
   const tabApptsBtn = document.getElementById('adminTabBtnAppointments');
   const tabReqsBtn = document.getElementById('adminTabBtnRequests');
   const tabSlotsBtn = document.getElementById('adminTabBtnSlotRequests');
@@ -555,6 +1082,15 @@ function switchAdminTab(tabName) {
     }
     tabSlotsBtn.setAttribute('aria-selected', showSlots ? 'true' : 'false');
   }
+
+  document.querySelectorAll('[data-drawer-tab]').forEach((btn) => {
+    const target = btn.getAttribute('data-drawer-tab');
+    const isMatch = (target === 'appointments' && showAppointments) ||
+      (target === 'requests' && showRequests) ||
+      (target === 'slot-requests' && showSlots);
+    btn.classList.toggle('is-active', isMatch);
+  });
+
   if (apptsPanel) {
     apptsPanel.hidden = !showAppointments;
     apptsPanel.style.display = showAppointments ? '' : 'none';
@@ -567,6 +1103,110 @@ function switchAdminTab(tabName) {
     slotsPanel.hidden = !showSlots;
     slotsPanel.style.display = showSlots ? '' : 'none';
   }
+
+  if (getStaffSearchQuery()) {
+    applyAdminSearchForCurrentPage();
+  }
+}
+
+function renderAdminPendingPreview() {
+  const previewEl = document.getElementById('adminPendingPreviewList');
+  if (!previewEl) return;
+
+  const openCancelItems = (adminRequestsCache || [])
+    .filter((r) => r.status === 'diajukan')
+    .map((r) => ({
+      kind: 'cancel',
+      doctorName: r.doctor?.name || r.appointment?.doctor?.name || '-',
+      poliName: r.appointment?.polyclinic?.name || r.doctor?.polyclinic?.name || '-',
+      dateLabel: r.appointment?.appointment_date ? formatCompactDateAdmin(r.appointment.appointment_date) : '-',
+      tag: isRequestOverdue(r) ? 'Lewat SLA' : 'Batal',
+      tagClass: isRequestOverdue(r) ? 'badge-overdue-sla' : 'badge-diajukan'
+    }));
+
+  const openSlotItems = (adminSlotRequestsCache || [])
+    .filter((s) => s.status === 'diajukan')
+    .map((s) => ({
+      kind: 'slot',
+      doctorName: s.doctor?.name || `Dokter #${s.doctor_id}`,
+      poliName: s.doctor?.polyclinic?.name || '-',
+      dateLabel: s.schedule_date ? formatCompactDateAdmin(s.schedule_date) : '-',
+      tag: `Slot +${s.quota || 0}`,
+      tagClass: 'badge-kontrol_rutin'
+    }));
+
+  const combined = [...openCancelItems, ...openSlotItems].slice(0, 3);
+
+  if (combined.length === 0) {
+    previewEl.innerHTML = '<p class="text-muted text-sm">Tidak ada pengajuan dokter yang menunggu keputusan saat ini.</p>';
+    return;
+  }
+
+  previewEl.innerHTML = combined.map((item) => `
+    <div class="staff-queue-item">
+      <div class="staff-queue-item__meta">
+        <strong>${escapeHtml(item.doctorName)}</strong>
+        <span class="text-muted text-xs">${escapeHtml(item.poliName)}, ${escapeHtml(item.dateLabel)}</span>
+      </div>
+      <div class="staff-queue-item__actions">
+        <span class="badge ${item.tagClass}">${escapeHtml(item.tag)}</span>
+        <button type="button" class="btn btn-secondary btn-sm btn-touch" data-preview-jump="${item.kind}">Tinjau</button>
+      </div>
+    </div>
+  `).join('');
+
+  previewEl.querySelectorAll('[data-preview-jump]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const kind = btn.getAttribute('data-preview-jump');
+      if (kind === 'slot') {
+        switchAdminTab('slotRequests');
+        loadAdminSlotRequests();
+      } else {
+        switchAdminTab('requests');
+        loadCancellationRequests();
+      }
+    });
+  });
+}
+
+function renderFilteredAdminRequests() {
+  const stateEl = getAdminEl('adminRequestState', 'adminRequestsState');
+  const tableBody = getAdminEl('adminRequestTableBody', 'adminRequestsTableBody');
+  const cardsEl = getAdminEl('adminRequestCards', 'adminRequestsCards');
+  const tableWrap = tableBody ? tableBody.closest('.table-responsive') : null;
+  if (!tableBody && !cardsEl) return;
+
+  const query = getStaffSearchQuery();
+  const filtered = (adminRequestsCache || []).filter((r) => {
+    if (!query) return true;
+    const appt = r.appointment || {};
+    const haystack = [
+      r.doctor?.name,
+      appt.doctor?.name,
+      appt.polyclinic?.name,
+      r.doctor?.polyclinic?.name,
+      appt.user?.name,
+      appt.patient?.name,
+      r.reason,
+      r.reason_category,
+      r.status
+    ].filter(Boolean).join(' ').toLowerCase();
+    return haystack.includes(query);
+  });
+
+  if (filtered.length === 0) {
+    const filterStatus = document.getElementById('reqFilterStatus')?.value ?? 'diajukan';
+    const emptyMsg = query
+      ? 'Tidak ada pengajuan dokter yang cocok dengan pencarian Anda.'
+      : (filterStatus === 'diajukan'
+          ? 'Tidak ada pengajuan yang menunggu.'
+          : 'Belum ada pengajuan pembatalan pada filter ini.');
+    setAdminRequestsState(stateEl, tableWrap, cardsEl, tableBody, 'empty', emptyMsg);
+    return;
+  }
+
+  hideAdminRequestsState(stateEl, tableWrap, cardsEl);
+  renderAdminRequests(filtered, tableBody, cardsEl);
 }
 
 function populateRequestDoctorFilter(polis) {
@@ -606,7 +1246,7 @@ async function loadCancellationRequests() {
     ? (overdueEl.type === 'checkbox' ? (overdueEl.checked ? '1' : '') : overdueEl.value)
     : '';
 
-  setAdminRequestsState(stateEl, tableWrap, cardsEl, tableBody, 'loading', 'Memuat daftar pengajuan pembatalan dokter…');
+  setAdminRequestsState(stateEl, tableWrap, cardsEl, tableBody, 'loading', 'Memuat daftar pengajuan pembatalan dokter...');
 
   const params = new URLSearchParams();
   if (filterStatus) params.set('status', filterStatus);
@@ -632,16 +1272,12 @@ async function loadCancellationRequests() {
       refreshAdminPendingBadgeCount();
     }
 
-    if (adminRequestsCache.length === 0) {
-      const emptyMsg = filterStatus === 'diajukan'
-        ? 'Tidak ada pengajuan yang menunggu.'
-        : 'Belum ada pengajuan pembatalan pada filter ini.';
-      setAdminRequestsState(stateEl, tableWrap, cardsEl, tableBody, 'empty', emptyMsg);
-      return;
+    renderAdminPendingPreview();
+    renderFilteredAdminRequests();
+    if (document.getElementById('adminAppointmentTableBody')) {
+      updateRightSummaryRail(adminAppointmentsCache, adminAppointmentsCache.length);
     }
-
-    hideAdminRequestsState(stateEl, tableWrap, cardsEl);
-    renderAdminRequests(adminRequestsCache, tableBody, cardsEl);
+    updateStaffSyncTime();
   } catch {
     setAdminRequestsState(stateEl, tableWrap, cardsEl, tableBody, 'error', 'Gagal memuat data. Coba lagi.', loadCancellationRequests);
   }
@@ -661,13 +1297,28 @@ async function refreshAdminPendingBadgeCount() {
   }
 }
 
+function syncAdminTopbarNotifCount() {
+  const reqCount = Number(document.getElementById('adminPendingReqBadge')?.textContent || '0') || 0;
+  const slotCount = Number(document.getElementById('adminPendingSlotBadge')?.textContent || '0') || 0;
+  const total = reqCount + slotCount;
+  const topbarBadge = document.getElementById('topbarNotifCount');
+  if (topbarBadge) {
+    topbarBadge.textContent = String(total);
+    topbarBadge.hidden = total === 0;
+    topbarBadge.style.display = total > 0 ? 'inline-flex' : 'none';
+  }
+}
+
 function updateAdminPendingBadge(count) {
-  const badge = document.getElementById('adminPendingReqBadge');
-  if (!badge) return;
   const safeCount = Number.isFinite(count) ? count : 0;
-  badge.textContent = String(safeCount);
-  badge.hidden = safeCount === 0;
-  badge.style.display = safeCount > 0 ? 'inline-flex' : 'none';
+  ['adminPendingReqBadge', 'drawerPendingReqBadge'].forEach((id) => {
+    const badge = document.getElementById(id);
+    if (!badge) return;
+    badge.textContent = String(safeCount);
+    badge.hidden = safeCount === 0;
+    badge.style.display = safeCount > 0 ? 'inline-flex' : 'none';
+  });
+  syncAdminTopbarNotifCount();
 }
 
 function setAdminRequestsState(stateEl, tableWrap, cardsEl, tableBody, mode, message, retryFn = null) {
@@ -1199,7 +1850,7 @@ function initRejectModal() {
       return;
     }
 
-    const originalText = submitBtn ? submitBtn.textContent : 'Tolak & Tugaskan Pengganti';
+    const originalText = submitBtn ? submitBtn.textContent : 'Tolak & Alihkan';
 
     try {
       if (submitBtn) {
@@ -1273,7 +1924,7 @@ async function openAdminRejectModal(requestId) {
 
   const substituteSelect = document.getElementById('rejectSubstituteDoctorId');
   if (substituteSelect) {
-    substituteSelect.innerHTML = '<option value="">Memuat daftar dokter pengganti...</option>';
+    substituteSelect.innerHTML = '<option value="">Memuat daftar dokter pengganti…</option>';
     substituteSelect.disabled = true;
   }
 
@@ -1297,7 +1948,7 @@ async function openAdminRejectModal(requestId) {
     );
 
     if (eligibleDoctors.length > 0) {
-      substituteSelect.innerHTML = '<option value="">Pilih dokter pengganti...</option>' +
+      substituteSelect.innerHTML = '<option value="">Pilih dokter pengganti…</option>' +
         eligibleDoctors.map(d => `<option value="${d.id}">${escapeHtml(d.name)}</option>`).join('');
       substituteSelect.disabled = false;
     } else {
@@ -1419,6 +2070,61 @@ window.closeAuditLogModal = closeAuditLogModal;
 /* Master Data & Akun Dokter */
 async function initMasterData() {
   initDoctorAccountModal();
+
+  const practiceSelect = document.getElementById('masterFilterPractice');
+  const accountSelect = document.getElementById('masterFilterAccount');
+  const sortSelect = document.getElementById('masterSort');
+  const resetBtn = document.getElementById('resetMasterFiltersBtn');
+
+  if (practiceSelect) practiceSelect.addEventListener('change', renderFilteredMasterData);
+  if (accountSelect) accountSelect.addEventListener('change', renderFilteredMasterData);
+  if (sortSelect) sortSelect.addEventListener('change', renderFilteredMasterData);
+
+  const resetMasterFilters = () => {
+    if (practiceSelect) practiceSelect.value = '';
+    if (accountSelect) accountSelect.value = '';
+    if (sortSelect) sortSelect.value = 'name_asc';
+    const searchInput = document.getElementById('staffSearchInput');
+    const clearBtn = document.getElementById('staffSearchClearBtn');
+    if (searchInput) searchInput.value = '';
+    if (clearBtn) clearBtn.hidden = true;
+    document.querySelectorAll('[data-master-quick]').forEach((el) => el.classList.remove('is-active'));
+    renderFilteredMasterData();
+  };
+
+  if (resetBtn) {
+    resetBtn.addEventListener('click', resetMasterFilters);
+  }
+
+  document.querySelectorAll('[data-master-quick]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const preset = btn.getAttribute('data-master-quick');
+      document.querySelectorAll('[data-master-quick]').forEach((el) => {
+        el.classList.toggle('is-active', el.getAttribute('data-master-quick') === preset);
+      });
+
+      if (preset === 'active_practice') {
+        if (practiceSelect) practiceSelect.value = 'active';
+        if (accountSelect) accountSelect.value = '';
+      } else if (preset === 'has_account') {
+        if (practiceSelect) practiceSelect.value = '';
+        if (accountSelect) accountSelect.value = 'active';
+      } else if (preset === 'no_account') {
+        if (practiceSelect) practiceSelect.value = '';
+        if (accountSelect) accountSelect.value = 'none';
+      } else {
+        resetMasterFilters();
+        if (typeof window.closeAdminStaffDrawer === 'function') window.closeAdminStaffDrawer();
+        return;
+      }
+
+      renderFilteredMasterData();
+      if (typeof window.closeAdminStaffDrawer === 'function') {
+        window.closeAdminStaffDrawer();
+      }
+    });
+  });
+
   await loadMasterDataList();
 
   const poliForm = document.getElementById('poliForm');
@@ -1439,7 +2145,7 @@ async function initMasterData() {
 
       try {
         btn.disabled = true;
-        btn.textContent = 'Menyimpan…';
+        btn.textContent = 'Menyimpan...';
 
         await api.request('/admin/poli', {
           method: 'POST',
@@ -1474,7 +2180,7 @@ async function initMasterData() {
 
       try {
         btn.disabled = true;
-        btn.textContent = 'Menyimpan…';
+        btn.textContent = 'Menyimpan...';
 
         await api.request('/admin/dokter', {
           method: 'POST',
@@ -1493,9 +2199,161 @@ async function initMasterData() {
   }
 }
 
+function getMergedMasterDoctors(doctors, doctorById) {
+  return (doctors || []).map((rawDoc) => {
+    const merged = { ...rawDoc, ...(doctorById.get(Number(rawDoc.id)) || {}) };
+    const hasAccount = Boolean(merged.user_id || merged.user || merged.account_email || merged.has_account);
+    const accountEmail = merged.user?.email || merged.account_email || '';
+    const isAccessEnabled = hasAccount && !(merged.user?.disabled_at || merged.disabled_at || merged.access_enabled === false);
+    const accountState = !hasAccount ? 'none' : (isAccessEnabled ? 'active' : 'disabled');
+    return {
+      ...merged,
+      hasAccount,
+      accountEmail,
+      isAccessEnabled,
+      accountState
+    };
+  });
+}
+
+function renderFilteredMasterData() {
+  const poliListEl = document.getElementById('poliTableBody');
+  const masterCardsEl = document.getElementById('masterDataCards');
+  const resultInfoEl = document.getElementById('masterResultInfo');
+  if (!poliListEl) return;
+
+  const doctorById = new Map(adminDoctorsCatalog.map(d => [Number(d.id), d]));
+  const practiceFilter = document.getElementById('masterFilterPractice')?.value || '';
+  const accountFilter = document.getElementById('masterFilterAccount')?.value || '';
+  const sortMode = document.getElementById('masterSort')?.value || 'name_asc';
+  const query = getStaffSearchQuery();
+
+  let prepared = (masterDataCache || []).map((p) => {
+    const poliHaystack = `${p.name || ''} ${p.description || ''}`.toLowerCase();
+    const poliMatchesQuery = Boolean(query && poliHaystack.includes(query));
+    const allDoctors = getMergedMasterDoctors(p.doctors || [], doctorById);
+
+    const visibleDoctors = allDoctors.filter((doc) => {
+      if (practiceFilter === 'active' && !doc.is_active) return false;
+      if (practiceFilter === 'inactive' && doc.is_active) return false;
+      if (accountFilter && doc.accountState !== accountFilter) return false;
+      if (query && !poliMatchesQuery) {
+        const docHaystack = `${doc.name || ''} ${doc.accountEmail || ''}`.toLowerCase();
+        if (!docHaystack.includes(query)) return false;
+      }
+      return true;
+    });
+
+    return {
+      ...p,
+      visibleDoctors
+    };
+  });
+
+  if (practiceFilter || accountFilter || query) {
+    prepared = prepared.filter((p) => {
+      if (p.visibleDoctors.length > 0) return true;
+      if (!practiceFilter && !accountFilter && query) {
+        return `${p.name || ''} ${p.description || ''}`.toLowerCase().includes(query);
+      }
+      return false;
+    });
+  }
+
+  prepared = prepared.slice().sort((a, b) => {
+    if (sortMode === 'doctors_desc') {
+      return b.visibleDoctors.length - a.visibleDoctors.length;
+    }
+    return (a.name || '').localeCompare(b.name || '', 'id');
+  });
+
+  const totalVisibleDoctors = prepared.reduce((acc, p) => acc + p.visibleDoctors.length, 0);
+  if (resultInfoEl) {
+    resultInfoEl.textContent = `Menampilkan ${prepared.length} poliklinik, ${totalVisibleDoctors} dokter`;
+  }
+
+  const renderDoctorListHtml = (doctors) => {
+    if (!doctors || doctors.length === 0) {
+      return '<ul class="master-doctor-list"><li class="text-muted text-sm">Belum ada dokter sesuai filter.</li></ul>';
+    }
+    return `
+      <ul class="master-doctor-list">
+        ${doctors.map((merged) => {
+          const accountBadgeHtml = merged.hasAccount
+            ? `<span class="badge ${merged.isAccessEnabled ? 'badge-selesai' : 'badge-dibatalkan'}">${merged.isAccessEnabled ? 'Akun Aktif' : 'Akses Nonaktif'}</span>`
+            : '<span class="badge badge-janji_baru">Belum Punya Akun</span>';
+
+          const accountActionHtml = merged.hasAccount
+            ? `<button type="button" class="btn btn-secondary btn-sm btn-touch" onclick="toggleDoctorAccountAccess(${merged.id}, ${!merged.isAccessEnabled})">${merged.isAccessEnabled ? 'Nonaktifkan Akses' : 'Aktifkan Akses'}</button>`
+            : `<button type="button" class="btn btn-primary btn-sm btn-touch" onclick="openDoctorAccountModal(${merged.id}, '${escapeJsString(merged.name)}')">Buat Akun</button>`;
+
+          return `
+            <li class="master-doctor-item">
+              <div>
+                <div class="master-doctor-item__info">
+                  <strong>${escapeHtml(merged.name)}</strong>
+                  <span class="badge ${merged.is_active ? 'badge-selesai' : 'badge-dibatalkan'}">
+                    ${merged.is_active ? 'Aktif' : 'Nonaktif'}
+                  </span>
+                  ${accountBadgeHtml}
+                </div>
+                ${merged.accountEmail ? `<div class="text-muted text-xs">${escapeHtml(merged.accountEmail)}</div>` : ''}
+              </div>
+              <div class="master-doctor-item__actions">
+                <button type="button" class="btn btn-secondary btn-sm btn-touch" onclick="toggleDoctorStatus(${merged.id}, ${!merged.is_active})">
+                  ${merged.is_active ? 'Nonaktifkan' : 'Aktifkan'}
+                </button>
+                ${accountActionHtml}
+              </div>
+            </li>
+          `;
+        }).join('')}
+      </ul>
+    `;
+  };
+
+  if (prepared.length === 0) {
+    poliListEl.innerHTML = '<tr><td colspan="3" class="text-muted text-center">Belum ada poliklinik atau dokter yang cocok dengan filter.</td></tr>';
+    if (masterCardsEl) {
+      masterCardsEl.innerHTML = '<div class="portal-state-box"><p class="text-muted">Belum ada poliklinik atau dokter yang cocok dengan filter.</p></div>';
+    }
+    return;
+  }
+
+  poliListEl.innerHTML = prepared.map(p => `
+    <tr>
+      <td><strong>${escapeHtml(p.name)}</strong></td>
+      <td>${escapeHtml(p.description || '-')}</td>
+      <td>${renderDoctorListHtml(p.visibleDoctors)}</td>
+    </tr>
+  `).join('');
+
+  if (masterCardsEl) {
+    masterCardsEl.innerHTML = prepared.map(p => `
+      <article class="mobile-data-card">
+        <div class="mobile-data-card__head">
+          <div>
+            <strong>${escapeHtml(p.name)}</strong>
+            <div class="text-muted text-sm">${escapeHtml(p.description || '-')}</div>
+          </div>
+        </div>
+        <div class="mobile-data-card__meta">
+          ${renderDoctorListHtml(p.visibleDoctors)}
+        </div>
+      </article>
+    `).join('');
+  }
+}
+
 async function loadMasterDataList() {
   const poliListEl = document.getElementById('poliTableBody');
+  const masterCardsEl = document.getElementById('masterDataCards');
   const docPoliSelect = document.getElementById('docPoliId');
+  const tableWrap = poliListEl ? poliListEl.closest('.table-responsive') : null;
+
+  if (tableWrap && masterCardsEl) {
+    tableWrap.classList.add('has-mobile-cards');
+  }
 
   try {
     const [poliRes, adminDoctorsRes] = await Promise.all([
@@ -1504,72 +2362,22 @@ async function loadMasterDataList() {
     ]);
 
     const polis = poliRes.data || [];
+    masterDataCache = polis;
     adminDoctorsCatalog = Array.isArray(adminDoctorsRes?.data) ? adminDoctorsRes.data : [];
-    const doctorById = new Map(adminDoctorsCatalog.map(d => [Number(d.id), d]));
 
     if (docPoliSelect) {
-      docPoliSelect.innerHTML = '<option value="">Pilih poliklinik…</option>' +
+      docPoliSelect.innerHTML = '<option value="">Pilih poliklinik...</option>' +
         polis.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
     }
 
-    if (poliListEl) {
-      if (polis.length === 0) {
-        poliListEl.innerHTML = '<tr><td colspan="3" class="text-muted text-center" style="padding: var(--space-6);">Belum ada poli/dokter.</td></tr>';
-        return;
-      }
-
-      poliListEl.innerHTML = polis.map(p => `
-        <tr>
-          <td><strong>${escapeHtml(p.name)}</strong></td>
-          <td>${escapeHtml(p.description || '-')}</td>
-          <td>
-            <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--space-3);">
-              ${(p.doctors || []).length > 0
-                ? p.doctors.map(rawDoc => {
-                  const merged = { ...rawDoc, ...(doctorById.get(Number(rawDoc.id)) || {}) };
-                  const hasAccount = Boolean(merged.user_id || merged.user || merged.account_email || merged.has_account);
-                  const accountEmail = merged.user?.email || merged.account_email || '';
-                  const isAccessEnabled = hasAccount && !(merged.user?.disabled_at || merged.disabled_at || merged.access_enabled === false);
-
-                  const accountBadgeHtml = hasAccount
-                    ? `<span class="badge ${isAccessEnabled ? 'badge-selesai' : 'badge-dibatalkan'}">${isAccessEnabled ? 'Akun Aktif' : 'Akses Nonaktif'}</span>`
-                    : '<span class="badge badge-janji_baru">Belum Punya Akun</span>';
-
-                  const accountActionHtml = hasAccount
-                    ? `<button type="button" class="btn btn-secondary btn-touch" onclick="toggleDoctorAccountAccess(${merged.id}, ${!isAccessEnabled})">${isAccessEnabled ? 'Nonaktifkan Akses' : 'Aktifkan Akses'}</button>`
-                    : `<button type="button" class="btn btn-primary btn-touch" onclick="openDoctorAccountModal(${merged.id}, '${escapeJsString(merged.name)}')">Buat Akun</button>`;
-
-                  return `
-                    <li style="display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; padding-bottom: var(--space-2); border-bottom: 1px solid var(--color-line);">
-                      <div>
-                        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2);">
-                          <strong>${escapeHtml(merged.name)}</strong>
-                          <span class="badge ${merged.is_active ? 'badge-selesai' : 'badge-dibatalkan'}">
-                            ${merged.is_active ? 'Aktif' : 'Nonaktif'}
-                          </span>
-                          ${accountBadgeHtml}
-                        </div>
-                        ${accountEmail ? `<div class="text-muted text-sm">${escapeHtml(accountEmail)}</div>` : ''}
-                      </div>
-                      <div style="display: flex; flex-wrap: wrap; gap: var(--space-2);">
-                        <button type="button" class="btn btn-secondary btn-touch" onclick="toggleDoctorStatus(${merged.id}, ${!merged.is_active})">
-                          ${merged.is_active ? 'Nonaktifkan' : 'Aktifkan'}
-                        </button>
-                        ${accountActionHtml}
-                      </div>
-                    </li>
-                  `;
-                }).join('')
-                : '<li class="text-muted">Belum ada poli/dokter.</li>'
-              }
-            </ul>
-          </td>
-        </tr>
-      `).join('');
-    }
+    renderFilteredMasterData();
+    updateStaffSyncTime();
   } catch {
     if (poliListEl) {
-      poliListEl.innerHTML = '<tr><td colspan="3" class="text-center" style="color: var(--color-danger-ink); padding: var(--space-6);">Gagal memuat data. Coba muat ulang halaman.</td></tr>';
+      poliListEl.innerHTML = '<tr><td colspan="3" class="text-center" style="color: var(--color-danger-ink);">Gagal memuat data. Coba muat ulang halaman.</td></tr>';
+    }
+    if (masterCardsEl) {
+      masterCardsEl.innerHTML = '<div class="portal-state-box portal-state-box--error"><p>Gagal memuat data. Coba muat ulang halaman.</p></div>';
     }
   }
 }
@@ -1828,14 +2636,114 @@ async function initAdminSlotRequests() {
 }
 
 function updateAdminSlotBadge(count) {
-  const badge = document.getElementById('adminPendingSlotBadge');
-  if (!badge) return;
-  if (count > 0) {
-    badge.textContent = String(count);
-    badge.style.display = 'inline-flex';
-  } else {
-    badge.textContent = '0';
-    badge.style.display = 'none';
+  const safeCount = Number.isFinite(count) ? count : 0;
+  ['adminPendingSlotBadge', 'drawerPendingSlotBadge'].forEach((id) => {
+    const badge = document.getElementById(id);
+    if (!badge) return;
+    badge.textContent = String(safeCount);
+    badge.hidden = safeCount === 0;
+    badge.style.display = safeCount > 0 ? 'inline-flex' : 'none';
+  });
+  syncAdminTopbarNotifCount();
+}
+
+function renderFilteredAdminSlotRequests() {
+  const emptyEl = document.getElementById('adminSlotRequestsEmpty');
+  const tableWrap = document.getElementById('adminSlotRequestsTableWrap');
+  const tableBody = document.getElementById('adminSlotRequestsTableBody');
+  const cardsEl = document.getElementById('adminSlotRequestsCards');
+  if (!tableBody && !cardsEl) return;
+
+  const query = getStaffSearchQuery();
+  const items = (adminSlotRequestsCache || []).filter((item) => {
+    if (!query) return true;
+    const haystack = [
+      item.doctor?.name,
+      item.doctor?.polyclinic?.name,
+      item.schedule_date,
+      item.reason,
+      item.admin_note,
+      item.status
+    ].filter(Boolean).join(' ').toLowerCase();
+    return haystack.includes(query);
+  });
+
+  if (tableWrap) tableWrap.hidden = items.length === 0;
+  if (emptyEl) emptyEl.hidden = items.length > 0;
+  if (cardsEl) cardsEl.innerHTML = '';
+
+  if (!items.length) return;
+
+  if (tableBody) {
+    tableBody.innerHTML = items.map((item) => {
+      const docName = item.doctor?.name || `Dokter #${item.doctor_id}`;
+      const poliName = item.doctor?.polyclinic?.name || '-';
+      const startLabel = String(item.start_time || '').slice(0, 5);
+      const endLabel = String(item.end_time || '').slice(0, 5);
+
+      return `
+        <tr>
+          <td>
+            <strong>${escapeHtml(docName)}</strong>
+            <div class="text-muted text-sm">${escapeHtml(poliName)}</div>
+          </td>
+          <td><strong>${escapeHtml(formatCompactDateAdmin(item.schedule_date))}</strong></td>
+          <td>${escapeHtml(startLabel)} - ${escapeHtml(endLabel)} WIB</td>
+          <td>${escapeHtml(String(item.quota || 0))} pasien</td>
+          <td>
+            <div>${escapeHtml(item.reason || '-')}</div>
+            ${item.admin_note ? `<div class="mt-2 text-sm"><strong>Catatan Admin:</strong> ${escapeHtml(item.admin_note)}</div>` : ''}
+          </td>
+          <td><span class="badge ${getRequestBadgeClassAdmin(item.status)}">${escapeHtml(getRequestStatusLabelAdmin(item.status))}</span></td>
+          <td>
+            <div class="staff-row-actions">
+              ${item.status === 'diajukan'
+                ? `
+                  <button type="button" class="btn btn-primary btn-sm btn-touch" onclick="openAdminSlotApproveModal(${item.id})">Setujui</button>
+                  <button type="button" class="btn btn-danger btn-sm btn-touch" onclick="openAdminSlotRejectModal(${item.id})">Tolak</button>
+                `
+                : '<span class="text-muted text-sm">Sudah diproses</span>'}
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  if (cardsEl) {
+    cardsEl.innerHTML = items.map((item) => {
+      const docName = item.doctor?.name || `Dokter #${item.doctor_id}`;
+      const poliName = item.doctor?.polyclinic?.name || '-';
+      const startLabel = String(item.start_time || '').slice(0, 5);
+      const endLabel = String(item.end_time || '').slice(0, 5);
+
+      return `
+        <article class="mobile-data-card">
+          <div class="mobile-data-card__head">
+            <div>
+              <strong>${escapeHtml(docName)}</strong>
+              <div class="text-muted text-sm">${escapeHtml(poliName)}</div>
+            </div>
+            <span class="badge ${getRequestBadgeClassAdmin(item.status)}">${escapeHtml(getRequestStatusLabelAdmin(item.status))}</span>
+          </div>
+          <div class="mobile-data-card__meta">
+            <div><strong>Tanggal:</strong> ${escapeHtml(formatCompactDateAdmin(item.schedule_date))}</div>
+            <div><strong>Jam:</strong> ${escapeHtml(startLabel)} - ${escapeHtml(endLabel)} WIB</div>
+            <div><strong>Kuota:</strong> ${escapeHtml(String(item.quota || 0))} pasien</div>
+            <div><strong>Alasan:</strong> ${escapeHtml(item.reason || '-')}</div>
+            ${item.admin_note ? `<div><strong>Catatan Admin:</strong> ${escapeHtml(item.admin_note)}</div>` : ''}
+          </div>
+          ${item.status === 'diajukan'
+            ? `
+              <div class="mobile-data-card__actions">
+                <button type="button" class="btn btn-primary btn-sm btn-touch" onclick="openAdminSlotApproveModal(${item.id})">Setujui</button>
+                <button type="button" class="btn btn-danger btn-sm btn-touch" onclick="openAdminSlotRejectModal(${item.id})">Tolak</button>
+              </div>
+            `
+            : ''}
+        </article>
+      `;
+    }).join('');
   }
 }
 
@@ -1876,83 +2784,12 @@ async function loadAdminSlotRequests() {
 
     if (loadingEl) loadingEl.hidden = true;
 
-    if (!items.length) {
-      if (emptyEl) emptyEl.hidden = false;
-      return;
+    renderAdminPendingPreview();
+    renderFilteredAdminSlotRequests();
+    if (document.getElementById('adminAppointmentTableBody')) {
+      updateRightSummaryRail(adminAppointmentsCache, adminAppointmentsCache.length);
     }
-
-    if (tableWrap) tableWrap.hidden = false;
-    if (tableBody) {
-      tableBody.innerHTML = items.map((item) => {
-        const docName = item.doctor?.name || `Dokter #${item.doctor_id}`;
-        const poliName = item.doctor?.polyclinic?.name || '-';
-        const startLabel = String(item.start_time || '').slice(0, 5);
-        const endLabel = String(item.end_time || '').slice(0, 5);
-
-        return `
-          <tr>
-            <td>
-              <strong>${escapeHtml(docName)}</strong>
-              <div class="text-muted text-sm">${escapeHtml(poliName)}</div>
-            </td>
-            <td><strong>${escapeHtml(api.formatDate(item.schedule_date))}</strong></td>
-            <td>${escapeHtml(startLabel)} - ${escapeHtml(endLabel)} WIB</td>
-            <td>${escapeHtml(String(item.quota || 0))} pasien</td>
-            <td>
-              <div>${escapeHtml(item.reason || '-')}</div>
-              ${item.admin_note ? `<div class="mt-2 text-sm"><strong>Catatan Admin:</strong> ${escapeHtml(item.admin_note)}</div>` : ''}
-            </td>
-            <td><span class="badge ${getRequestBadgeClassAdmin(item.status)}">${escapeHtml(getRequestStatusLabelAdmin(item.status))}</span></td>
-            <td>
-              <div style="display: flex; flex-wrap: wrap; gap: var(--space-2);">
-                ${item.status === 'diajukan'
-                  ? `
-                    <button type="button" class="btn btn-primary btn-touch" onclick="openAdminSlotApproveModal(${item.id})">Setujui</button>
-                    <button type="button" class="btn btn-danger btn-touch" onclick="openAdminSlotRejectModal(${item.id})">Tolak</button>
-                  `
-                  : '<span class="text-muted text-sm">Sudah diproses</span>'}
-              </div>
-            </td>
-          </tr>
-        `;
-      }).join('');
-    }
-
-    if (cardsEl) {
-      cardsEl.innerHTML = items.map((item) => {
-        const docName = item.doctor?.name || `Dokter #${item.doctor_id}`;
-        const poliName = item.doctor?.polyclinic?.name || '-';
-        const startLabel = String(item.start_time || '').slice(0, 5);
-        const endLabel = String(item.end_time || '').slice(0, 5);
-
-        return `
-          <article class="mobile-data-card">
-            <div class="mobile-data-card__head">
-              <div>
-                <strong>${escapeHtml(docName)}</strong>
-                <div class="text-muted text-sm">${escapeHtml(poliName)}</div>
-              </div>
-              <span class="badge ${getRequestBadgeClassAdmin(item.status)}">${escapeHtml(getRequestStatusLabelAdmin(item.status))}</span>
-            </div>
-            <div class="mobile-data-card__meta">
-              <div><strong>Tanggal:</strong> ${escapeHtml(api.formatDate(item.schedule_date))}</div>
-              <div><strong>Jam:</strong> ${escapeHtml(startLabel)} - ${escapeHtml(endLabel)} WIB</div>
-              <div><strong>Kuota:</strong> ${escapeHtml(String(item.quota || 0))} pasien</div>
-              <div><strong>Alasan:</strong> ${escapeHtml(item.reason || '-')}</div>
-              ${item.admin_note ? `<div><strong>Catatan Admin:</strong> ${escapeHtml(item.admin_note)}</div>` : ''}
-            </div>
-            ${item.status === 'diajukan'
-              ? `
-                <div class="mobile-data-card__actions">
-                  <button type="button" class="btn btn-primary btn-touch" onclick="openAdminSlotApproveModal(${item.id})">Setujui</button>
-                  <button type="button" class="btn btn-danger btn-touch" onclick="openAdminSlotRejectModal(${item.id})">Tolak</button>
-                </div>
-              `
-              : ''}
-          </article>
-        `;
-      }).join('');
-    }
+    updateStaffSyncTime();
   } catch (err) {
     if (loadingEl) loadingEl.hidden = true;
     if (errorEl) errorEl.hidden = false;

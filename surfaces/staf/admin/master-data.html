@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#F7F9FB">
+  <meta name="theme-color" content="#F8F9FB">
+  <meta name="description" content="Kelola data master poliklinik, ketersediaan praktik dokter, dan akun portal dokter Nuvacare.">
   <title>Master Data - Admin Nuvacare</title>
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
@@ -11,9 +12,10 @@
   <link rel="shortcut icon" href="/favicon.ico">
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
   <link rel="stylesheet" href="/css/style.css" fetchpriority="high">
+  <link rel="alternate stylesheet" href="../../../public/css/style.css" title="source" disabled>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400..800;1,400..800&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400&family=Plus+Jakarta+Sans:wght@400;600;700&family=Rethink+Sans:wght@600;700&display=swap">
   <script src="/js/api.js" defer fetchpriority="high"></script>
   <script src="/js/admin.js" defer></script>
   <script type="speculationrules">
@@ -25,130 +27,375 @@
   }
   </script>
 </head>
-<body data-surface="staf" style="background-color: var(--color-bg);">
+<body data-surface="staf" class="staff-portal-page">
   <a href="#main-content" class="skip-link">Langsung ke isi utama</a>
 
-  <header class="site-header">
-    <nav class="navbar" aria-label="Navigasi utama">
-      <a href="/admin/kelola-janji.html" class="brand" translate="no">
-        <span class="brand-text">Nuvacare</span>
-      </a>
-      <ul class="nav-links">
-        <li><a href="/admin/kelola-janji.html">Kelola Janji</a></li>
-        <li><a href="/admin/master-data.html" class="active" aria-current="page">Master Data</a></li>
-        <li class="nav-user">
-          <span id="navAdminName" class="nav-user-name"></span>
-          <button type="button" id="logoutBtn" class="btn btn-secondary btn-sm btn-touch" style="border-radius: 8px;">Keluar</button>
-        </li>
-      </ul>
-    </nav>
+  <header class="staff-topbar" aria-label="Bilah atas master data admin">
+    <div class="staff-topbar__inner">
+      <div class="staff-topbar__brand">
+        <a href="/admin/kelola-janji.html" class="brand" translate="no">
+          <span class="brand-text">Nuvacare</span>
+          <span class="staff-role-badge">Admin</span>
+        </a>
+      </div>
+
+      <form id="staffSearchForm" class="staff-topbar__search" role="search" aria-label="Cari poliklinik, dokter, atau email">
+        <div class="staff-search-wrap">
+          <svg class="staff-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input type="search" id="staffSearchInput" class="staff-search-input" placeholder="Cari poliklinik, nama dokter, atau email..." aria-label="Cari poliklinik, nama dokter, atau email">
+          <button type="button" id="staffSearchClearBtn" class="staff-search-clear" aria-label="Bersihkan pencarian" hidden>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+      </form>
+
+      <div class="staff-topbar__actions">
+        <a href="/admin/kelola-janji.html?tab=pengajuan" class="staff-notif-btn" aria-label="Buka kotak masuk pengajuan dokter">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+          </svg>
+        </a>
+
+        <div class="staff-topbar__user">
+          <span id="navAdminNameTop" class="nav-user-name">Admin</span>
+          <button type="button" id="logoutBtnTop" class="btn btn-secondary btn-sm btn-touch">Keluar</button>
+        </div>
+
+        <button type="button" id="mobileMenuBtn" class="patient-drawer-btn" aria-label="Buka menu navigasi" aria-expanded="false" aria-controls="staffDrawerPanel">
+          <span class="staff-drawer-trigger-label">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+            <span>Menu</span>
+          </span>
+        </button>
+      </div>
+    </div>
   </header>
 
-  <main id="main-content" class="container">
-    <div class="mb-4">
-      <h1 class="page-title">Master Data</h1>
-      <p class="text-sm text-muted">Tambah poliklinik baru, daftarkan dokter, kelola akun portal dokter, dan atur status ketersediaan praktik dokter.</p>
-    </div>
+  <div class="staff-app-shell">
+    <aside class="staff-sidebar" aria-label="Navigasi portal admin">
+      <div class="staff-sidebar__top">
+        <nav class="staff-sidebar__section" aria-label="Menu utama admin">
+          <p class="staff-sidebar__label">Menu utama</p>
+          <div class="staff-sidebar__nav">
+            <a href="/admin/kelola-janji.html" class="staff-nav-link">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+              </svg>
+              <span>Kelola Janji</span>
+            </a>
+            <a href="/admin/kelola-janji.html?tab=pengajuan" class="staff-nav-link">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+              </svg>
+              <span>Pengajuan Dokter</span>
+            </a>
+            <a href="/admin/kelola-janji.html?tab=slot-tambahan" class="staff-nav-link">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="16"></line>
+                <line x1="8" y1="12" x2="16" y2="12"></line>
+              </svg>
+              <span>Slot Tambahan</span>
+            </a>
+            <a href="/admin/master-data.html" class="staff-nav-link is-active" aria-current="page">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+              </svg>
+              <span>Master Data</span>
+            </a>
+          </div>
+        </nav>
 
-    <div class="grid-2">
-      <section class="card" aria-labelledby="addPoliTitle" style="border-radius: 12px;">
-        <h2 id="addPoliTitle" class="card-title">Tambah Poliklinik</h2>
-        <div id="poliAlert" class="alert" role="status" aria-live="polite"></div>
-        <form id="poliForm" novalidate>
-          <div class="form-group">
-            <label class="form-label" for="poliName">Nama Poliklinik</label>
-            <input type="text" id="poliName" name="name" class="form-input" style="border-radius: 8px;" required autocomplete="off" placeholder="Contoh: Poli Mata…">
+        <div class="staff-sidebar__section" aria-label="Filter cepat master data">
+          <p class="staff-sidebar__label">Filter cepat</p>
+          <div class="staff-sidebar__nav">
+            <button type="button" class="staff-quick-filter-btn" data-master-quick="active_practice">
+              <span>Praktik aktif</span>
+            </button>
+            <button type="button" class="staff-quick-filter-btn" data-master-quick="has_account">
+              <span>Sudah punya akun</span>
+            </button>
+            <button type="button" class="staff-quick-filter-btn" data-master-quick="no_account">
+              <span>Belum punya akun</span>
+            </button>
+            <button type="button" class="staff-quick-filter-btn" data-master-quick="all">
+              <span>Semua data</span>
+            </button>
           </div>
-          <div class="form-group">
-            <label class="form-label" for="poliDesc">Deskripsi Layanan</label>
-            <textarea id="poliDesc" name="description" class="form-textarea" style="border-radius: 8px;" autocomplete="off" placeholder="Ringkasan layanan pemeriksaan poliklinik…"></textarea>
-          </div>
-          <button type="submit" class="btn btn-primary" style="border-radius: 8px;">Tambah poli</button>
-        </form>
-      </section>
+        </div>
 
-      <section class="card" aria-labelledby="addDoctorTitle" style="border-radius: 12px;">
-        <h2 id="addDoctorTitle" class="card-title">Tambah Dokter</h2>
-        <div id="doctorAlert" class="alert" role="status" aria-live="polite"></div>
-        <form id="doctorForm" novalidate>
-          <div class="form-group">
-            <label class="form-label" for="docPoliId">Poliklinik</label>
-            <select id="docPoliId" name="polyclinic_id" class="form-select" style="border-radius: 8px;" required autocomplete="off">
-              <option value="">Memuat daftar poliklinik…</option>
-            </select>
+        <div class="staff-sidebar__section staff-sidebar__shortcuts">
+          <p class="staff-sidebar__label">Pintasan portal</p>
+          <div class="staff-sidebar__nav">
+            <a href="#poliFormSection" class="staff-shortcut-btn">+ Tambah poliklinik</a>
+            <a href="#doctorFormSection" class="staff-shortcut-btn">+ Tambah dokter</a>
           </div>
-          <div class="form-group">
-            <label class="form-label" for="docName">Nama Lengkap &amp; Gelar Dokter</label>
-            <input type="text" id="docName" name="name" class="form-input" style="border-radius: 8px;" required autocomplete="off" placeholder="Contoh: dr. Ahmad Fauzi, Sp.M…">
-          </div>
-          <button type="submit" class="btn btn-secondary" style="border-radius: 8px;">Tambah dokter</button>
-        </form>
-      </section>
-    </div>
-
-    <section class="card" aria-labelledby="listMasterTitle" style="border-radius: 12px;">
-      <h2 id="listMasterTitle" class="card-title">Daftar Poliklinik &amp; Dokter</h2>
-      <div id="masterListAlert" class="alert" role="status" aria-live="polite"></div>
-      <div class="table-responsive">
-        <table>
-          <thead>
-            <tr>
-              <th>Poliklinik</th>
-              <th>Deskripsi</th>
-              <th>Dokter &amp; Status Praktik</th>
-            </tr>
-          </thead>
-          <tbody id="poliTableBody" aria-live="polite">
-            <tr>
-              <td colspan="3" class="text-muted text-center" style="padding: var(--space-6);">Memuat daftar poliklinik dan dokter…</td>
-            </tr>
-          </tbody>
-        </table>
+        </div>
       </div>
-    </section>
-  </main>
+
+      <div class="staff-sidebar__footer">
+        <p class="staff-sidebar__sync">Pembaruan: <span id="staffSidebarSyncTime">-</span></p>
+        <div class="staff-user-row">
+          <div class="staff-user-meta">
+            <span id="navAdminName" class="nav-user-name">Admin</span>
+            <span class="staff-user-role">Administrator</span>
+          </div>
+          <button type="button" id="logoutBtn" class="btn btn-secondary btn-sm btn-touch">Keluar</button>
+        </div>
+      </div>
+    </aside>
+
+    <div class="staff-workspace staff-workspace--single">
+      <main id="main-content" class="staff-main">
+        <div class="portal-page-header">
+          <div class="booking-header-copy">
+            <h1 class="page-title">Master Data</h1>
+            <p class="booking-page-subtitle">Kelola poliklinik, daftarkan dokter, atur akun portal dokter, dan pantau ketersediaan praktik.</p>
+          </div>
+          <a href="#poliFormSection" class="btn btn-primary btn-sm btn-touch">+ Tambah Poliklinik</a>
+        </div>
+
+        <section class="card" aria-labelledby="listMasterTitle">
+          <div class="portal-toolbar">
+            <h2 id="listMasterTitle" class="card-title">Daftar Poliklinik &amp; Dokter</h2>
+            <span id="masterResultInfo" class="text-muted text-xs" aria-live="polite"></span>
+          </div>
+
+          <div class="staff-organizer-bar" role="region" aria-label="Filter dan pengurut master data">
+            <div class="staff-organizer-field">
+              <label for="masterFilterPractice" class="staff-organizer-label">Status Praktik</label>
+              <select id="masterFilterPractice" class="form-select" aria-label="Filter status praktik dokter">
+                <option value="">Semua Praktik</option>
+                <option value="active">Praktik Aktif</option>
+                <option value="inactive">Nonaktif</option>
+              </select>
+            </div>
+            <div class="staff-organizer-field">
+              <label for="masterFilterAccount" class="staff-organizer-label">Status Akun</label>
+              <select id="masterFilterAccount" class="form-select" aria-label="Filter status akun dokter">
+                <option value="">Semua Akun</option>
+                <option value="active">Akun Aktif</option>
+                <option value="disabled">Akses Dinonaktifkan</option>
+                <option value="none">Belum Punya Akun</option>
+              </select>
+            </div>
+            <div class="staff-organizer-field">
+              <label for="masterSort" class="staff-organizer-label">Urutkan</label>
+              <select id="masterSort" class="form-select" aria-label="Urutkan daftar poliklinik">
+                <option value="name_asc">Nama Poli A-Z</option>
+                <option value="doctors_desc">Dokter Terbanyak</option>
+              </select>
+            </div>
+            <div class="staff-organizer-actions">
+              <button type="button" id="resetMasterFiltersBtn" class="btn btn-ghost btn-sm btn-touch">Reset</button>
+            </div>
+          </div>
+
+          <div id="masterListAlert" class="alert" role="status" aria-live="polite"></div>
+
+          <div class="table-responsive has-mobile-cards">
+            <table>
+              <thead>
+                <tr>
+                  <th>Poliklinik</th>
+                  <th>Deskripsi</th>
+                  <th>Dokter &amp; Status Praktik</th>
+                </tr>
+              </thead>
+              <tbody id="poliTableBody" aria-live="polite">
+                <tr>
+                  <td colspan="3" class="text-muted text-center">Memuat daftar poliklinik dan dokter…</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div id="masterDataCards" class="mobile-card-list mt-3" aria-live="polite"></div>
+        </section>
+
+        <div class="portal-standalone-section">
+          <div class="grid-2">
+            <section id="poliFormSection" class="card" aria-labelledby="addPoliTitle">
+              <h2 id="addPoliTitle" class="card-title">Tambah Poliklinik</h2>
+              <div id="poliAlert" class="alert" role="status" aria-live="polite"></div>
+              <form id="poliForm" novalidate>
+                <div class="form-group">
+                  <label class="form-label" for="poliName">Nama Poliklinik</label>
+                  <input type="text" id="poliName" name="name" class="form-input" required autocomplete="off" placeholder="Contoh: Poli Mata...">
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="poliDesc">Deskripsi Layanan</label>
+                  <textarea id="poliDesc" name="description" class="form-textarea" autocomplete="off" placeholder="Ringkasan layanan pemeriksaan poliklinik..."></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary btn-touch">Tambah poli</button>
+              </form>
+            </section>
+
+            <section id="doctorFormSection" class="card" aria-labelledby="addDoctorTitle">
+              <h2 id="addDoctorTitle" class="card-title">Tambah Dokter</h2>
+              <div id="doctorAlert" class="alert" role="status" aria-live="polite"></div>
+              <form id="doctorForm" novalidate>
+                <div class="form-group">
+                  <label class="form-label" for="docPoliId">Poliklinik</label>
+                  <select id="docPoliId" name="polyclinic_id" class="form-select" required autocomplete="off">
+                    <option value="">Memuat daftar poliklinik…</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="docName">Nama Lengkap &amp; Gelar Dokter</label>
+                  <input type="text" id="docName" name="name" class="form-input" required autocomplete="off" placeholder="Contoh: dr. Ahmad Fauzi, Sp.M...">
+                </div>
+                <button type="submit" class="btn btn-secondary btn-touch">Tambah dokter</button>
+              </form>
+            </section>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <div id="staffDrawerOverlay" class="patient-drawer-overlay" hidden aria-hidden="true">
+    <nav id="staffDrawerPanel" class="patient-drawer" aria-label="Menu navigasi mobile master data" role="dialog" aria-modal="true" aria-labelledby="drawerBrandTitle">
+      <div class="patient-drawer__header">
+        <span id="drawerBrandTitle" class="brand-text" translate="no">Nuvacare <span class="staff-role-badge">Admin</span></span>
+        <button type="button" id="drawerCloseBtn" class="patient-drawer__close-btn btn-touch">
+          <span>Tutup</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <ul class="patient-drawer__list">
+        <li class="patient-drawer__item">
+          <a href="/admin/kelola-janji.html" class="patient-drawer__link">
+            <span>Kelola Janji</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+          </a>
+        </li>
+        <li class="patient-drawer__item">
+          <a href="/admin/kelola-janji.html?tab=pengajuan" class="patient-drawer__link">
+            <span>Pengajuan Dokter</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+          </a>
+        </li>
+        <li class="patient-drawer__item">
+          <a href="/admin/kelola-janji.html?tab=slot-tambahan" class="patient-drawer__link">
+            <span>Slot Tambahan</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+          </a>
+        </li>
+        <li class="patient-drawer__item">
+          <a href="/admin/master-data.html" class="patient-drawer__link is-active" aria-current="page">
+            <span>Master Data</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+          </a>
+        </li>
+        <li class="patient-drawer__item">
+          <button type="button" id="drawerQuickFilterExpandBtn" class="patient-drawer__toggle-expand" aria-expanded="false" aria-controls="drawerQuickFilterSub">
+            <span>Filter Cepat</span>
+            <span class="patient-drawer__plus" aria-hidden="true">+</span>
+          </button>
+          <div id="drawerQuickFilterSub" class="patient-drawer__sub" hidden>
+            <button type="button" class="patient-drawer__sub-link" data-master-quick="active_practice">Praktik aktif</button>
+            <button type="button" class="patient-drawer__sub-link" data-master-quick="has_account">Sudah punya akun</button>
+            <button type="button" class="patient-drawer__sub-link" data-master-quick="no_account">Belum punya akun</button>
+            <button type="button" class="patient-drawer__sub-link" data-master-quick="all">Semua data</button>
+          </div>
+        </li>
+        <li class="patient-drawer__item">
+          <button type="button" id="drawerLogoutBtn" class="patient-drawer__link">
+            <span>Keluar</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+              <polyline points="16 17 21 12 16 7"></polyline>
+              <line x1="21" y1="12" x2="9" y2="12"></line>
+            </svg>
+          </button>
+        </li>
+      </ul>
+
+      <div class="patient-drawer__user-card">
+        <span id="drawerAdminName" class="nav-user-name">Admin</span>
+        <span class="staff-user-role">Administrator Portal</span>
+      </div>
+
+      <div class="patient-drawer__spacer">
+        <span class="patient-drawer__stamp" aria-hidden="true">NC</span>
+      </div>
+
+      <div class="patient-drawer__footer">
+        <a href="#poliFormSection" id="drawerPrimaryCta" class="patient-drawer__pill-cta">Tambah Poliklinik</a>
+      </div>
+    </nav>
+  </div>
 
   <div id="doctorAccountModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="docAccModalTitle">
-    <div class="modal-content" style="border-radius: 16px;">
+    <div class="modal-content">
       <div class="flex-between mb-4">
-        <h2 id="docAccModalTitle" class="card-title" style="margin-bottom: 0;">Buat Akun Login Dokter</h2>
+        <h2 id="docAccModalTitle" class="card-title">Buat Akun Login Dokter</h2>
         <button type="button" id="closeDocAccModalBtn" class="btn btn-secondary btn-sm btn-touch"
-          data-close-modal="doctorAccountModal" aria-label="Tutup dialog"
-          style="min-width: 44px; border-radius: 8px;">Tutup</button>
+          data-close-modal="doctorAccountModal" aria-label="Tutup dialog">Tutup</button>
       </div>
 
       <div id="docAccAlert" class="alert" role="alert" aria-live="polite"></div>
 
       <form id="docAccForm" novalidate>
         <input type="hidden" id="docAccDoctorId" name="doctor_id">
-        <p id="docAccDoctorLabel" class="text-sm mb-4" style="font-weight: 600;"></p>
+        <p id="docAccDoctorLabel" class="text-sm mb-4"></p>
 
         <div class="form-group">
           <label class="form-label" for="docAccEmail">Email Login Dokter</label>
           <input type="email" id="docAccEmail" name="email" class="form-input"
-            style="border-radius: 8px;" required autocomplete="off" spellcheck="false"
+            required autocomplete="off" spellcheck="false"
             placeholder="dokter@klinik.local">
         </div>
 
         <div class="form-group">
           <label class="form-label" for="docAccPhone">Nomor WhatsApp Dokter (Opsional)</label>
           <input type="tel" id="docAccPhone" name="phone_number" class="form-input"
-            style="border-radius: 8px;" inputmode="tel" autocomplete="off"
+            inputmode="tel" autocomplete="off"
             placeholder="0812xxxxxxxx">
         </div>
 
         <div class="form-group">
           <label class="form-label" for="docAccPassword">Kata Sandi Awal (Min. 8 karakter)</label>
           <input type="password" id="docAccPassword" name="password" class="form-input"
-            style="border-radius: 8px;" required minlength="8" autocomplete="new-password"
+            required minlength="8" autocomplete="new-password"
             placeholder="Minimal 8 karakter">
         </div>
 
-        <div style="display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-6); flex-wrap: wrap;">
-          <button type="button" class="btn btn-secondary btn-touch" data-close-modal="doctorAccountModal"
-            style="border-radius: 8px;">Batal</button>
-          <button type="submit" id="docAccSubmitBtn" class="btn btn-primary btn-touch"
-            style="border-radius: 8px;">Buat Akun Dokter</button>
+        <div class="flex-between mt-4">
+          <button type="button" class="btn btn-secondary btn-touch" data-close-modal="doctorAccountModal">Batal</button>
+          <button type="submit" id="docAccSubmitBtn" class="btn btn-primary btn-touch">Buat Akun Dokter</button>
         </div>
       </form>
     </div>

@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#F7F9FB">
+  <meta name="theme-color" content="#F8F9FB">
+  <meta name="description" content="Panel admin Nuvacare untuk memantau janji temu pasien, menindak pengajuan dokter, dan menjadwalkan kontrol rutin.">
   <title>Kelola Janji - Admin Nuvacare</title>
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
@@ -11,9 +12,10 @@
   <link rel="shortcut icon" href="/favicon.ico">
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
   <link rel="stylesheet" href="/css/style.css" fetchpriority="high">
+  <link rel="alternate stylesheet" href="../../../public/css/style.css" title="source" disabled>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400..800;1,400..800&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400&family=Plus+Jakarta+Sans:wght@400;600;700&family=Rethink+Sans:wght@600;700&display=swap">
   <script src="/js/api.js" defer fetchpriority="high"></script>
   <script src="/js/admin.js" defer></script>
   <script type="speculationrules">
@@ -25,267 +27,531 @@
   }
   </script>
 </head>
-<body data-surface="staf" style="background-color: var(--color-bg);">
+<body data-surface="staf" class="staff-portal-page">
   <a href="#main-content" class="skip-link">Langsung ke isi utama</a>
 
-  <header class="site-header">
-    <nav class="navbar" aria-label="Navigasi utama">
-      <a href="/admin/kelola-janji.html" class="brand" translate="no">
-        <span class="brand-text">Nuvacare</span>
-      </a>
-      <ul class="nav-links">
-        <li><a href="/admin/kelola-janji.html" class="active" aria-current="page">Kelola Janji</a></li>
-        <li><a href="/admin/master-data.html">Master Data</a></li>
-        <li class="nav-user">
-          <span id="navAdminName" class="nav-user-name"></span>
-          <button type="button" id="logoutBtn" class="btn btn-secondary btn-sm btn-touch" style="border-radius: 8px;">Keluar</button>
-        </li>
-      </ul>
-    </nav>
+  <header class="staff-topbar" aria-label="Bilah atas portal admin">
+    <div class="staff-topbar__inner">
+      <div class="staff-topbar__brand">
+        <a href="/admin/kelola-janji.html" class="brand" translate="no">
+          <span class="brand-text">Nuvacare</span>
+          <span class="staff-role-badge">Admin</span>
+        </a>
+      </div>
+
+      <form id="staffSearchForm" class="staff-topbar__search" role="search" aria-label="Pencarian cepat portal admin">
+        <div class="staff-search-wrap">
+          <svg class="staff-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input type="search" id="staffSearchInput" class="staff-search-input" placeholder="Cari RM, pasien, dokter, atau poliklinik..." aria-label="Cari RM, pasien, dokter, atau poliklinik">
+          <button type="button" id="staffSearchClearBtn" class="staff-search-clear" aria-label="Bersihkan pencarian" hidden>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+      </form>
+
+      <div class="staff-topbar__actions">
+        <button type="button" id="topbarNotifBtn" class="staff-notif-btn" aria-label="Lihat pengajuan dokter menunggu">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+          </svg>
+          <span id="topbarNotifCount" class="nav-count-badge" hidden>0</span>
+        </button>
+
+        <div class="staff-topbar__user">
+          <span id="navAdminNameTop" class="nav-user-name">Admin</span>
+          <button type="button" id="logoutBtnTop" class="btn btn-secondary btn-sm btn-touch">Keluar</button>
+        </div>
+
+        <button type="button" id="mobileMenuBtn" class="patient-drawer-btn" aria-label="Buka menu navigasi" aria-expanded="false" aria-controls="staffDrawerPanel">
+          <span class="staff-drawer-trigger-label">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+            <span>Menu</span>
+          </span>
+        </button>
+      </div>
+    </div>
   </header>
 
-  <main id="main-content" class="container">
-    <div class="mb-4">
-      <h1 class="page-title">Kelola Janji Temu</h1>
-      <p class="text-sm text-muted">Pantau daftar kunjungan per tanggal, tinjau pengajuan pembatalan serta slot tambahan dokter, atau jadwalkan kontrol rutin.</p>
-    </div>
+  <div class="staff-app-shell">
+    <aside class="staff-sidebar" aria-label="Navigasi portal admin">
+      <div class="staff-sidebar__top">
+        <nav class="staff-sidebar__section" aria-label="Menu utama admin">
+          <p class="staff-sidebar__label">Menu utama</p>
+          <div class="portal-tabs staff-sidebar__nav" role="tablist" aria-label="Menu Kelola Janji Admin">
+            <button type="button" role="tab" id="adminTabBtnAppointments" class="portal-tab-btn is-active"
+              aria-selected="true" aria-controls="adminTabAppointments">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+              </svg>
+              <span>Kelola Janji</span>
+            </button>
+            <button type="button" role="tab" id="adminTabBtnRequests" class="portal-tab-btn"
+              aria-selected="false" aria-controls="adminTabRequests">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+              </svg>
+              <span>Pengajuan Dokter</span>
+              <span id="adminPendingReqBadge" class="nav-count-badge" hidden>0</span>
+            </button>
+            <button type="button" role="tab" id="adminTabBtnSlotRequests" class="portal-tab-btn"
+              aria-selected="false" aria-controls="adminTabSlotRequests">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="16"></line>
+                <line x1="8" y1="12" x2="16" y2="12"></line>
+              </svg>
+              <span>Slot Tambahan</span>
+              <span id="adminPendingSlotBadge" class="nav-count-badge" hidden>0</span>
+            </button>
+          </div>
+          <a href="/admin/master-data.html" class="staff-nav-link">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+            <span>Master Data</span>
+          </a>
+        </nav>
 
-    <div class="portal-tabs" role="tablist" aria-label="Menu Kelola Janji Admin">
-      <button type="button" role="tab" id="adminTabBtnAppointments" class="portal-tab-btn is-active"
-        aria-selected="true" aria-controls="adminTabAppointments">
-        Kelola Janji
-      </button>
-      <button type="button" role="tab" id="adminTabBtnRequests" class="portal-tab-btn"
-        aria-selected="false" aria-controls="adminTabRequests">
-        <span>Pengajuan Dokter</span>
-        <span id="adminPendingReqBadge" class="nav-count-badge" style="display: none;">0</span>
-      </button>
-      <button type="button" role="tab" id="adminTabBtnSlotRequests" class="portal-tab-btn"
-        aria-selected="false" aria-controls="adminTabSlotRequests">
-        <span>Pengajuan Slot Tambahan Dokter</span>
-        <span id="adminPendingSlotBadge" class="nav-count-badge" style="display: none;">0</span>
-      </button>
-    </div>
-
-    <div id="adminTabAppointments" role="tabpanel" aria-labelledby="adminTabBtnAppointments">
-      <section class="card" aria-labelledby="appointmentListTitle" style="border-radius: 12px;">
-        <div class="flex-between mb-4" style="flex-wrap: wrap;">
-          <h2 id="appointmentListTitle" class="card-title" style="margin-bottom: 0;">Daftar Janji &amp; Kontrol</h2>
-          <div style="display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap;">
-            <input type="date" id="filterDate" name="date" class="form-input" style="width: auto; min-height: 44px; border-radius: 8px; padding: var(--space-2) var(--space-3);" aria-label="Filter tanggal kunjungan">
-            <select id="filterType" name="type" class="form-select" style="width: auto; min-height: 44px; border-radius: 8px; padding: var(--space-2) var(--space-3);" aria-label="Filter jenis kunjungan">
-              <option value="">Semua Tipe</option>
-              <option value="janji_baru">Janji baru</option>
-              <option value="kontrol_rutin">Kontrol rutin</option>
-            </select>
-            <select id="filterStatus" name="status" class="form-select" style="width: auto; min-height: 44px; border-radius: 8px; padding: var(--space-2) var(--space-3);" aria-label="Filter status kunjungan">
-              <option value="">Semua Status</option>
-              <option value="terjadwal">Terjadwal</option>
-              <option value="selesai">Selesai</option>
-              <option value="dibatalkan">Dibatalkan</option>
-            </select>
+        <div class="staff-sidebar__section" aria-label="Filter cepat janji">
+          <p class="staff-sidebar__label">Filter cepat</p>
+          <div class="staff-sidebar__nav">
+            <button type="button" class="staff-quick-filter-btn" data-quick-filter="today">
+              <span>Hari ini</span>
+            </button>
+            <button type="button" class="staff-quick-filter-btn" data-quick-filter="scheduled">
+              <span>Status terjadwal</span>
+            </button>
+            <button type="button" class="staff-quick-filter-btn" data-quick-filter="all">
+              <span>Semua kunjungan</span>
+            </button>
+            <button type="button" class="staff-quick-filter-btn" data-quick-filter="overdue">
+              <span>Pengajuan lewat SLA</span>
+            </button>
           </div>
         </div>
 
-        <div id="adminAppointmentMetaSummary" class="text-sm text-muted mb-3" aria-live="polite" hidden></div>
-        <div id="adminListAlert" class="alert" role="status" aria-live="polite"></div>
+        <div class="staff-sidebar__section staff-sidebar__shortcuts">
+          <p class="staff-sidebar__label">Pintasan portal</p>
+          <div class="staff-sidebar__nav">
+            <a href="#controlFormSection" id="sidebarShortcutControl" class="staff-shortcut-btn">+ Buat jadwal kontrol</a>
+            <a href="/admin/master-data.html#poliFormSection" class="staff-shortcut-btn">+ Tambah poliklinik</a>
+            <a href="/admin/master-data.html#doctorFormSection" class="staff-shortcut-btn">+ Tambah dokter</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="staff-sidebar__footer">
+        <p class="staff-sidebar__sync">Pembaruan: <span id="staffSidebarSyncTime">-</span></p>
+        <div class="staff-user-row">
+          <div class="staff-user-meta">
+            <span id="navAdminName" class="nav-user-name">Admin</span>
+            <span class="staff-user-role">Administrator</span>
+          </div>
+          <button type="button" id="logoutBtn" class="btn btn-secondary btn-sm btn-touch">Keluar</button>
+        </div>
+      </div>
+    </aside>
+
+    <div class="staff-workspace">
+      <main id="main-content" class="staff-main">
+        <div class="portal-page-header">
+          <div class="booking-header-copy">
+            <h1 class="page-title">Kelola Janji Temu</h1>
+            <p class="booking-page-subtitle">Pantau daftar kunjungan, tinjau pengajuan dokter, atau jadwalkan kontrol rutin pasien.</p>
+          </div>
+          <a href="#controlFormSection" id="headerControlShortcut" class="btn btn-primary btn-sm btn-touch">+ Buat Jadwal Kontrol</a>
+        </div>
+
+        <div id="adminTabAppointments" role="tabpanel" aria-labelledby="adminTabBtnAppointments">
+          <div class="staff-relation-split">
+            <section id="adminFocusCard" class="card staff-focus-card" aria-labelledby="adminFocusTitle">
+              <div class="staff-section-head">
+                <h2 id="adminFocusTitle" class="card-title">Fokus Pasien Terpilih</h2>
+                <span id="adminFocusBadge" class="badge badge-neutral">Menunggu</span>
+              </div>
+              <div id="adminFocusBody" class="staff-focus-grid" aria-live="polite">
+                <p class="text-muted text-sm">Pilih salah satu baris janji temu di bawah untuk melihat ringkasan dan aksi cepat.</p>
+              </div>
+            </section>
+
+            <section id="adminPendingPreviewCard" class="card staff-queue-card" aria-labelledby="adminPendingPreviewTitle">
+              <div class="staff-section-head">
+                <h2 id="adminPendingPreviewTitle" class="card-title">Antrean Pengajuan Dokter</h2>
+                <button type="button" id="openPendingInboxBtn" class="btn btn-ghost btn-sm btn-touch">Buka kotak masuk</button>
+              </div>
+              <div id="adminPendingPreviewList" class="staff-queue-list" aria-live="polite">
+                <p class="text-muted text-sm">Memuat antrean pengajuan…</p>
+              </div>
+            </section>
+          </div>
+
+          <section class="card" aria-labelledby="appointmentListTitle">
+            <div class="portal-toolbar">
+              <h2 id="appointmentListTitle" class="card-title">Daftar Janji &amp; Kontrol</h2>
+              <span id="adminAppointmentsResultInfo" class="text-muted text-xs" aria-live="polite"></span>
+            </div>
+
+            <div class="staff-organizer-bar" role="region" aria-label="Filter dan pengurut daftar janji">
+              <div class="staff-organizer-field">
+                <label for="filterDate" class="staff-organizer-label">Tanggal</label>
+                <input type="date" id="filterDate" name="date" class="form-input" aria-label="Filter tanggal kunjungan">
+              </div>
+              <div class="staff-organizer-field">
+                <label for="filterPoli" class="staff-organizer-label">Poliklinik</label>
+                <select id="filterPoli" name="poli" class="form-select" aria-label="Filter poliklinik">
+                  <option value="">Semua Poli</option>
+                </select>
+              </div>
+              <div class="staff-organizer-field">
+                <label for="filterDoctor" class="staff-organizer-label">Dokter</label>
+                <select id="filterDoctor" name="doctor" class="form-select" aria-label="Filter dokter">
+                  <option value="">Semua Dokter</option>
+                </select>
+              </div>
+              <div class="staff-organizer-field">
+                <label for="filterType" class="staff-organizer-label">Tipe</label>
+                <select id="filterType" name="type" class="form-select" aria-label="Filter jenis kunjungan">
+                  <option value="">Semua Tipe</option>
+                  <option value="janji_baru">Janji baru</option>
+                  <option value="kontrol_rutin">Kontrol rutin</option>
+                </select>
+              </div>
+              <div class="staff-organizer-field">
+                <label for="filterStatus" class="staff-organizer-label">Status</label>
+                <select id="filterStatus" name="status" class="form-select" aria-label="Filter status kunjungan">
+                  <option value="">Semua Status</option>
+                  <option value="terjadwal">Terjadwal</option>
+                  <option value="selesai">Selesai</option>
+                  <option value="dibatalkan">Dibatalkan</option>
+                </select>
+              </div>
+              <div class="staff-organizer-field">
+                <label for="filterSort" class="staff-organizer-label">Urutkan</label>
+                <select id="filterSort" name="sort" class="form-select" aria-label="Urutkan daftar janji">
+                  <option value="date_desc">Tanggal terbaru</option>
+                  <option value="date_asc">Tanggal terlama</option>
+                  <option value="patient_asc">Nama pasien A-Z</option>
+                  <option value="status_asc">Status</option>
+                </select>
+              </div>
+              <div class="staff-organizer-actions">
+                <button type="button" id="quickTodayBtn" class="btn btn-secondary btn-sm btn-touch">Hari ini</button>
+                <button type="button" id="resetAdminFiltersBtn" class="btn btn-ghost btn-sm btn-touch">Reset</button>
+              </div>
+            </div>
+
+            <div id="adminListAlert" class="alert" role="status" aria-live="polite"></div>
+
+            <div class="table-responsive has-mobile-cards">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Pasien / RM</th>
+                    <th>Poli &amp; Dokter</th>
+                    <th>Tanggal &amp; Jam</th>
+                    <th>Tipe</th>
+                    <th>Status</th>
+                    <th>Keluhan &amp; Catatan</th>
+                    <th>Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="adminAppointmentTableBody" aria-live="polite">
+                  <tr>
+                    <td colspan="7" class="text-muted text-center">
+                      Memuat daftar janji temu…
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div id="adminAppointmentCards" class="mobile-card-list mt-3" aria-live="polite"></div>
+          </section>
+
+          <div class="portal-standalone-section">
+            <section class="card" id="controlFormSection" aria-labelledby="scheduleControlTitle">
+              <h2 id="scheduleControlTitle" class="card-title">Buat Jadwal Kontrol</h2>
+              <div id="controlAlert" class="alert" role="status" aria-live="polite"></div>
+              <form id="scheduleControlForm" class="staff-control-form-grid" novalidate>
+              <div class="form-group">
+                <label class="form-label" for="controlPatientId">Pasien</label>
+                <select id="controlPatientId" name="user_id" class="form-select" required autocomplete="off">
+                  <option value="">Memuat daftar pasien…</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="controlPoliId">Poliklinik</label>
+                <select id="controlPoliId" name="polyclinic_id" class="form-select" required autocomplete="off">
+                  <option value="">Memuat daftar poli…</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="controlDoctorId">Dokter</label>
+                <select id="controlDoctorId" name="doctor_id" class="form-select" required disabled autocomplete="off">
+                  <option value="">Pilih poliklinik terlebih dahulu…</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="controlDate">Tanggal Kontrol</label>
+                <input type="date" id="controlDate" name="appointment_date" class="form-input" required autocomplete="off">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="controlTime">Jam Kontrol</label>
+                <select id="controlTime" name="appointment_time" class="form-select" required autocomplete="off">
+                  <option value="08:00">08:00 WIB</option>
+                  <option value="09:00" selected>09:00 WIB</option>
+                  <option value="10:00">10:00 WIB</option>
+                  <option value="11:00">11:00 WIB</option>
+                  <option value="13:00">13:00 WIB</option>
+                  <option value="14:00">14:00 WIB</option>
+                  <option value="15:00">15:00 WIB</option>
+                  <option value="16:00">16:00 WIB</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="controlNotes">Arahan / Catatan Kontrol</label>
+                <input type="text" id="controlNotes" name="doctor_notes" class="form-input" autocomplete="off" placeholder="Contoh: Evaluasi tekanan darah dan hasil laboratorium…">
+              </div>
+              <div>
+                <button type="submit" class="btn btn-primary btn-touch">Buat jadwal kontrol</button>
+              </div>
+            </form>
+          </section>
+        </div>
+      </div>
+
+      <section id="adminTabRequests" class="card" role="tabpanel" aria-labelledby="adminTabBtnRequests" hidden>
+        <div class="portal-toolbar">
+          <h2 id="adminRequestsTitle" class="card-title">Inbox Pengajuan Dokter</h2>
+          <button type="button" id="reqRefreshBtn" class="btn btn-secondary btn-touch">Muat ulang</button>
+        </div>
+
+        <div class="portal-filter-bar">
+          <div class="form-group">
+            <label class="form-label" for="reqFilterStatus">Status Pengajuan</label>
+            <select id="reqFilterStatus" name="status" class="form-select">
+              <option value="diajukan" selected>Menunggu (Diajukan)</option>
+              <option value="">Semua Status</option>
+              <option value="disetujui">Disetujui</option>
+              <option value="dijadwalkan_ulang">Dijadwalkan Ulang</option>
+              <option value="ditolak">Ditolak</option>
+              <option value="ditarik">Ditarik</option>
+              <option value="gugur">Gugur</option>
+              <option value="kedaluwarsa">Kedaluwarsa</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="reqFilterDoctor">Dokter</label>
+            <select id="reqFilterDoctor" name="doctor_id" class="form-select">
+              <option value="">Semua Dokter</option>
+            </select>
+          </div>
+          <label class="checkbox-inline" for="reqFilterOverdue">
+            <input type="checkbox" id="reqFilterOverdue" name="overdue" class="form-checkbox">
+            <span>Lewat SLA</span>
+          </label>
+        </div>
+
+        <div id="adminRequestAlert" class="alert" role="status" aria-live="polite"></div>
+        <div id="adminRequestState" class="text-sm text-muted mb-4" role="status" aria-live="polite">
+          Memuat daftar pengajuan pembatalan dokter…
+        </div>
 
         <div class="table-responsive">
           <table>
             <thead>
               <tr>
-                <th>Pasien (ID RM / Inisial)</th>
-                <th>Poli &amp; Dokter</th>
-                <th>Tanggal &amp; Jam</th>
-                <th>Tipe</th>
+                <th>Batas SLA</th>
+                <th>Dokter</th>
+                <th>Pasien &amp; Jadwal</th>
+                <th>Kategori &amp; Alasan</th>
                 <th>Status</th>
-                <th>Keluhan &amp; Catatan</th>
                 <th>Aksi</th>
               </tr>
             </thead>
-            <tbody id="adminAppointmentTableBody" aria-live="polite">
-              <tr>
-                <td colspan="7" class="text-muted text-center" style="padding: var(--space-6);">
-                  Memuat daftar janji temu…
-                </td>
-              </tr>
-            </tbody>
+            <tbody id="adminRequestTableBody" aria-live="polite"></tbody>
           </table>
         </div>
 
-        <div id="adminAppointmentCards" class="mobile-card-list mt-4" aria-live="polite"></div>
+        <div id="adminRequestsCards" class="mobile-card-list mt-4" aria-live="polite"></div>
       </section>
 
-      <section class="card" id="controlFormSection" aria-labelledby="scheduleControlTitle" style="border-radius: 12px;">
-        <h2 id="scheduleControlTitle" class="card-title">Buat Jadwal Kontrol</h2>
-        <div id="controlAlert" class="alert" role="status" aria-live="polite"></div>
-        <form id="scheduleControlForm" class="grid-2" novalidate>
-          <div class="form-group">
-            <label class="form-label" for="controlPatientId">Pasien</label>
-            <select id="controlPatientId" name="user_id" class="form-select" style="border-radius: 8px;" required autocomplete="off">
-              <option value="">Memuat daftar pasien…</option>
-            </select>
+      <section id="adminTabSlotRequests" role="tabpanel" aria-labelledby="adminTabBtnSlotRequests" hidden>
+        <div class="card card-flat">
+          <div class="portal-toolbar">
+            <div>
+              <h2 class="card-title">Pengajuan Slot Tambahan Dokter</h2>
+              <p class="text-sm text-muted">Setujui atau tolak usulan kuota dan jam praktik tambahan yang diajukan dokter.</p>
+            </div>
+            <div class="portal-filter-bar">
+              <select id="adminSlotStatusFilter" class="form-select" aria-label="Filter status pengajuan slot">
+                <option value="diajukan">Menunggu Admin</option>
+                <option value="disetujui">Disetujui</option>
+                <option value="ditolak">Ditolak</option>
+                <option value="semua">Semua Status</option>
+              </select>
+              <button type="button" id="adminReloadSlotRequestsBtn" class="btn btn-secondary btn-touch">Muat ulang</button>
+            </div>
           </div>
-          <div class="form-group">
-            <label class="form-label" for="controlPoliId">Poliklinik</label>
-            <select id="controlPoliId" name="polyclinic_id" class="form-select" style="border-radius: 8px;" required autocomplete="off">
-              <option value="">Memuat daftar poli…</option>
-            </select>
+
+          <div id="adminSlotRequestsAlert" class="alert" role="alert" aria-live="polite"></div>
+
+          <div id="adminSlotRequestsLoading" class="portal-state-box" hidden>
+            <p class="text-muted">Memuat daftar pengajuan slot tambahan…</p>
           </div>
-          <div class="form-group">
-            <label class="form-label" for="controlDoctorId">Dokter</label>
-            <select id="controlDoctorId" name="doctor_id" class="form-select" style="border-radius: 8px;" required disabled autocomplete="off">
-              <option value="">Pilih poliklinik terlebih dahulu…</option>
-            </select>
+
+          <div id="adminSlotRequestsEmpty" class="portal-state-box" hidden>
+            <p class="portal-state-title">Tidak ada pengajuan slot tambahan</p>
+            <p class="text-sm text-muted">Belum ada pengajuan slot tambahan dokter pada status ini.</p>
           </div>
-          <div class="form-group">
-            <label class="form-label" for="controlDate">Tanggal Kontrol</label>
-            <input type="date" id="controlDate" name="appointment_date" class="form-input" style="border-radius: 8px;" required autocomplete="off">
+
+          <div id="adminSlotRequestsError" class="portal-state-box portal-state-box--error" hidden>
+            <p class="portal-state-title">Gagal memuat pengajuan slot</p>
+            <p id="adminSlotRequestsErrorMsg" class="text-sm text-muted"></p>
+            <button type="button" id="adminRetrySlotRequestsBtn" class="btn btn-secondary btn-touch mt-4">Coba Lagi</button>
           </div>
-          <div class="form-group">
-            <label class="form-label" for="controlTime">Jam Kontrol</label>
-            <select id="controlTime" name="appointment_time" class="form-select" style="border-radius: 8px;" required autocomplete="off">
-              <option value="08:00">08:00 WIB</option>
-              <option value="09:00" selected>09:00 WIB</option>
-              <option value="10:00">10:00 WIB</option>
-              <option value="11:00">11:00 WIB</option>
-              <option value="13:00">13:00 WIB</option>
-              <option value="14:00">14:00 WIB</option>
-              <option value="15:00">15:00 WIB</option>
-              <option value="16:00">16:00 WIB</option>
-            </select>
+
+          <div id="adminSlotRequestsTableWrap" class="table-responsive" hidden>
+            <table>
+              <thead>
+                <tr>
+                  <th>Dokter &amp; Poliklinik</th>
+                  <th>Tanggal</th>
+                  <th>Jam Praktik</th>
+                  <th>Kuota</th>
+                  <th>Alasan Dokter</th>
+                  <th>Status</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="adminSlotRequestsTableBody"></tbody>
+            </table>
           </div>
-          <div class="form-group">
-            <label class="form-label" for="controlNotes">Arahan / Catatan Kontrol</label>
-            <input type="text" id="controlNotes" name="doctor_notes" class="form-input" style="border-radius: 8px;" autocomplete="off" placeholder="Contoh: Evaluasi tekanan darah dan hasil laboratorium…">
-          </div>
-          <div style="grid-column: 1 / -1;">
-            <button type="submit" class="btn btn-primary btn-touch" style="border-radius: 8px;">Buat jadwal kontrol</button>
-          </div>
-        </form>
+
+          <div id="adminSlotRequestsCards" class="mobile-card-list mt-4" aria-live="polite"></div>
+        </div>
       </section>
+      </main>
+
+      <aside id="adminRightSummaryRail" class="staff-right-rail" aria-label="Ringkasan hari ini">
+        <div class="card staff-rail-card">
+          <div class="staff-section-head">
+            <h2 class="card-title">Ringkasan Hari Ini</h2>
+          </div>
+          <div id="adminAppointmentMetaSummary" class="staff-rail-metrics" aria-live="polite" hidden></div>
+          <p class="staff-rail-sync">Pembaruan terakhir: <span id="staffLastUpdated">-</span></p>
+        </div>
+      </aside>
     </div>
+  </div>
 
-    <section id="adminTabRequests" class="card" role="tabpanel" aria-labelledby="adminTabBtnRequests" style="display: none; border-radius: 12px;">
-      <div class="portal-toolbar">
-        <h2 id="adminRequestsTitle" class="card-title" style="margin-bottom: 0;">Inbox Pengajuan Dokter</h2>
-        <button type="button" id="reqRefreshBtn" class="btn btn-secondary btn-touch" style="border-radius: 8px;">Muat ulang</button>
+  <div id="staffDrawerOverlay" class="patient-drawer-overlay" hidden aria-hidden="true">
+    <nav id="staffDrawerPanel" class="patient-drawer" aria-label="Menu navigasi mobile admin" role="dialog" aria-modal="true" aria-labelledby="drawerBrandTitle">
+      <div class="patient-drawer__header">
+        <span id="drawerBrandTitle" class="brand-text" translate="no">Nuvacare <span class="staff-role-badge">Admin</span></span>
+        <button type="button" id="drawerCloseBtn" class="patient-drawer__close-btn btn-touch">
+          <span>Tutup</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
       </div>
 
-      <div class="portal-filter-bar">
-        <div class="form-group">
-          <label class="form-label" for="reqFilterStatus">Status Pengajuan</label>
-          <select id="reqFilterStatus" name="status" class="form-select" style="border-radius: 8px;">
-            <option value="diajukan" selected>Menunggu (Diajukan)</option>
-            <option value="">Semua Status</option>
-            <option value="disetujui">Disetujui</option>
-            <option value="dijadwalkan_ulang">Dijadwalkan Ulang</option>
-            <option value="ditolak">Ditolak</option>
-            <option value="ditarik">Ditarik</option>
-            <option value="gugur">Gugur</option>
-            <option value="kedaluwarsa">Kedaluwarsa</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="reqFilterDoctor">Dokter</label>
-          <select id="reqFilterDoctor" name="doctor_id" class="form-select" style="border-radius: 8px;">
-            <option value="">Semua Dokter</option>
-          </select>
-        </div>
-        <label class="checkbox-inline" for="reqFilterOverdue" style="min-height: 44px; display: inline-flex; align-items: center; gap: var(--space-2);">
-          <input type="checkbox" id="reqFilterOverdue" name="overdue" class="form-checkbox">
-          <span>Lewat SLA</span>
-        </label>
-      </div>
-
-      <div id="adminRequestAlert" class="alert" role="status" aria-live="polite"></div>
-      <div id="adminRequestState" class="text-sm text-muted mb-4" role="status" aria-live="polite">
-        Memuat daftar pengajuan pembatalan dokter...
-      </div>
-
-      <div class="table-responsive">
-        <table>
-          <thead>
-            <tr>
-              <th>Batas SLA</th>
-              <th>Dokter</th>
-              <th>Pasien &amp; Jadwal</th>
-              <th>Kategori &amp; Alasan</th>
-              <th>Status</th>
-              <th>Aksi</th>
-            </tr>
-          </thead>
-          <tbody id="adminRequestTableBody" aria-live="polite"></tbody>
-        </table>
-      </div>
-
-      <div id="adminRequestsCards" class="mobile-card-list mt-4" aria-live="polite"></div>
-    </section>
-
-    <section id="adminTabSlotRequests" role="tabpanel" aria-labelledby="adminTabBtnSlotRequests" hidden>
-      <div class="card card-flat" style="border-radius: 16px;">
-        <div class="portal-toolbar" style="margin-bottom: var(--space-4);">
-          <div>
-            <h2 class="card-title" style="margin-bottom: 4px;">Pengajuan Slot Tambahan Dokter</h2>
-            <p class="text-sm text-muted" style="margin-bottom: 0;">Setujui atau tolak usulan kuota dan jam praktik tambahan yang diajukan dokter.</p>
+      <ul class="patient-drawer__list">
+        <li class="patient-drawer__item">
+          <button type="button" id="drawerTabAppointments" class="patient-drawer__link is-active" data-drawer-tab="appointments">
+            <span>Kelola Janji</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+          </button>
+        </li>
+        <li class="patient-drawer__item">
+          <button type="button" id="drawerTabRequests" class="patient-drawer__link" data-drawer-tab="requests">
+            <span>Pengajuan Dokter</span>
+            <span id="drawerPendingReqBadge" class="nav-count-badge" hidden>0</span>
+          </button>
+        </li>
+        <li class="patient-drawer__item">
+          <button type="button" id="drawerTabSlotRequests" class="patient-drawer__link" data-drawer-tab="slot-requests">
+            <span>Slot Tambahan</span>
+            <span id="drawerPendingSlotBadge" class="nav-count-badge" hidden>0</span>
+          </button>
+        </li>
+        <li class="patient-drawer__item">
+          <a href="/admin/master-data.html" class="patient-drawer__link">
+            <span>Master Data</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+          </a>
+        </li>
+        <li class="patient-drawer__item">
+          <button type="button" id="drawerQuickFilterExpandBtn" class="patient-drawer__toggle-expand" aria-expanded="false" aria-controls="drawerQuickFilterSub">
+            <span>Filter Cepat</span>
+            <span class="patient-drawer__plus" aria-hidden="true">+</span>
+          </button>
+          <div id="drawerQuickFilterSub" class="patient-drawer__sub" hidden>
+            <button type="button" class="patient-drawer__sub-link" data-quick-filter="today">Hari ini</button>
+            <button type="button" class="patient-drawer__sub-link" data-quick-filter="scheduled">Status terjadwal</button>
+            <button type="button" class="patient-drawer__sub-link" data-quick-filter="all">Semua kunjungan</button>
+            <button type="button" class="patient-drawer__sub-link" data-quick-filter="overdue">Pengajuan lewat SLA</button>
           </div>
-          <div style="display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center;">
-            <select id="adminSlotStatusFilter" class="form-select" aria-label="Filter status pengajuan slot" style="width: auto; min-height: 44px; border-radius: 8px; padding: var(--space-2) var(--space-3);">
-              <option value="diajukan">Menunggu Admin</option>
-              <option value="disetujui">Disetujui</option>
-              <option value="ditolak">Ditolak</option>
-              <option value="semua">Semua Status</option>
-            </select>
-            <button type="button" id="adminReloadSlotRequestsBtn" class="btn btn-secondary btn-touch" style="border-radius: 8px;">Muat ulang</button>
-          </div>
-        </div>
+        </li>
+        <li class="patient-drawer__item">
+          <button type="button" id="drawerLogoutBtn" class="patient-drawer__link">
+            <span>Keluar</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+              <polyline points="16 17 21 12 16 7"></polyline>
+              <line x1="21" y1="12" x2="9" y2="12"></line>
+            </svg>
+          </button>
+        </li>
+      </ul>
 
-        <div id="adminSlotRequestsAlert" class="alert" role="alert" aria-live="polite"></div>
-
-        <div id="adminSlotRequestsLoading" class="portal-state-box" hidden>
-          <p class="text-muted">Memuat daftar pengajuan slot tambahan...</p>
-        </div>
-
-        <div id="adminSlotRequestsEmpty" class="portal-state-box" hidden>
-          <p class="portal-state-title">Tidak ada pengajuan slot tambahan</p>
-          <p class="text-sm text-muted">Belum ada pengajuan slot tambahan dokter pada status ini.</p>
-        </div>
-
-        <div id="adminSlotRequestsError" class="portal-state-box" hidden>
-          <p class="portal-state-title" style="color: var(--color-danger-ink);">Gagal memuat pengajuan slot</p>
-          <p id="adminSlotRequestsErrorMsg" class="text-sm text-muted"></p>
-          <button type="button" id="adminRetrySlotRequestsBtn" class="btn btn-secondary btn-touch mt-4" style="border-radius: 8px;">Coba Lagi</button>
-        </div>
-
-        <div id="adminSlotRequestsTableWrap" class="table-responsive" hidden>
-          <table>
-            <thead>
-              <tr>
-                <th>Dokter &amp; Poliklinik</th>
-                <th>Tanggal</th>
-                <th>Jam Praktik</th>
-                <th>Kuota</th>
-                <th>Alasan Dokter</th>
-                <th>Status</th>
-                <th>Aksi</th>
-              </tr>
-            </thead>
-            <tbody id="adminSlotRequestsTableBody"></tbody>
-          </table>
-        </div>
-
-        <div id="adminSlotRequestsCards" class="mobile-card-list mt-4" aria-live="polite"></div>
+      <div class="patient-drawer__user-card">
+        <span id="drawerAdminName" class="nav-user-name">Admin</span>
+        <span class="staff-user-role">Administrator Portal</span>
       </div>
-    </section>
-  </main>
+
+      <div class="patient-drawer__spacer">
+        <span class="patient-drawer__stamp" aria-hidden="true">NC</span>
+      </div>
+
+      <div class="patient-drawer__footer">
+        <a href="#controlFormSection" id="drawerPrimaryCta" class="patient-drawer__pill-cta">Buat Jadwal Kontrol</a>
+      </div>
+    </nav>
+  </div>
 
   <div id="adminApproveModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="approveModalTitle">
-    <div class="modal-content" style="border-radius: 16px;">
+    <div class="modal-content">
       <div class="flex-between mb-4">
-        <h2 id="approveModalTitle" class="card-title" style="margin-bottom: 0;">Setujui Pembatalan Janji Temu</h2>
+        <h2 id="approveModalTitle" class="card-title">Setujui Pembatalan Janji Temu</h2>
         <button type="button" id="closeApproveModalBtn" class="btn btn-secondary btn-sm btn-touch"
-          data-close-modal="adminApproveModal" aria-label="Tutup dialog"
-          style="min-width: 44px; border-radius: 8px;">Tutup</button>
+          data-close-modal="adminApproveModal" aria-label="Tutup dialog">Tutup</button>
       </div>
 
       <div id="approveAlert" class="alert" role="alert" aria-live="polite"></div>
@@ -297,26 +563,23 @@
         <div class="form-group">
           <label class="form-label" for="approveAdminNote">Catatan Admin (Opsional, maks. 500 karakter)</label>
           <textarea id="approveAdminNote" name="admin_note" class="form-textarea" maxlength="500"
-            style="border-radius: 8px;" placeholder="Catatan keputusan untuk dokter dan dokumentasi pembatalan..."></textarea>
+            placeholder="Catatan keputusan untuk dokter dan dokumentasi pembatalan…"></textarea>
         </div>
 
-        <div style="display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-6); flex-wrap: wrap;">
-          <button type="button" class="btn btn-secondary btn-touch" data-close-modal="adminApproveModal"
-            style="border-radius: 8px;">Batal</button>
-          <button type="submit" id="approveSubmitBtn" class="btn btn-danger btn-touch"
-            style="border-radius: 8px;">Batalkan Janji</button>
+        <div class="flex-between mt-4">
+          <button type="button" class="btn btn-secondary btn-touch" data-close-modal="adminApproveModal">Batal</button>
+          <button type="submit" id="approveSubmitBtn" class="btn btn-danger btn-touch">Batalkan Janji</button>
         </div>
       </form>
     </div>
   </div>
 
   <div id="adminRescheduleModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="reschedModalTitle">
-    <div class="modal-content" style="border-radius: 16px;">
+    <div class="modal-content">
       <div class="flex-between mb-4">
-        <h2 id="reschedModalTitle" class="card-title" style="margin-bottom: 0;">Jadwalkan Ulang Janji Temu</h2>
+        <h2 id="reschedModalTitle" class="card-title">Jadwalkan Ulang Janji Temu</h2>
         <button type="button" id="closeReschedModalBtn" class="btn btn-secondary btn-sm btn-touch"
-          data-close-modal="adminRescheduleModal" aria-label="Tutup dialog"
-          style="min-width: 44px; border-radius: 8px;">Tutup</button>
+          data-close-modal="adminRescheduleModal" aria-label="Tutup dialog">Tutup</button>
       </div>
 
       <div id="reschedAlert" class="alert" role="alert" aria-live="polite"></div>
@@ -327,20 +590,20 @@
 
         <div class="form-group">
           <label class="form-label" for="reschedDoctorId">Dokter Tujuan (Satu Poliklinik Aktif)</label>
-          <select id="reschedDoctorId" name="doctor_id" class="form-select" style="border-radius: 8px;">
-            <option value="">Memuat daftar dokter...</option>
+          <select id="reschedDoctorId" name="doctor_id" class="form-select">
+            <option value="">Memuat daftar dokter…</option>
           </select>
         </div>
 
         <div class="grid-2">
           <div class="form-group">
             <label class="form-label" for="reschedDate">Tanggal Baru</label>
-            <input type="date" id="reschedDate" name="appointment_date" class="form-input" style="border-radius: 8px;" required>
+            <input type="date" id="reschedDate" name="appointment_date" class="form-input" required>
           </div>
 
           <div class="form-group">
             <label class="form-label" for="reschedTime">Jam Baru</label>
-            <select id="reschedTime" name="appointment_time" class="form-select" style="border-radius: 8px;" required>
+            <select id="reschedTime" name="appointment_time" class="form-select" required>
               <option value="08:00">08:00 WIB</option>
               <option value="09:00">09:00 WIB</option>
               <option value="10:00">10:00 WIB</option>
@@ -356,31 +619,28 @@
         <p id="reschedSlotHint" class="text-sm text-muted mb-2" aria-live="polite">
           Pilih dokter dan tanggal untuk memeriksa slot jam yang tersedia.
         </p>
-        <div id="rescheduleSlotsGrid" class="mb-4" style="display: flex; flex-wrap: wrap; gap: var(--space-2);"></div>
+        <div id="rescheduleSlotsGrid" class="portal-filter-bar mb-4"></div>
 
         <div class="form-group">
           <label class="form-label" for="reschedAdminNote">Catatan Admin (Opsional, maks. 500 karakter)</label>
           <textarea id="reschedAdminNote" name="admin_note" class="form-textarea" maxlength="500"
-            style="border-radius: 8px;" placeholder="Catatan penjadwalan ulang untuk pasien dan dokter..."></textarea>
+            placeholder="Catatan penjadwalan ulang untuk pasien dan dokter…"></textarea>
         </div>
 
-        <div style="display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-6); flex-wrap: wrap;">
-          <button type="button" class="btn btn-secondary btn-touch" data-close-modal="adminRescheduleModal"
-            style="border-radius: 8px;">Batal</button>
-          <button type="submit" id="reschedSubmitBtn" class="btn btn-primary btn-touch"
-            style="border-radius: 8px;">Simpan Jadwal Baru</button>
+        <div class="flex-between mt-4">
+          <button type="button" class="btn btn-secondary btn-touch" data-close-modal="adminRescheduleModal">Batal</button>
+          <button type="submit" id="reschedSubmitBtn" class="btn btn-primary btn-touch">Simpan Jadwal Baru</button>
         </div>
       </form>
     </div>
   </div>
 
   <div id="adminRejectModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="rejectModalTitle">
-    <div class="modal-content" style="border-radius: 16px;">
+    <div class="modal-content">
       <div class="flex-between mb-4">
-        <h2 id="rejectModalTitle" class="card-title" style="margin-bottom: 0;">Tolak Pengajuan Pembatalan</h2>
+        <h2 id="rejectModalTitle" class="card-title">Tolak Pengajuan Pembatalan</h2>
         <button type="button" id="closeRejectModalBtn" class="btn btn-secondary btn-sm btn-touch"
-          data-close-modal="adminRejectModal" aria-label="Tutup dialog"
-          style="min-width: 44px; border-radius: 8px;">Tutup</button>
+          data-close-modal="adminRejectModal" aria-label="Tutup dialog">Tutup</button>
       </div>
 
       <div id="rejectAlert" class="alert" role="alert" aria-live="polite"></div>
@@ -391,61 +651,55 @@
 
         <div class="form-group">
           <label class="form-label" for="rejectSubstituteDoctorId">Dokter Pengganti (Satu Poliklinik Aktif)</label>
-          <select id="rejectSubstituteDoctorId" name="substitute_doctor_id" class="form-select" required style="border-radius: 8px;">
-            <option value="">Memuat daftar dokter pengganti...</option>
+          <select id="rejectSubstituteDoctorId" name="substitute_doctor_id" class="form-select" required>
+            <option value="">Memuat daftar dokter pengganti…</option>
           </select>
         </div>
 
         <div class="form-group">
           <label class="form-label" for="rejectAdminNote">Alasan Penolakan (Wajib, 5 s.d. 500 karakter)</label>
           <textarea id="rejectAdminNote" name="admin_note" class="form-textarea" minlength="5" maxlength="500" required
-            style="border-radius: 8px;" placeholder="Jelaskan alasan penolakan pengajuan dan penunjukan dokter pengganti..."></textarea>
+            placeholder="Jelaskan alasan penolakan pengajuan dan penunjukan dokter pengganti…"></textarea>
           <div class="char-counter-row">
             <span>Minimal 5 karakter</span>
             <span id="rejectAdminNoteCount">0/500</span>
           </div>
         </div>
 
-        <div style="display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-6); flex-wrap: wrap;">
-          <button type="button" class="btn btn-secondary btn-touch" data-close-modal="adminRejectModal"
-            style="border-radius: 8px;">Batal</button>
-          <button type="submit" id="rejectSubmitBtn" class="btn btn-danger btn-touch"
-            style="border-radius: 8px;">Tolak &amp; Tugaskan Pengganti</button>
+        <div class="flex-between mt-4">
+          <button type="button" class="btn btn-secondary btn-touch" data-close-modal="adminRejectModal">Batal</button>
+          <button type="submit" id="rejectSubmitBtn" class="btn btn-danger btn-touch">Tolak &amp; Alihkan</button>
         </div>
       </form>
     </div>
   </div>
 
   <div id="adminAuditLogModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="auditLogTitle">
-    <div class="modal-content" style="border-radius: 16px; max-width: 640px;">
+    <div class="modal-content">
       <div class="flex-between mb-4">
-        <h2 id="auditLogTitle" class="card-title" style="margin-bottom: 0;">Riwayat Perubahan Status</h2>
+        <h2 id="auditLogTitle" class="card-title">Riwayat Perubahan Status</h2>
         <button type="button" id="closeAuditLogModalBtn" class="btn btn-secondary btn-sm btn-touch"
-          data-close-modal="adminAuditLogModal" aria-label="Tutup dialog"
-          style="min-width: 44px; border-radius: 8px;">Tutup</button>
+          data-close-modal="adminAuditLogModal" aria-label="Tutup dialog">Tutup</button>
       </div>
 
       <div id="auditLogSummary" class="text-sm text-muted mb-3"></div>
       <div id="auditLogAlert" class="alert" role="alert" aria-live="polite"></div>
       <div id="auditLogBody" aria-live="polite">
-        <p class="text-sm text-muted">Memuat riwayat perubahan status...</p>
+        <p class="text-sm text-muted">Memuat riwayat perubahan status…</p>
       </div>
 
-      <div style="display: flex; justify-content: flex-end; margin-top: var(--space-6);">
-        <button type="button" class="btn btn-secondary btn-touch" data-close-modal="adminAuditLogModal"
-          style="border-radius: 8px;">Tutup</button>
+      <div class="flex-between mt-4">
+        <button type="button" class="btn btn-secondary btn-touch" data-close-modal="adminAuditLogModal">Tutup</button>
       </div>
     </div>
   </div>
 
-  <!-- Modal Setujui Slot Tambahan -->
   <div id="adminSlotApproveModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="slotApproveModalTitle">
-    <div class="modal-content" style="border-radius: 16px;">
+    <div class="modal-content">
       <div class="flex-between mb-4">
-        <h2 id="slotApproveModalTitle" class="card-title" style="margin-bottom: 0;">Setujui Slot Tambahan Dokter</h2>
+        <h2 id="slotApproveModalTitle" class="card-title">Setujui Slot Tambahan Dokter</h2>
         <button type="button" id="closeSlotApproveModalBtn" class="btn btn-secondary btn-sm btn-touch"
-          data-close-modal="adminSlotApproveModal" aria-label="Tutup dialog"
-          style="min-width: 44px; border-radius: 8px;">Tutup</button>
+          data-close-modal="adminSlotApproveModal" aria-label="Tutup dialog">Tutup</button>
       </div>
 
       <div id="slotApproveAlert" class="alert" role="alert" aria-live="polite"></div>
@@ -456,24 +710,22 @@
         <div class="form-group">
           <label class="form-label" for="slotApproveAdminNote">Catatan Admin (Opsional, maks. 500 karakter)</label>
           <textarea id="slotApproveAdminNote" name="admin_note" class="form-textarea" maxlength="500"
-            style="border-radius: 8px;" placeholder="Tambahkan catatan persetujuan untuk dokter bila perlu..."></textarea>
+            placeholder="Tambahkan catatan persetujuan untuk dokter bila perlu…"></textarea>
         </div>
-        <div style="display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-6); flex-wrap: wrap;">
-          <button type="button" class="btn btn-secondary btn-touch" data-close-modal="adminSlotApproveModal" style="border-radius: 8px;">Batal</button>
-          <button type="submit" id="slotApproveSubmitBtn" class="btn btn-primary btn-touch" style="border-radius: 8px;">Ya, Setujui Slot</button>
+        <div class="flex-between mt-4">
+          <button type="button" class="btn btn-secondary btn-touch" data-close-modal="adminSlotApproveModal">Batal</button>
+          <button type="submit" id="slotApproveSubmitBtn" class="btn btn-primary btn-touch">Ya, Setujui Slot</button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- Modal Tolak Slot Tambahan -->
   <div id="adminSlotRejectModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="slotRejectModalTitle">
-    <div class="modal-content" style="border-radius: 16px;">
+    <div class="modal-content">
       <div class="flex-between mb-4">
-        <h2 id="slotRejectModalTitle" class="card-title" style="margin-bottom: 0;">Tolak Slot Tambahan Dokter</h2>
+        <h2 id="slotRejectModalTitle" class="card-title">Tolak Slot Tambahan Dokter</h2>
         <button type="button" id="closeSlotRejectModalBtn" class="btn btn-secondary btn-sm btn-touch"
-          data-close-modal="adminSlotRejectModal" aria-label="Tutup dialog"
-          style="min-width: 44px; border-radius: 8px;">Tutup</button>
+          data-close-modal="adminSlotRejectModal" aria-label="Tutup dialog">Tutup</button>
       </div>
 
       <div id="slotRejectAlert" class="alert" role="alert" aria-live="polite"></div>
@@ -484,15 +736,15 @@
         <div class="form-group">
           <label class="form-label" for="slotRejectAdminNote">Alasan Penolakan (Wajib, 5 s.d. 500 karakter)</label>
           <textarea id="slotRejectAdminNote" name="admin_note" class="form-textarea" minlength="5" maxlength="500" required
-            style="border-radius: 8px;" placeholder="Jelaskan alasan penolakan pengajuan slot tambahan..."></textarea>
+            placeholder="Jelaskan alasan penolakan pengajuan slot tambahan…"></textarea>
           <div class="char-counter-row">
             <span>Minimal 5 karakter</span>
             <span id="slotRejectAdminNoteCount">0/500</span>
           </div>
         </div>
-        <div style="display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-6); flex-wrap: wrap;">
-          <button type="button" class="btn btn-secondary btn-touch" data-close-modal="adminSlotRejectModal" style="border-radius: 8px;">Batal</button>
-          <button type="submit" id="slotRejectSubmitBtn" class="btn btn-danger btn-touch" style="border-radius: 8px;">Tolak Pengajuan Slot</button>
+        <div class="flex-between mt-4">
+          <button type="button" class="btn btn-secondary btn-touch" data-close-modal="adminSlotRejectModal">Batal</button>
+          <button type="submit" id="slotRejectSubmitBtn" class="btn btn-danger btn-touch">Tolak Pengajuan Slot</button>
         </div>
       </form>
     </div>
