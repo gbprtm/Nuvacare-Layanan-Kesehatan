@@ -78,3 +78,5 @@ temp/
 *.dump
 *.sha256
 *.sql.gz
+
+.hallmark/

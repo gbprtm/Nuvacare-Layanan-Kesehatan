@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const drawerBottomPillLabel = document.getElementById('drawerBottomPillLabel');
   if (currentUser) {
     if (userNameEl) {
-      userNameEl.textContent = `${currentUser.name} · Profil`;
+      userNameEl.textContent = currentUser.name || 'Profil';
     }
     if (drawerBottomPillLabel) {
       drawerBottomPillLabel.textContent = `PROFIL (${currentUser.name})`;
@@ -192,18 +192,69 @@ document.addEventListener('DOMContentLoaded', () => {
     initBookingPage();
   }
 
-  if (document.getElementById('appointmentTableBody')) {
+  if (document.getElementById('appointmentTableBody') || document.getElementById('patientAppointmentsContainer')) {
     initPatientCancelModal();
     initPatientDeleteModal();
     const reloadPatientBtn = document.getElementById('reloadPatientAppointmentsBtn');
     if (reloadPatientBtn) {
-      reloadPatientBtn.addEventListener('click', loadPatientAppointments);
+      reloadPatientBtn.addEventListener('click', () => {
+        currentApptPage = 1;
+        loadPatientAppointments();
+      });
+    }
+    const prevApptBtn = document.getElementById('prevApptPageBtn');
+    if (prevApptBtn) {
+      prevApptBtn.addEventListener('click', () => {
+        if (currentApptPage > 1) {
+          currentApptPage--;
+          renderPatientAppointmentsTable();
+          document.getElementById('patientAppointmentsSection')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      });
+    }
+    const nextApptBtn = document.getElementById('nextApptPageBtn');
+    if (nextApptBtn) {
+      nextApptBtn.addEventListener('click', () => {
+        const hiddenIds = getHiddenAppointmentIds();
+        const total = patientAppointmentsCache.filter(
+          a => a.status === 'terjadwal' && !hiddenIds.includes(String(a.id))
+        ).length;
+        const totalPages = Math.ceil(total / APPT_PAGE_SIZE) || 1;
+        if (currentApptPage < totalPages) {
+          currentApptPage++;
+          renderPatientAppointmentsTable();
+          document.getElementById('patientAppointmentsSection')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      });
     }
     loadPatientAppointments();
   }
 
   if (document.getElementById('historyCardsContainer') || document.getElementById('historyTableBody')) {
     loadExaminationHistory();
+
+    const prevBtn = document.getElementById('prevPageBtn');
+    if (prevBtn) {
+      prevBtn.addEventListener('click', () => {
+        if (currentHistoryPage > 1) {
+          currentHistoryPage--;
+          renderHistoryCurrentPage();
+          document.getElementById('historyCardsContainer')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      });
+    }
+
+    const nextBtn = document.getElementById('nextPageBtn');
+    if (nextBtn) {
+      nextBtn.addEventListener('click', () => {
+        const totalPages = Math.ceil(filteredHistoryRecords.length / HISTORY_PAGE_SIZE) || 1;
+        if (currentHistoryPage < totalPages) {
+          currentHistoryPage++;
+          renderHistoryCurrentPage();
+          document.getElementById('historyCardsContainer')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      });
+    }
 
     const closeQrBtn = document.getElementById('closeModalQrBtn');
     if (closeQrBtn) closeQrBtn.addEventListener('click', closeMedicalQrModal);
@@ -218,12 +269,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const searchInput = document.getElementById('medicalSearchInput');
     if (searchInput) {
-      searchInput.addEventListener('input', () => filterAndRenderHistory());
+      searchInput.addEventListener('input', () => {
+        currentHistoryPage = 1;
+        filterAndRenderHistory();
+      });
     }
 
     const yearSelect = document.getElementById('medicalYearSelect');
     if (yearSelect) {
-      yearSelect.addEventListener('change', () => filterAndRenderHistory());
+      yearSelect.addEventListener('change', () => {
+        currentHistoryPage = 1;
+        filterAndRenderHistory();
+      });
     }
 
     const filterChips = document.querySelectorAll('.medical-filter-chip');
@@ -235,6 +292,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         chip.classList.add('is-active');
         chip.setAttribute('aria-pressed', 'true');
+        currentHistoryPage = 1;
         filterAndRenderHistory();
       });
     });
@@ -1281,6 +1339,7 @@ async function initBookingPage() {
         syncSymptomChipStates();
         updateBookingSummary();
 
+        currentApptPage = 1;
         await loadPatientAppointments();
         goToStep(1);
       } catch (err) {
@@ -1310,6 +1369,8 @@ async function initBookingPage() {
   }
 }
 
+const APPT_PAGE_SIZE = 5;
+let currentApptPage = 1;
 const PATIENT_APPT_VISIBLE_LIMIT = 5;
 let patientAppointmentsCache = [];
 
@@ -1346,14 +1407,19 @@ function saveHiddenAppointmentId(id) {
 }
 
 function renderPatientAppointmentsTable() {
+  const container = document.getElementById('patientAppointmentsContainer');
   const tableBody = document.getElementById('appointmentTableBody');
   const subtitleEl = document.getElementById('patientAppointmentsSub');
-  if (!tableBody) return;
+  if (!container && !tableBody) return;
 
   const hiddenIds = getHiddenAppointmentIds();
   const visiblePool = patientAppointmentsCache.filter(
     a => a.status === 'terjadwal' && !hiddenIds.includes(String(a.id))
-  );
+  ).sort((a, b) => {
+    const dateA = `${a.appointment_date || ''} ${a.appointment_time || ''}`;
+    const dateB = `${b.appointment_date || ''} ${b.appointment_time || ''}`;
+    return dateA.localeCompare(dateB);
+  });
 
   const quickCountEl = document.getElementById('activeApptsQuickCount');
   if (quickCountEl) {
@@ -1362,30 +1428,158 @@ function renderPatientAppointmentsTable() {
   }
 
   if (subtitleEl) {
-    subtitleEl.textContent = visiblePool.length > PATIENT_APPT_VISIBLE_LIMIT
-      ? `Menampilkan ${PATIENT_APPT_VISIBLE_LIMIT} dari ${visiblePool.length} janji temu aktif.`
+    subtitleEl.textContent = visiblePool.length > 0
+      ? `Terdapat ${visiblePool.length} janji temu aktif terjadwal.`
       : 'Pantau status kunjungan poliklinik Anda.';
   }
 
   if (visiblePool.length === 0) {
-    tableBody.innerHTML = '<tr><td colspan="5" class="text-muted text-center" style="padding: var(--space-6);">Belum ada janji temu aktif. Buat janji pertama Anda di formulir atas.</td></tr>';
+    const paginationNav = document.getElementById('patientAppointmentsPagination');
+    if (paginationNav) paginationNav.style.display = 'none';
+    const emptyHtml = `
+      <div class="medical-empty-card">
+        <div class="medical-empty-icon" aria-hidden="true">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="16" y1="2" x2="16" y2="6"></line>
+            <line x1="8" y1="2" x2="8" y2="6"></line>
+            <line x1="3" y1="10" x2="21" y2="10"></line>
+          </svg>
+        </div>
+        <h3 class="medical-empty-title">Belum ada janji temu aktif</h3>
+        <p class="medical-empty-sub">Pilih dokter dan jadwal di atas untuk membuat janji temu baru.</p>
+      </div>
+    `;
+    if (container) container.innerHTML = emptyHtml;
+    if (tableBody) tableBody.innerHTML = '<tr><td colspan="5" class="text-muted text-center" style="padding: var(--space-6);">Belum ada janji temu aktif.</td></tr>';
     return;
   }
 
-  const displayedAppointments = visiblePool.slice(0, PATIENT_APPT_VISIBLE_LIMIT);
+  // Render to container if present (Clinical Ledger matching riwayat.html)
+  if (container) {
+    const totalApptPages = Math.ceil(visiblePool.length / APPT_PAGE_SIZE) || 1;
+    if (currentApptPage > totalApptPages) currentApptPage = totalApptPages;
+    if (currentApptPage < 1) currentApptPage = 1;
 
-  tableBody.innerHTML = displayedAppointments.map(a => {
-    const mobileComplaint = a.complaint
-      ? `<span class="appt-mobile-complaint">${escapeHtml(a.complaint)}</span>`
-      : '';
-    const notesSub = a.doctor_notes
-      ? `<div class="appt-notes-sub">Catatan: ${escapeHtml(a.doctor_notes)}</div>`
-      : '';
-    const actionCell = a.status === 'terjadwal'
-      ? `<button type="button" class="appt-btn-cancel" onclick="openPatientCancelModal(${a.id})">Batalkan</button>`
-      : `<button type="button" class="appt-btn-remove" onclick="openPatientDeleteModal(${a.id})">Hapus</button>`;
+    const pageStartIndex = (currentApptPage - 1) * APPT_PAGE_SIZE;
+    const pageItems = visiblePool.slice(pageStartIndex, pageStartIndex + APPT_PAGE_SIZE);
 
-    return `
+    // Group by month
+    const groupsMap = new Map();
+    pageItems.forEach(item => {
+      const monthKey = formatMonthYear(item.appointment_date);
+      if (!groupsMap.has(monthKey)) groupsMap.set(monthKey, []);
+      groupsMap.get(monthKey).push(item);
+    });
+
+    let html = '';
+    groupsMap.forEach((groupItems, monthLabel) => {
+      html += `
+        <div class="timeline-group">
+          <div class="timeline-group-header">
+            <div class="timeline-month-badge">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+              </svg>
+              <span>${escapeHtml(monthLabel)}</span>
+            </div>
+            <span class="timeline-month-count">${groupItems.length} jadwal</span>
+          </div>
+          <div class="timeline-group-items">
+      `;
+
+      groupItems.forEach(a => {
+        const poliRoom = a.polyclinic?.room || 'Gedung Rawat Jalan, Lantai 2 • Ruang Konsultasi';
+        const visitType = a.type === 'kontrol_rutin' ? 'Jadwal Kontrol Rutin' : 'Janji Temu Baru';
+
+        html += `
+          <article class="clinical-ledger-item" id="ledger-item-${a.id}">
+            <div class="clinical-ledger-header">
+              <div class="clinical-ledger-date-col">
+                <span class="clinical-ledger-date">${escapeHtml(api.formatDate(a.appointment_date))}</span>
+                <span class="clinical-ledger-time">${escapeHtml(a.appointment_time || '08:00')} WIB</span>
+                <span class="clinical-ledger-created" title="Janji diajukan pada ${formatDateShort(a.created_at)}">Dibuat: ${formatDateShort(a.created_at)}</span>
+              </div>
+
+              <div class="clinical-ledger-main-col">
+                <div class="clinical-ledger-poli">${escapeHtml(a.polyclinic?.name || 'Poliklinik')}</div>
+                <div class="clinical-ledger-doc">${escapeHtml(a.doctor?.name || 'dr. Spesialis')} <span class="clinical-ledger-doc-spec">• ${escapeHtml(a.doctor?.specialization || 'Spesialis Medis')}</span></div>
+              </div>
+
+              <div class="clinical-ledger-status-col">
+                <span class="clinical-badge clinical-badge--scheduled">Terjadwal</span>
+              </div>
+
+              <div class="clinical-ledger-actions-col">
+                <button type="button" class="clinical-ledger-btn-cancel" onclick="openPatientCancelModal(${a.id})" title="Batalkan janji temu ini">Batalkan</button>
+                <button type="button" class="clinical-ledger-toggle-btn" onclick="toggleClinicalLedgerDrawer('${a.id}')" aria-expanded="false" aria-controls="ledger-drawer-${a.id}" aria-label="Buka rincian janji temu">
+                  <span class="clinical-ledger-toggle-label">Rincian</span>
+                  <svg class="clinical-ledger-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="clinical-ledger-drawer" id="ledger-drawer-${a.id}" hidden>
+              <div class="clinical-ledger-drawer-grid">
+                <div class="clinical-drawer-cell">
+                  <span class="clinical-drawer-label">Dibuat di Sistem</span>
+                  <p class="clinical-drawer-value">${formatDateShort(a.created_at)}</p>
+                </div>
+                <div class="clinical-drawer-cell">
+                  <span class="clinical-drawer-label">Keluhan Pasien</span>
+                  <p class="clinical-drawer-value">${escapeHtml(a.complaint || 'Pemeriksaan rutin berkala.')}</p>
+                </div>
+                <div class="clinical-drawer-cell">
+                  <span class="clinical-drawer-label">Catatan Dokter</span>
+                  <p class="clinical-drawer-value">${escapeHtml(a.doctor_notes || 'Menunggu konsultasi.')}</p>
+                </div>
+                <div class="clinical-drawer-cell">
+                  <span class="clinical-drawer-label">Lokasi Poliklinik</span>
+                  <p class="clinical-drawer-value">${escapeHtml(poliRoom)}</p>
+                </div>
+                <div class="clinical-drawer-cell">
+                  <span class="clinical-drawer-label">Jenis Kunjungan</span>
+                  <p class="clinical-drawer-value">${visitType}</p>
+                </div>
+              </div>
+            </div>
+          </article>
+        `;
+      });
+
+      html += `
+          </div>
+        </div>
+      `;
+    });
+
+    container.innerHTML = html;
+
+    const paginationNav = document.getElementById('patientAppointmentsPagination');
+    const pageIndicator = document.getElementById('apptPageIndicator');
+    const prevBtn = document.getElementById('prevApptPageBtn');
+    const nextBtn = document.getElementById('nextApptPageBtn');
+
+    if (paginationNav) {
+      if (visiblePool.length > APPT_PAGE_SIZE) {
+        paginationNav.style.display = 'flex';
+        if (pageIndicator) pageIndicator.textContent = `Halaman ${currentApptPage} dari ${totalApptPages}`;
+        if (prevBtn) prevBtn.disabled = currentApptPage <= 1;
+        if (nextBtn) nextBtn.disabled = currentApptPage >= totalApptPages;
+      } else {
+        paginationNav.style.display = 'none';
+      }
+    }
+  }
+
+  // Fallback to tableBody if present
+  if (tableBody) {
+    tableBody.innerHTML = visiblePool.map(a => `
       <tr>
         <td>
           <span class="appt-date-primary">${escapeHtml(api.formatDate(a.appointment_date))}</span>
@@ -1394,34 +1588,42 @@ function renderPatientAppointmentsTable() {
         <td>
           <span class="appt-poli-name">${escapeHtml(a.polyclinic?.name || '-')}</span>
           <span class="appt-doctor-sub">${escapeHtml(a.doctor?.name || '-')}</span>
-          ${mobileComplaint}
         </td>
         <td class="appt-col-notes">
           <div class="appt-notes-main">${escapeHtml(a.complaint || '-')}</div>
-          ${notesSub}
         </td>
         <td>
-          <span class="appt-status-text appt-status-text--${escapeHtml(a.status)}">
-            <span class="appt-status-dot" aria-hidden="true"></span>
-            <span>${escapeHtml(getStatusLabel(a.status))}</span>
-          </span>
+          <span class="clinical-badge clinical-badge--scheduled">Terjadwal</span>
         </td>
-        <td class="appt-col-actions">${actionCell}</td>
+        <td class="appt-col-actions">
+          <button type="button" class="appt-btn-cancel" onclick="openPatientCancelModal(${a.id})">Batalkan</button>
+        </td>
       </tr>
-    `;
-  }).join('');
+    `).join('');
+  }
 }
 
 async function loadPatientAppointments() {
+  const container = document.getElementById('patientAppointmentsContainer');
   const tableBody = document.getElementById('appointmentTableBody');
-  if (!tableBody) return;
+  if (!container && !tableBody) return;
 
   try {
     const res = await api.request('/janji-temu', { priority: 'high' });
     patientAppointmentsCache = Array.isArray(res.data) ? res.data : [];
     renderPatientAppointmentsTable();
   } catch {
-    tableBody.innerHTML = '<tr><td colspan="5" class="text-center" style="color: var(--color-danger-ink); padding: var(--space-6);">Gagal memuat data. Coba muat ulang halaman.</td></tr>';
+    if (container) {
+      container.innerHTML = `
+        <div class="medical-empty-card" style="border-color: #FCA5A5; background: #FEF2F2;">
+          <p style="color: #991B1B; font-weight: 600; margin: 0 0 8px 0;">Gagal memuat jadwal janji temu.</p>
+          <button type="button" class="profile-btn-cancel" onclick="loadPatientAppointments()">Coba Lagi</button>
+        </div>
+      `;
+    }
+    if (tableBody) {
+      tableBody.innerHTML = '<tr><td colspan="5" class="text-center" style="color: var(--color-danger-ink); padding: var(--space-6);">Gagal memuat data. Coba muat ulang halaman.</td></tr>';
+    }
   }
 }
 
@@ -1612,180 +1814,181 @@ function closeMedicalQrModal() {
 window.openMedicalQrModal = openMedicalQrModal;
 window.closeMedicalQrModal = closeMedicalQrModal;
 
-function renderHistoryCards(items) {
-  const cardsContainer = document.getElementById('historyCardsContainer');
-  if (!cardsContainer) return;
+let upcomingAppointmentsData = [];
+let historicalRecordsData = [];
+let filteredHistoryRecords = [];
+let currentHistoryPage = 1;
+const HISTORY_PAGE_SIZE = 5;
 
-  const loadMoreBtn = document.getElementById('loadMoreHistoryBtn');
-  if (loadMoreBtn) {
-    loadMoreBtn.style.display = items.length >= 10 ? 'flex' : 'none';
+function formatDateShort(dateInput) {
+  if (!dateInput) return '-';
+  try {
+    const raw = String(dateInput).trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+      const [y, m, d] = raw.split('-');
+      return `${d}/${m}/${y}`;
+    }
+    const d = new Date(raw);
+    if (!Number.isNaN(d.getTime())) {
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      return `${day}/${month}/${year}`;
+    }
+    const parts = raw.split('T')[0].split(' ')[0].split('-');
+    if (parts.length === 3) {
+      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+    return raw;
+  } catch {
+    return String(dateInput);
   }
+}
 
-  if (items.length === 0) {
-    cardsContainer.innerHTML = `
-      <div class="medical-empty-card">
-        <div class="medical-empty-icon">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
-            <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
-          </svg>
-        </div>
-        <h3 style="font-size: 16px; font-weight: 700; color: #0F172A; margin: 0 0 4px 0;">Tidak Ada Riwayat Pemeriksaan</h3>
-        <p style="font-size: 13.5px; color: #64748B; margin: 0 0 16px 0;">Belum ada catatan kunjungan selesai atau janji temu yang dibatalkan sesuai filter Anda.</p>
-        <a href="/pasien/janji-temu.html" class="medical-btn-rebook" style="display: inline-flex;">Buat Janji Baru</a>
-      </div>
-    `;
+function formatMonthYear(dateStr) {
+  if (!dateStr) return 'Lainnya';
+  try {
+    const parts = dateStr.split('-');
+    if (parts.length >= 2) {
+      const year = parts[0];
+      const monthNames = [
+        'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+        'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+      ];
+      const monthIdx = parseInt(parts[1], 10) - 1;
+      if (monthIdx >= 0 && monthIdx < 12) {
+        return `${monthNames[monthIdx]} ${year}`;
+      }
+    }
+    return dateStr;
+  } catch {
+    return dateStr;
+  }
+}
+
+function renderUpcomingFocusCard(upcomingItems) {
+  const section = document.getElementById('upcomingScheduleSection');
+  if (!section) return;
+
+  if (!upcomingItems || upcomingItems.length === 0) {
+    section.innerHTML = '';
+    section.style.display = 'none';
     return;
   }
 
-  cardsContainer.innerHTML = items.map(a => {
-    const isCancelled = a.status === 'dibatalkan';
-    const badgeHtml = isCancelled
-      ? `<span class="clinical-badge-cancelled"><span class="clinical-status-dot clinical-status-dot--cancelled" aria-hidden="true">&bull;</span><span>Dibatalkan</span></span>`
-      : `<span class="clinical-badge-completed"><span class="clinical-status-dot" aria-hidden="true">&bull;</span><span>Kunjungan Selesai</span></span>`;
-    const summaryTitle = isCancelled ? 'Catatan Pembatalan' : 'Ringkasan Klinis';
-    const summaryText = isCancelled
-      ? ([a.complaint, a.doctor_notes].filter(Boolean).join(' - ') || 'Janji temu ini telah dibatalkan.')
-      : `${a.complaint || 'Evaluasi rutin kondisi kesehatan pasien.'}${a.doctor_notes ? ` ${a.doctor_notes}` : ''}`;
-    const qrButtonHtml = isCancelled
-      ? ''
-      : `
-          <button type="button" class="clinical-btn-qr" onclick="openMedicalQrModal('${a.id}')">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <rect x="3" y="3" width="7" height="7"></rect>
-              <rect x="14" y="3" width="7" height="7"></rect>
-              <rect x="14" y="14" width="7" height="7"></rect>
-              <rect x="3" y="14" width="7" height="7"></rect>
-            </svg>
-            <span>QR Medis</span>
-          </button>`;
-    const rebookLabel = isCancelled ? 'Buat Janji Baru' : 'Buat Jadwal Kontrol';
+  // Sort upcoming chronologically ascending (terdekat lebih dahulu)
+  const sorted = [...upcomingItems].sort((a, b) => {
+    const dateA = `${a.appointment_date || ''} ${a.appointment_time || ''}`;
+    const dateB = `${b.appointment_date || ''} ${b.appointment_time || ''}`;
+    return dateA.localeCompare(dateB);
+  });
 
-    return `
-    <article class="clinical-card">
-      <!-- Baris 1: Header Poliklinik & Tanggal/Status -->
-      <div class="clinical-card-header">
-        <div class="clinical-poli-info">
-          <div class="clinical-poli-icon${isCancelled ? ' clinical-poli-icon--cancelled' : ''}" aria-hidden="true">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="2" y="4" width="20" height="16" rx="4"></rect>
-              <path d="M6 12h3l2-3 3 6 2-3h3"></path>
-            </svg>
-          </div>
-          <div>
-            <h2 class="clinical-poli-title">${escapeHtml(a.polyclinic?.name || 'Poliklinik')}</h2>
-            <p class="clinical-poli-location">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                <circle cx="12" cy="10" r="3"></circle>
-              </svg>
-              <span>${escapeHtml(a.polyclinic?.room || 'Gedung B Spesialis, Lantai 3 • Ruang K-304')}</span>
-            </p>
-          </div>
+  const nextAppt = sorted[0];
+  const moreCount = sorted.length - 1;
+
+  section.innerHTML = `
+    <div class="upcoming-focus-card">
+      <div class="upcoming-focus-header">
+        <div class="upcoming-header-left">
+          <span class="upcoming-kicker">Kunjungan Mendatang</span>
+          <span class="upcoming-datetime">${escapeHtml(api.formatDate(nextAppt.appointment_date))} • ${escapeHtml(nextAppt.appointment_time || '08:00')} WIB</span>
         </div>
-
-        <div class="clinical-meta-right">
-          <span class="clinical-datetime">${escapeHtml(api.formatDate(a.appointment_date))} &bull; ${escapeHtml(a.appointment_time || '09:40')} WIB</span>
-          ${badgeHtml}
-        </div>
-      </div>
-
-      <!-- Baris 2: Profil Dokter -->
-      <div class="clinical-doctor-row">
-        <div class="clinical-doctor-avatar${isCancelled ? ' clinical-doctor-avatar--cancelled' : ''}">${escapeHtml(getDoctorInitials(a.doctor?.name))}</div>
-        <div class="clinical-doctor-details">
-          <h3 class="clinical-doctor-name">${escapeHtml(a.doctor?.name || 'dr. Dokter Spesialis')}</h3>
-          <p class="clinical-doctor-spec">&bull; ${escapeHtml(a.doctor?.specialization || 'Spesialis Medis')}</p>
-        </div>
-      </div>
-
-      <!-- Baris 3: Kotak Ringkasan Klinis / Catatan Pembatalan -->
-      <div class="clinical-summary-box${isCancelled ? ' clinical-summary-box--cancelled' : ''}">
-        <div class="clinical-summary-title${isCancelled ? ' clinical-summary-title--cancelled' : ''}">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-            <polyline points="14 2 14 8 20 8"></polyline>
-            <line x1="16" y1="13" x2="8" y2="13"></line>
-            <line x1="16" y1="17" x2="8" y2="17"></line>
-            <polyline points="10 9 9 9 8 9"></polyline>
+        <a href="/pasien/janji-temu.html" class="upcoming-manage-btn" title="Kelola janji di halaman Janji Temu">
+          <span>Kelola Janji</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="9 18 15 12 9 6"></polyline>
           </svg>
-          <span>${summaryTitle}</span>
-        </div>
-        <p class="clinical-summary-text">${escapeHtml(summaryText)}</p>
-      </div>
-
-      <!-- Baris 4: Footer Tombol Aksi -->
-      <div class="clinical-actions-row">
-        <div class="clinical-actions-left">
-          ${qrButtonHtml}
-          <button type="button" class="clinical-btn-delete" onclick="confirmDeleteHistory('${a.id}')" title="Hapus catatan ini dari tampilan">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <polyline points="3 6 5 6 21 6"></polyline>
-              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-            </svg>
-            <span>Hapus</span>
-          </button>
-        </div>
-
-        <a href="/pasien/janji-temu.html?polyclinic_id=${a.polyclinic_id || a.polyclinic?.id || ''}&doctor_id=${a.doctor_id || a.doctor?.id || ''}" class="clinical-btn-rebook">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-            <line x1="16" y1="2" x2="16" y2="6"></line>
-            <line x1="8" y1="2" x2="8" y2="6"></line>
-            <line x1="3" y1="10" x2="21" y2="10"></line>
-            <line x1="12" y1="14" x2="12" y2="18"></line>
-            <line x1="10" y1="16" x2="14" y2="16"></line>
-          </svg>
-          <span>${rebookLabel}</span>
         </a>
       </div>
-    </article>
+
+      <div class="upcoming-focus-content">
+        <div class="upcoming-doctor-block">
+          <h3 class="upcoming-poli-title">${escapeHtml(nextAppt.polyclinic?.name || 'Poliklinik')}</h3>
+          <p class="upcoming-doctor-name">${escapeHtml(nextAppt.doctor?.name || 'dr. Spesialis')} <span class="upcoming-doc-spec">• ${escapeHtml(nextAppt.doctor?.specialization || 'Spesialis Medis')}</span></p>
+        </div>
+        <div class="upcoming-meta-grid">
+          <div class="upcoming-meta-cell">
+            <span class="upcoming-meta-label">Ruang Klinik</span>
+            <span class="upcoming-meta-value">${escapeHtml(nextAppt.polyclinic?.room || 'Gedung Rawat Jalan, Lantai 2')}</span>
+          </div>
+          <div class="upcoming-meta-cell">
+            <span class="upcoming-meta-label">Dibuat di Sistem</span>
+            <span class="upcoming-meta-value upcoming-meta-mono" title="Waktu janji diajukan">${formatDateShort(nextAppt.created_at)}</span>
+          </div>
+          <div class="upcoming-meta-cell">
+            <span class="upcoming-meta-label">Keluhan / Catatan</span>
+            <span class="upcoming-meta-value">${escapeHtml(nextAppt.complaint || 'Pemeriksaan / konsultasi rutin.')}</span>
+          </div>
+        </div>
+      </div>
+
+      ${moreCount > 0 ? `<div class="upcoming-focus-footer"><span>+ Terdapat ${moreCount} janji temu mendatang lainnya terjadwal.</span></div>` : ''}
+    </div>
   `;
-  }).join('');
+  section.style.display = 'block';
 }
 
-let pendingDeleteHistoryId = null;
+function updateStatusFilterCounts(items) {
+  const total = items.length;
+  const completed = items.filter(i => i.status === 'selesai').length;
+  const cancelled = items.filter(i => i.status === 'dibatalkan').length;
 
-function getDeletedHistoryIds() {
-  return getStoredIdList('nuvacare_deleted_records');
+  const elAll = document.getElementById('countAll');
+  const elSelesai = document.getElementById('countSelesai');
+  const elDibatalkan = document.getElementById('countDibatalkan');
+  const elArchiveTotal = document.getElementById('archiveTotalCount');
+
+  if (elAll) elAll.textContent = total;
+  if (elSelesai) elSelesai.textContent = completed;
+  if (elDibatalkan) elDibatalkan.textContent = cancelled;
+  if (elArchiveTotal) elArchiveTotal.textContent = `${total} riwayat`;
 }
 
-function saveDeletedHistoryId(id) {
-  appendStoredId('nuvacare_deleted_records', id);
-}
+function toggleClinicalLedgerDrawer(id) {
+  const targetDrawer = document.getElementById(`ledger-drawer-${id}`);
+  const targetItem = document.getElementById(`ledger-item-${id}`);
+  if (!targetDrawer || !targetItem) return;
 
-function confirmDeleteHistory(id) {
-  pendingDeleteHistoryId = id;
-  const modal = document.getElementById('modalConfirmDeleteHistory');
-  if (modal) {
-    modal.classList.remove('hidden');
-    document.body.style.overflow = 'hidden';
+  const btn = targetItem.querySelector('.clinical-ledger-toggle-btn');
+  const isOpening = targetDrawer.hasAttribute('hidden');
+
+  // Single-Expand Exclusive Accordion: Tutup drawer lain agar tidak menumpuk
+  const allOpenItems = document.querySelectorAll('.clinical-ledger-item.is-expanded');
+  allOpenItems.forEach(item => {
+    if (item.id !== `ledger-item-${id}`) {
+      item.classList.remove('is-expanded');
+      const otherDrawer = item.querySelector('.clinical-ledger-drawer');
+      if (otherDrawer) otherDrawer.setAttribute('hidden', '');
+      const otherBtn = item.querySelector('.clinical-ledger-toggle-btn');
+      if (otherBtn) {
+        otherBtn.setAttribute('aria-expanded', 'false');
+        const otherLabel = otherBtn.querySelector('.clinical-ledger-toggle-label');
+        if (otherLabel) otherLabel.textContent = 'Rincian';
+      }
+    }
+  });
+
+  if (isOpening) {
+    targetDrawer.removeAttribute('hidden');
+    targetItem.classList.add('is-expanded');
+    if (btn) {
+      btn.setAttribute('aria-expanded', 'true');
+      const label = btn.querySelector('.clinical-ledger-toggle-label');
+      if (label) label.textContent = 'Tutup';
+    }
+  } else {
+    targetDrawer.setAttribute('hidden', '');
+    targetItem.classList.remove('is-expanded');
+    if (btn) {
+      btn.setAttribute('aria-expanded', 'false');
+      const label = btn.querySelector('.clinical-ledger-toggle-label');
+      if (label) label.textContent = 'Rincian';
+    }
   }
 }
 
-function closeDeleteHistoryModal() {
-  pendingDeleteHistoryId = null;
-  const modal = document.getElementById('modalConfirmDeleteHistory');
-  if (modal) {
-    modal.classList.add('hidden');
-    document.body.style.overflow = '';
-  }
-}
-
-function executeDeleteHistory() {
-  if (!pendingDeleteHistoryId) return;
-  saveDeletedHistoryId(pendingDeleteHistoryId);
-
-  examinationHistoryData = examinationHistoryData.filter(x => String(x.id) !== String(pendingDeleteHistoryId));
-  closeDeleteHistoryModal();
-
-  populateYearDropdown(examinationHistoryData);
-  filterAndRenderHistory();
-}
-
-window.confirmDeleteHistory = confirmDeleteHistory;
-window.closeDeleteHistoryModal = closeDeleteHistoryModal;
-window.executeDeleteHistory = executeDeleteHistory;
+window.toggleClinicalLedgerDrawer = toggleClinicalLedgerDrawer;
+window.updateStatusFilterCounts = updateStatusFilterCounts;
 
 function populateYearDropdown(items) {
   const yearSelect = document.getElementById('medicalYearSelect');
@@ -1803,7 +2006,6 @@ function populateYearDropdown(items) {
     });
   }
 
-  // Fallback setidaknya tahun berjalan jika data kosong
   const currentYear = new Date().getFullYear().toString();
   if (yearsSet.size === 0) {
     yearsSet.add(currentYear);
@@ -1833,7 +2035,7 @@ function filterAndRenderHistory() {
   const filterYear = yearSelect ? yearSelect.value : 'all';
   const filterStatus = activeChip?.dataset?.status || 'all';
 
-  const filtered = examinationHistoryData.filter(item => {
+  filteredHistoryRecords = historicalRecordsData.filter(item => {
     if (filterStatus !== 'all' && item.status !== filterStatus) {
       return false;
     }
@@ -1849,10 +2051,181 @@ function filterAndRenderHistory() {
     return doctorName.includes(query) || poliName.includes(query) || complaint.includes(query) || doctorNotes.includes(query);
   });
 
-  renderHistoryCards(filtered);
+  renderHistoryCurrentPage();
 }
 
-window.renderHistoryCards = renderHistoryCards;
+function renderHistoryCurrentPage() {
+  const cardsContainer = document.getElementById('historyCardsContainer');
+  const paginationNav = document.getElementById('historyPagination');
+  const pageIndicator = document.getElementById('pageIndicator');
+  const prevBtn = document.getElementById('prevPageBtn');
+  const nextBtn = document.getElementById('nextPageBtn');
+  if (!cardsContainer) return;
+
+  if (filteredHistoryRecords.length === 0) {
+    cardsContainer.innerHTML = `
+      <div class="medical-empty-card">
+        <div class="medical-empty-icon" aria-hidden="true">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="4" width="20" height="16" rx="4"></rect>
+            <path d="M6 12h3l2-3 3 6 2-3h3"></path>
+          </svg>
+        </div>
+        <h3 class="medical-empty-title">Tidak ada riwayat pemeriksaan</h3>
+        <p class="medical-empty-sub">Tidak ditemukan catatan kunjungan yang sesuai dengan filter Anda.</p>
+      </div>
+    `;
+    if (paginationNav) paginationNav.style.display = 'none';
+    return;
+  }
+
+  const totalPages = Math.ceil(filteredHistoryRecords.length / HISTORY_PAGE_SIZE) || 1;
+  if (currentHistoryPage > totalPages) currentHistoryPage = totalPages;
+  if (currentHistoryPage < 1) currentHistoryPage = 1;
+
+  const startIndex = (currentHistoryPage - 1) * HISTORY_PAGE_SIZE;
+  const pageItems = filteredHistoryRecords.slice(startIndex, startIndex + HISTORY_PAGE_SIZE);
+
+  // Group pageItems by Month & Year (Timeline Grouping)
+  const groupsMap = new Map();
+  pageItems.forEach(item => {
+    const monthKey = formatMonthYear(item.appointment_date);
+    if (!groupsMap.has(monthKey)) {
+      groupsMap.set(monthKey, []);
+    }
+    groupsMap.get(monthKey).push(item);
+  });
+
+  let html = '';
+  groupsMap.forEach((groupItems, monthLabel) => {
+    html += `
+      <div class="timeline-group">
+        <div class="timeline-group-header">
+          <div class="timeline-month-badge">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+            <span>${escapeHtml(monthLabel)}</span>
+          </div>
+          <span class="timeline-month-count">${groupItems.length} kunjungan</span>
+        </div>
+        <div class="timeline-group-items">
+    `;
+
+    groupItems.forEach(a => {
+      const isCancelled = a.status === 'dibatalkan';
+      const isCompleted = a.status === 'selesai';
+
+      const badgeClass = isCancelled ? 'clinical-badge--cancelled' : 'clinical-badge--completed';
+      const statusLabel = isCancelled ? 'Dibatalkan' : 'Selesai';
+
+      const qrButtonHtml = isCompleted
+        ? `<button type="button" class="clinical-ledger-btn-qr" onclick="openMedicalQrModal('${a.id}')" title="Buka validasi digital QR medis">
+             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+               <rect x="3" y="3" width="7" height="7"></rect>
+               <rect x="14" y="3" width="7" height="7"></rect>
+               <rect x="14" y="14" width="7" height="7"></rect>
+               <rect x="3" y="14" width="7" height="7"></rect>
+             </svg>
+             <span>QR Medis</span>
+           </button>`
+        : '';
+
+      const actionLinkHtml = isCompleted
+        ? `<a href="/pasien/janji-temu.html?polyclinic_id=${a.polyclinic_id || a.polyclinic?.id || ''}&doctor_id=${a.doctor_id || a.doctor?.id || ''}" class="clinical-ledger-btn-action" title="Jadwalkan kontrol ulang">
+             <span>Kontrol</span>
+           </a>`
+        : `<a href="/pasien/janji-temu.html?polyclinic_id=${a.polyclinic_id || a.polyclinic?.id || ''}&doctor_id=${a.doctor_id || a.doctor?.id || ''}" class="clinical-ledger-btn-action" title="Buat janji temu baru">
+             <span>Janji Baru</span>
+           </a>`;
+
+      const noteLabel = isCancelled ? 'Alasan Pembatalan' : 'Catatan Dokter';
+      const noteValue = a.doctor_notes || (isCancelled ? 'Janji temu telah dibatalkan.' : 'Pemeriksaan rutin berkala.');
+      const poliRoom = a.polyclinic?.room || 'Gedung Rawat Jalan, Lantai 2 • Ruang Konsultasi';
+      const visitType = a.type === 'kontrol_rutin' ? 'Jadwal Kontrol Rutin' : 'Janji Temu Baru';
+
+      html += `
+        <article class="clinical-ledger-item" id="ledger-item-${a.id}">
+          <div class="clinical-ledger-header">
+            <div class="clinical-ledger-date-col">
+              <span class="clinical-ledger-date">${escapeHtml(api.formatDate(a.appointment_date))}</span>
+              <span class="clinical-ledger-time">${escapeHtml(a.appointment_time || '08:00')} WIB</span>
+              <span class="clinical-ledger-created" title="Janji diajukan pada ${formatDateShort(a.created_at)}">Dibuat: ${formatDateShort(a.created_at)}</span>
+            </div>
+
+            <div class="clinical-ledger-main-col">
+              <div class="clinical-ledger-poli">${escapeHtml(a.polyclinic?.name || 'Poliklinik')}</div>
+              <div class="clinical-ledger-doc">${escapeHtml(a.doctor?.name || 'dr. Spesialis')} <span class="clinical-ledger-doc-spec">• ${escapeHtml(a.doctor?.specialization || 'Spesialis Medis')}</span></div>
+            </div>
+
+            <div class="clinical-ledger-status-col">
+              <span class="clinical-badge ${badgeClass}">${statusLabel}</span>
+            </div>
+
+            <div class="clinical-ledger-actions-col">
+              ${qrButtonHtml}
+              ${actionLinkHtml}
+              <button type="button" class="clinical-ledger-toggle-btn" onclick="toggleClinicalLedgerDrawer('${a.id}')" aria-expanded="false" aria-controls="ledger-drawer-${a.id}" aria-label="Buka rincian pemeriksaan">
+                <span class="clinical-ledger-toggle-label">Rincian</span>
+                <svg class="clinical-ledger-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="clinical-ledger-drawer" id="ledger-drawer-${a.id}" hidden>
+            <div class="clinical-ledger-drawer-grid">
+              <div class="clinical-drawer-cell">
+                <span class="clinical-drawer-label">Dibuat di Sistem</span>
+                <p class="clinical-drawer-value">${formatDateShort(a.created_at)}</p>
+              </div>
+              <div class="clinical-drawer-cell">
+                <span class="clinical-drawer-label">Keluhan Pasien</span>
+                <p class="clinical-drawer-value">${escapeHtml(a.complaint || 'Pemeriksaan rutin berkala.')}</p>
+              </div>
+              <div class="clinical-drawer-cell">
+                <span class="clinical-drawer-label">${noteLabel}</span>
+                <p class="clinical-drawer-value">${escapeHtml(noteValue)}</p>
+              </div>
+              <div class="clinical-drawer-cell">
+                <span class="clinical-drawer-label">Lokasi Poliklinik</span>
+                <p class="clinical-drawer-value">${escapeHtml(poliRoom)}</p>
+              </div>
+              <div class="clinical-drawer-cell">
+                <span class="clinical-drawer-label">Jenis Kunjungan</span>
+                <p class="clinical-drawer-value">${visitType}</p>
+              </div>
+            </div>
+          </div>
+        </article>
+      `;
+    });
+
+    html += `
+        </div>
+      </div>
+    `;
+  });
+
+  cardsContainer.innerHTML = html;
+
+  if (paginationNav) {
+    if (filteredHistoryRecords.length > HISTORY_PAGE_SIZE) {
+      paginationNav.style.display = 'flex';
+      if (pageIndicator) pageIndicator.textContent = `Halaman ${currentHistoryPage} dari ${totalPages}`;
+      if (prevBtn) prevBtn.disabled = currentHistoryPage <= 1;
+      if (nextBtn) nextBtn.disabled = currentHistoryPage >= totalPages;
+    } else {
+      paginationNav.style.display = 'none';
+    }
+  }
+}
+
+window.renderHistoryCurrentPage = renderHistoryCurrentPage;
 window.filterAndRenderHistory = filterAndRenderHistory;
 window.populateYearDropdown = populateYearDropdown;
 
@@ -1862,32 +2235,45 @@ async function loadExaminationHistory() {
   if (!cardsContainer && !tableBody) return;
 
   try {
-    const res = await api.request('/riwayat-pemeriksaan', { priority: 'high' });
-    const rawItems = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
-    const deletedIds = getDeletedHistoryIds();
-    const items = rawItems.filter(it => !deletedIds.includes(String(it.id)));
-    examinationHistoryData = items;
+    const [scheduledRes, historyRes] = await Promise.all([
+      api.request('/janji-temu', { priority: 'high' }).catch(() => ({ data: [] })),
+      api.request('/riwayat-pemeriksaan', { priority: 'high' }).catch(() => ({ data: [] })),
+    ]);
 
-    const countEl = document.getElementById('totalRecordsCount');
-    if (countEl) countEl.textContent = items.length;
+    const scheduled = (Array.isArray(scheduledRes) ? scheduledRes : (Array.isArray(scheduledRes?.data) ? scheduledRes.data : [])).map(item => ({
+      ...item,
+      status: item.status || 'terjadwal'
+    }));
 
-    populateYearDropdown(items);
+    const history = (Array.isArray(historyRes) ? historyRes : (Array.isArray(historyRes?.data) ? historyRes.data : [])).filter(item => item.status !== 'terjadwal');
 
+    upcomingAppointmentsData = scheduled;
+    historicalRecordsData = history.sort((a, b) => {
+      const dateA = `${a.appointment_date || ''} ${a.appointment_time || ''}`;
+      const dateB = `${b.appointment_date || ''} ${b.appointment_time || ''}`;
+      return dateB.localeCompare(dateA);
+    });
+
+    renderUpcomingFocusCard(upcomingAppointmentsData);
+    updateStatusFilterCounts(historicalRecordsData);
+    populateYearDropdown(historicalRecordsData);
+
+    currentHistoryPage = 1;
     if (cardsContainer) {
-      renderHistoryCards(items);
+      filterAndRenderHistory();
     }
 
     if (tableBody) {
-      if (items.length === 0) {
+      if (historicalRecordsData.length === 0) {
         tableBody.innerHTML = '<tr><td colspan="5" class="text-muted text-center" style="padding: var(--space-6);">Belum ada pemeriksaan yang selesai.</td></tr>';
       } else {
-        tableBody.innerHTML = items.map(a => `
+        tableBody.innerHTML = historicalRecordsData.map(a => `
           <tr>
             <td><strong>${escapeHtml(api.formatDate(a.appointment_date))}</strong></td>
             <td>${escapeHtml(a.polyclinic?.name || '-')}</td>
             <td>${escapeHtml(a.doctor?.name || '-')}</td>
             <td>${escapeHtml(a.complaint || '-')}</td>
-            <td>${escapeHtml(a.doctor_notes || 'Tidak ada catatan khusus dari dokter.')}</td>
+            <td>${escapeHtml(a.doctor_notes || 'Tidak ada catatan.')}</td>
           </tr>
         `).join('');
       }
@@ -2518,13 +2904,19 @@ function openBookingSuccessModal(appointment, fallbackForm) {
 
   modal.classList.add('is-open');
   modal.setAttribute('aria-hidden', 'false');
+  document.body.classList.add('modal-open');
+  document.documentElement.classList.add('modal-open');
   document.body.style.overflow = 'hidden';
+  document.documentElement.style.overflow = 'hidden';
 
   const closeBtn = document.getElementById('closeSuccessModalBtn');
   const handleClose = () => {
     modal.classList.remove('is-open');
     modal.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('modal-open');
+    document.documentElement.classList.remove('modal-open');
     document.body.style.overflow = '';
+    document.documentElement.style.overflow = '';
   };
 
   if (closeBtn) {

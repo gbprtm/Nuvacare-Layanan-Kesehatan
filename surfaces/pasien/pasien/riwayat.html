@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#F8FAFC">
-  <title>Riwayat Pemeriksaan - Nuvacare</title>
+  <title>Riwayat &amp; Jadwal Pemeriksaan - Nuvacare</title>
   <script src="/js/theme.js"></script>
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
@@ -53,8 +53,9 @@
           <li><a href="/pasien/riwayat.html" class="patient-nav-link active" aria-current="page">RIWAYAT</a></li>
         </ul>
 
-        <div class="patient-nav-auth">
-          <button type="button" class="patient-theme-toggle" data-theme-toggle aria-label="Ganti ke tema gelap" title="Ganti tema">
+                <div class="patient-nav-auth">
+          <button type="button" id="logoutBtn" class="patient-nav-logout-btn" title="Keluar dari akun">KELUAR</button>
+          <button type="button" class="patient-theme-toggle" data-theme-toggle aria-label="Ganti tema" title="Ganti tema">
             <svg class="theme-icon theme-icon--sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <circle cx="12" cy="12" r="4"></circle>
               <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
@@ -63,10 +64,8 @@
               <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
             </svg>
           </button>
-          <button type="button" id="logoutBtn" class="patient-nav-link" style="background: none; border: none; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer;">KELUAR</button>
-          <a href="/pasien/profil.html" class="patient-pill-cta">
+          <a href="/pasien/profil.html" class="patient-profile-pill" title="Profil Pasien">
             <span id="navUserName">Profil</span>
-            <span class="patient-arrow" aria-hidden="true">&#x2197;</span>
           </a>
         </div>
       </div>
@@ -182,66 +181,98 @@
     </nav>
 
     <div class="medical-history-header">
-      <h1 class="medical-history-title">Riwayat Pemeriksaan</h1>
-      <p class="medical-history-sub">Catatan pemeriksaan selesai dan janji temu yang dibatalkan.</p>
+      <h1 class="medical-history-title">Riwayat &amp; Jadwal Pemeriksaan</h1>
+      <p class="medical-history-sub">Catatan rekam medis kunjungan selesai dan jadwal konsultasi klinik Anda.</p>
     </div>
 
-    <!-- Search & Filter Bar -->
-    <div class="medical-search-bar" role="search" aria-label="Pencarian rekam medis">
-      <div class="medical-search-input-wrap">
-        <span class="medical-search-icon" aria-hidden="true">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="11" cy="11" r="8"></circle>
-            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-          </svg>
-        </span>
-        <input type="search" id="medicalSearchInput" class="medical-search-input" placeholder="Cari dokter, poli, atau catatan..." aria-label="Cari riwayat pemeriksaan">
-      </div>
-      <div class="medical-filter-dropdown-wrap">
-        <label for="medicalYearSelect" class="sr-only">Filter Tahun</label>
-        <div class="medical-select-container">
-          <span class="medical-select-icon-left" aria-hidden="true">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-              <line x1="16" y1="2" x2="16" y2="6"></line>
-              <line x1="8" y1="2" x2="8" y2="6"></line>
-              <line x1="3" y1="10" x2="21" y2="10"></line>
-            </svg>
-          </span>
-          <select id="medicalYearSelect" class="medical-year-select" aria-label="Pilih tahun riwayat pemeriksaan">
-            <option value="all">Semua Tahun</option>
-            <option value="2026">Tahun 2026</option>
-            <option value="2025">Tahun 2025</option>
-          </select>
-          <span class="medical-select-arrow" aria-hidden="true">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="6 9 12 15 18 9"></polyline>
-            </svg>
-          </span>
-        </div>
-      </div>
-    </div>
-
-    <div id="medicalStatusFilters" class="medical-filter-chips medical-history-status-filters" role="group" aria-label="Filter status riwayat">
-      <button type="button" class="medical-filter-chip is-active" data-status="all" aria-pressed="true">Semua</button>
-      <button type="button" class="medical-filter-chip" data-status="selesai" aria-pressed="false">Selesai</button>
-      <button type="button" class="medical-filter-chip" data-status="dibatalkan" aria-pressed="false">Dibatalkan</button>
-    </div>
-
-    <!-- Container Kartu Riwayat Pemeriksaan -->
-    <section id="historyCardsContainer" class="medical-history-list" aria-live="polite" aria-label="Daftar riwayat pemeriksaan">
-      <div class="medical-empty-card">
-        <p class="text-muted" style="margin: 0;">Memuat riwayat pemeriksaan...</p>
-      </div>
+    <!-- 1. Jadwal Kunjungan Mendatang (Timeline Split Top Focus) -->
+    <section id="upcomingScheduleSection" class="upcoming-focus-section" aria-label="Jadwal pemeriksaan mendatang" style="display: none;">
+      <!-- Konten dinamis jadwal aktif mendatang dimasukkan lewat JS -->
     </section>
 
-    <!-- Load More Button -->
-    <button type="button" id="loadMoreHistoryBtn" class="medical-load-more" style="display: none;">
-      <span>Muat Riwayat Pemeriksaan Sebelumnya</span>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <polyline points="6 9 12 15 18 9"></polyline>
-      </svg>
-    </button>
+    <!-- 2. Arsip Riwayat Kunjungan Lampau -->
+    <section class="medical-archive-section" aria-label="Arsip riwayat pemeriksaan">
+      <div class="archive-section-header">
+        <h2 class="archive-section-title">Arsip Riwayat Kunjungan</h2>
+        <span class="archive-section-counter" id="archiveTotalCount">0 riwayat</span>
+      </div>
+
+      <!-- Search & Filter Bar -->
+      <div class="medical-search-bar" role="search" aria-label="Pencarian rekam medis">
+        <div class="medical-search-input-wrap">
+          <span class="medical-search-icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+          </span>
+          <input type="search" id="medicalSearchInput" class="medical-search-input" placeholder="Cari dokter, poli, keluhan, atau diagnosis..." aria-label="Cari riwayat pemeriksaan">
+        </div>
+        <div class="medical-filter-dropdown-wrap">
+          <label for="medicalYearSelect" class="sr-only">Filter Tahun</label>
+          <div class="medical-select-container">
+            <span class="medical-select-icon-left" aria-hidden="true">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+              </svg>
+            </span>
+            <select id="medicalYearSelect" class="medical-year-select" aria-label="Pilih tahun riwayat pemeriksaan">
+              <option value="all">Semua Tahun</option>
+              <option value="2026">Tahun 2026</option>
+              <option value="2025">Tahun 2025</option>
+            </select>
+            <span class="medical-select-arrow" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Filter Status Riwayat: Semua, Selesai, Dibatalkan -->
+      <div id="medicalStatusFilters" class="medical-filter-chips medical-history-status-filters" role="group" aria-label="Filter status riwayat pemeriksaan">
+        <button type="button" class="medical-filter-chip is-active" data-status="all" aria-pressed="true">
+          <span>Semua Status</span>
+          <span class="medical-filter-count" id="countAll">0</span>
+        </button>
+        <button type="button" class="medical-filter-chip" data-status="selesai" aria-pressed="false">
+          <span>Selesai</span>
+          <span class="medical-filter-count" id="countSelesai">0</span>
+        </button>
+        <button type="button" class="medical-filter-chip" data-status="dibatalkan" aria-pressed="false">
+          <span>Dibatalkan</span>
+          <span class="medical-filter-count" id="countDibatalkan">0</span>
+        </button>
+      </div>
+
+      <!-- Container Timeline Ledger Riwayat (Dikelompokkan per Bulan/Tahun) -->
+      <div id="historyCardsContainer" class="clinical-timeline-container" aria-live="polite" aria-label="Daftar riwayat pemeriksaan">
+        <div class="medical-empty-card">
+          <p class="text-muted" style="margin: 0;">Memuat riwayat pemeriksaan...</p>
+        </div>
+      </div>
+
+      <!-- Paginasi Ramping (Pagination 5-6 item per halaman) -->
+      <nav id="historyPagination" class="clinical-pagination-nav" aria-label="Navigasi halaman riwayat" style="display: none;">
+        <button type="button" id="prevPageBtn" class="clinical-page-btn" aria-label="Halaman sebelumnya">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="15 18 9 12 15 6"></polyline>
+          </svg>
+          <span>Sebelumnya</span>
+        </button>
+        <span class="clinical-page-indicator" id="pageIndicator" aria-live="polite">Halaman 1 dari 1</span>
+        <button type="button" id="nextPageBtn" class="clinical-page-btn" aria-label="Halaman berikutnya">
+          <span>Berikutnya</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </button>
+      </nav>
+    </section>
   </main>
 
   <!-- Footer Nuvacare (Selaras dengan Halaman Utama) -->
@@ -314,28 +345,6 @@
           </div>
         </div>
         <button type="button" class="profile-btn-cancel" id="closeModalQrBottomBtn" style="width: 100%;">Tutup</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal Konfirmasi Hapus Riwayat -->
-  <div id="modalConfirmDeleteHistory" class="medical-modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modalDeleteTitle">
-    <div class="medical-modal-dialog" style="max-width: 440px;">
-      <div class="medical-modal-header">
-        <div>
-          <h3 class="medical-modal-title" id="modalDeleteTitle" style="color: #991B1B;">Hapus Riwayat Pemeriksaan</h3>
-          <p class="medical-modal-subtitle">Konfirmasi tindakan penghapusan</p>
-        </div>
-        <button type="button" class="medical-modal-close" onclick="closeDeleteHistoryModal()" aria-label="Tutup modal">&times;</button>
-      </div>
-      <div class="medical-modal-body">
-        <p style="font-size: 14px; line-height: 1.6; color: #475569; margin: 0 0 20px 0;">
-          Apakah Anda yakin ingin menghapus catatan riwayat pemeriksaan ini dari tampilan akun Anda?
-        </p>
-        <div style="display: flex; gap: 10px; justify-content: flex-end;">
-          <button type="button" class="profile-btn-cancel" onclick="closeDeleteHistoryModal()">Batal</button>
-          <button type="button" class="btn btn-pill-danger" id="btnExecuteDeleteHistory" onclick="executeDeleteHistory()" style="background: #DC2626; color: #FFFFFF; border: none; padding: 0 20px; height: 42px; border-radius: 9999px; font-weight: 600; cursor: pointer;">Hapus Riwayat</button>
-        </div>
       </div>
     </div>
   </div>

@@ -58,26 +58,19 @@
           <li><a href="/pasien/riwayat.html" class="patient-nav-link">RIWAYAT</a></li>
         </ul>
 
-        <div class="patient-nav-auth">
-          <button type="button" class="patient-theme-toggle" data-theme-toggle aria-label="Ganti ke tema gelap"
-            title="Ganti tema">
-            <svg class="theme-icon theme-icon--sun" width="18" height="18" viewBox="0 0 24 24" fill="none"
-              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <div class="patient-nav-auth">
+          <button type="button" id="logoutBtn" class="patient-nav-logout-btn" title="Keluar dari akun">KELUAR</button>
+          <button type="button" class="patient-theme-toggle" data-theme-toggle aria-label="Ganti tema" title="Ganti tema">
+            <svg class="theme-icon theme-icon--sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <circle cx="12" cy="12" r="4"></circle>
-              <path
-                d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41">
-              </path>
+              <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
             </svg>
-            <svg class="theme-icon theme-icon--moon" width="18" height="18" viewBox="0 0 24 24" fill="none"
-              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <svg class="theme-icon theme-icon--moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
             </svg>
           </button>
-          <button type="button" id="logoutBtn" class="patient-nav-link"
-            style="background: none; border: none; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer;">KELUAR</button>
-          <a href="/pasien/profil.html" class="patient-pill-cta">
+          <a href="/pasien/profil.html" class="patient-profile-pill" title="Profil Pasien">
             <span id="navUserName">Profil</span>
-            <span class="patient-arrow" aria-hidden="true">&#x2197;</span>
           </a>
         </div>
       </div>
@@ -195,13 +188,22 @@
 
   <main id="main-content" class="container booking-container">
     <div class="booking-page-header">
-      <nav class="booking-breadcrumb" aria-label="Breadcrumb">
-        <a href="/index.html">Beranda</a>
-        <span class="breadcrumb-sep" aria-hidden="true">&rsaquo;</span>
-        <a href="/index.html#poliklinik">Poliklinik</a>
-        <span class="breadcrumb-sep" aria-hidden="true">&rsaquo;</span>
-        <span aria-current="page" class="breadcrumb-current">Buat Janji Temu</span>
-      </nav>
+      <div class="booking-header-top-row">
+        <a href="/index.html" class="booking-back-btn" id="pageBackBtn" onclick="if (window.history.length > 1) { window.history.back(); return false; }" title="Kembali ke halaman sebelumnya">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <line x1="19" y1="12" x2="5" y2="12"></line>
+            <polyline points="12 19 5 12 12 5"></polyline>
+          </svg>
+          <span>Kembali</span>
+        </a>
+        <nav class="booking-breadcrumb" aria-label="Breadcrumb">
+          <a href="/index.html">Beranda</a>
+          <span class="breadcrumb-sep" aria-hidden="true">&rsaquo;</span>
+          <a href="/index.html#poliklinik">Poliklinik</a>
+          <span class="breadcrumb-sep" aria-hidden="true">&rsaquo;</span>
+          <span aria-current="page" class="breadcrumb-current">Buat Janji Temu</span>
+        </nav>
+      </div>
       <div class="booking-header-copy">
         <h1 class="page-title">Buat Janji Temu Poliklinik</h1>
         <p class="booking-page-subtitle">Pilih poliklinik, dokter, tanggal, dan jam kunjungan.</p>
@@ -629,25 +631,28 @@
 
       <div id="patientAppointmentsAlert" class="alert" role="status" aria-live="polite"></div>
 
-      <div class="appt-table-wrap">
-        <table class="appt-minimal-table">
-          <thead>
-            <tr>
-              <th scope="col">Jadwal</th>
-              <th scope="col">Layanan</th>
-              <th scope="col" class="appt-col-notes">Keluhan &amp; Catatan</th>
-              <th scope="col">Status</th>
-              <th scope="col" class="appt-col-actions">Aksi</th>
-            </tr>
-          </thead>
-          <tbody id="appointmentTableBody" aria-live="polite">
-            <tr>
-              <td colspan="5" class="text-muted text-center" style="padding: var(--space-6);">Memuat daftar janji
-                temu...</td>
-            </tr>
-          </tbody>
-        </table>
+      <div id="patientAppointmentsContainer" class="clinical-timeline-container" aria-live="polite">
+        <div class="medical-empty-card">
+          <p class="text-muted text-center" style="margin: 0;">Memuat daftar janji temu...</p>
+        </div>
       </div>
+
+      <!-- Paginasi Ramping Janji Temu Aktif (Sesuai Desain Riwayat) -->
+      <nav id="patientAppointmentsPagination" class="clinical-pagination-nav" aria-label="Navigasi halaman janji temu" style="display: none;">
+        <button type="button" id="prevApptPageBtn" class="clinical-page-btn" aria-label="Halaman sebelumnya">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="15 18 9 12 15 6"></polyline>
+          </svg>
+          <span>Sebelumnya</span>
+        </button>
+        <span class="clinical-page-indicator" id="apptPageIndicator" aria-live="polite">Halaman 1 dari 1</span>
+        <button type="button" id="nextApptPageBtn" class="clinical-page-btn" aria-label="Halaman berikutnya">
+          <span>Berikutnya</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </button>
+      </nav>
     </section>
   </main>
 
