@@ -2068,8 +2068,11 @@ window.openAuditLogModal = openAuditLogModal;
 window.closeAuditLogModal = closeAuditLogModal;
 
 /* Master Data & Akun Dokter */
+let editingScheduleDates = [];
+
 async function initMasterData() {
   initDoctorAccountModal();
+  initDoctorScheduleModal();
 
   const practiceSelect = document.getElementById('masterFilterPractice');
   const accountSelect = document.getElementById('masterFilterAccount');
@@ -2287,6 +2290,11 @@ function renderFilteredMasterData() {
             ? `<button type="button" class="btn btn-secondary btn-sm btn-touch" onclick="toggleDoctorAccountAccess(${merged.id}, ${!merged.isAccessEnabled})">${merged.isAccessEnabled ? 'Nonaktifkan Akses' : 'Aktifkan Akses'}</button>`
             : `<button type="button" class="btn btn-primary btn-sm btn-touch" onclick="openDoctorAccountModal(${merged.id}, '${escapeJsString(merged.name)}')">Buat Akun</button>`;
 
+          const availableDates = Array.isArray(merged.available_dates) ? merged.available_dates : null;
+          const scheduleSummary = availableDates === null
+            ? 'Reguler (Senin s.d. Sabtu)'
+            : (availableDates.length > 0 ? `Terbatas: ${availableDates.join(', ')}` : 'Belum ada tanggal tersedia');
+
           return `
             <li class="master-doctor-item">
               <div>
@@ -2297,9 +2305,10 @@ function renderFilteredMasterData() {
                   </span>
                   ${accountBadgeHtml}
                 </div>
-                ${merged.accountEmail ? `<div class="text-muted text-xs">${escapeHtml(merged.accountEmail)}</div>` : ''}
+                <div class="text-muted text-xs">${escapeHtml(scheduleSummary)}${merged.accountEmail ? ` • ${escapeHtml(merged.accountEmail)}` : ''}</div>
               </div>
               <div class="master-doctor-item__actions">
+                <button type="button" class="btn btn-secondary btn-sm btn-touch" onclick="openDoctorScheduleModal(${merged.id}, '${escapeJsString(merged.name)}')">Atur Tanggal</button>
                 <button type="button" class="btn btn-secondary btn-sm btn-touch" onclick="toggleDoctorStatus(${merged.id}, ${!merged.is_active})">
                   ${merged.is_active ? 'Nonaktifkan' : 'Aktifkan'}
                 </button>
@@ -2503,6 +2512,113 @@ async function toggleDoctorStatus(doctorId, isActive) {
   }
 }
 
+function renderDoctorScheduleChips() {
+  const listEl = document.getElementById('docScheduleDatesList');
+  if (!listEl) return;
+  if (editingScheduleDates.length === 0) {
+    listEl.innerHTML = '<span class="text-muted text-xs">Belum ada tanggal dipilih.</span>';
+    return;
+  }
+  listEl.innerHTML = editingScheduleDates.map((d) => `
+    <button type="button" class="medical-filter-chip is-active" data-remove-schedule-date="${escapeHtml(d)}" title="Hapus tanggal ${escapeHtml(d)}">
+      <span>${escapeHtml(d)}</span>
+      <span aria-hidden="true">&times;</span>
+    </button>
+  `).join('');
+
+  listEl.querySelectorAll('[data-remove-schedule-date]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const target = btn.getAttribute('data-remove-schedule-date');
+      editingScheduleDates = editingScheduleDates.filter((d) => d !== target);
+      renderDoctorScheduleChips();
+    });
+  });
+}
+
+function initDoctorScheduleModal() {
+  const modal = document.getElementById('doctorScheduleModal');
+  const form = document.getElementById('docScheduleForm');
+  const modeSelect = document.getElementById('docScheduleMode');
+  const customWrap = document.getElementById('docScheduleCustomWrap');
+  const addInput = document.getElementById('docScheduleAddDate');
+  const addBtn = document.getElementById('docScheduleAddDateBtn');
+  if (!modal || !form) return;
+
+  if (modeSelect && customWrap) {
+    modeSelect.addEventListener('change', () => {
+      customWrap.hidden = modeSelect.value !== 'custom';
+    });
+  }
+
+  if (addBtn && addInput) {
+    addBtn.addEventListener('click', () => {
+      const val = (addInput.value || '').trim();
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(val)) return;
+      if (!editingScheduleDates.includes(val)) {
+        editingScheduleDates = [...editingScheduleDates, val].sort();
+        renderDoctorScheduleChips();
+      }
+      addInput.value = '';
+    });
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    api.hideAlert('docScheduleAlert');
+    const doctorId = document.getElementById('docScheduleDoctorId')?.value;
+    const submitBtn = document.getElementById('docScheduleSubmitBtn');
+    const mode = modeSelect ? modeSelect.value : 'regular';
+    const available_dates = mode === 'custom' ? editingScheduleDates.slice() : null;
+
+    try {
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Menyimpan…';
+      }
+      const res = await api.request(`/admin/dokter/${doctorId}/jadwal`, {
+        method: 'PATCH',
+        body: JSON.stringify({ available_dates })
+      });
+      hideAdminModal(modal);
+      api.showAlert('masterListAlert', res.message || 'Jadwal tanggal dokter diperbarui.', 'success');
+      await loadMasterDataList();
+    } catch (err) {
+      api.showAlert('docScheduleAlert', err.message || 'Gagal menyimpan jadwal tanggal dokter.', 'danger');
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Simpan Jadwal';
+      }
+    }
+  });
+}
+
+function openDoctorScheduleModal(doctorId, doctorName = '') {
+  const modal = document.getElementById('doctorScheduleModal');
+  if (!modal) return;
+  api.hideAlert('docScheduleAlert');
+
+  const doc = adminDoctorsCatalog.find((d) => Number(d.id) === Number(doctorId));
+  const existingDates = Array.isArray(doc?.available_dates) ? doc.available_dates.slice() : null;
+  editingScheduleDates = existingDates ? existingDates.slice().sort() : [];
+
+  const idInput = document.getElementById('docScheduleDoctorId');
+  const labelEl = document.getElementById('docScheduleDoctorLabel');
+  const modeSelect = document.getElementById('docScheduleMode');
+  const customWrap = document.getElementById('docScheduleCustomWrap');
+  const addInput = document.getElementById('docScheduleAddDate');
+
+  if (idInput) idInput.value = String(doctorId);
+  if (labelEl) labelEl.textContent = doctorName ? `Dokter: ${doctorName}` : `Dokter #${doctorId}`;
+  if (modeSelect) modeSelect.value = existingDates === null ? 'regular' : 'custom';
+  if (customWrap) customWrap.hidden = existingDates === null;
+  if (addInput) addInput.value = '';
+
+  renderDoctorScheduleChips();
+  showAdminModal(modal, modeSelect);
+}
+
+window.openDoctorScheduleModal = openDoctorScheduleModal;
 window.toggleDoctorStatus = toggleDoctorStatus;
 window.openDoctorAccountModal = openDoctorAccountModal;
 window.closeDoctorAccountModal = closeDoctorAccountModal;

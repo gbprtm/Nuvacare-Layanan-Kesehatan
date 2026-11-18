@@ -30,10 +30,9 @@ class Polyclinic extends Model
 
     public function getRoomLabelAttribute(): string
     {
-        $floor = (($this->id % 3) ?: 3);
         $roomNum = 100 + $this->id;
 
-        return "Lt. {$floor} • Ruang {$roomNum}";
+        return "Gedung Utama • Ruang {$roomNum}";
     }
 
     public function getScheduleLabelAttribute(): string

@@ -8,7 +8,6 @@ use App\Models\Doctor;
 use App\Models\Polyclinic;
 use App\Models\StatusChangeLog;
 use App\Models\User;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
@@ -32,26 +31,20 @@ class AppointmentAndAdminApiTest extends TestCase
             return;
         }
 
-        DB::transaction(function () use ($ids): void {
-            if (DB::getDriverName() === 'pgsql') {
-                DB::statement('SET LOCAL search_path TO klinik, public');
-            }
-
-            $requestIds = CancellationRequest::whereIn('appointment_id', $ids)->pluck('id')->all();
-            if (! empty($requestIds)) {
-                StatusChangeLog::where('subject_type', StatusChangeLog::SUBJECT_CANCELLATION_REQUEST)
-                    ->whereIn('subject_id', $requestIds)
-                    ->delete();
-
-                CancellationRequest::whereIn('id', $requestIds)->delete();
-            }
-
-            StatusChangeLog::where('subject_type', StatusChangeLog::SUBJECT_APPOINTMENT)
-                ->whereIn('subject_id', $ids)
+        $requestIds = CancellationRequest::whereIn('appointment_id', $ids)->pluck('id')->all();
+        if (! empty($requestIds)) {
+            StatusChangeLog::where('subject_type', StatusChangeLog::SUBJECT_CANCELLATION_REQUEST)
+                ->whereIn('subject_id', $requestIds)
                 ->delete();
 
-            Appointment::whereIn('id', $ids)->delete();
-        });
+            CancellationRequest::whereIn('id', $requestIds)->delete();
+        }
+
+        StatusChangeLog::where('subject_type', StatusChangeLog::SUBJECT_APPOINTMENT)
+            ->whereIn('subject_id', $ids)
+            ->delete();
+
+        Appointment::whereIn('id', $ids)->delete();
     }
 
     private function cleanupDoctorDateAppointments(int $doctorId, string $date): void
@@ -512,5 +505,117 @@ class AppointmentAndAdminApiTest extends TestCase
 
         Doctor::whereHas('polyclinic', fn ($q) => $q->where('name', 'like', 'Poli Rehabilitasi %'))->delete();
         Polyclinic::where('name', 'like', 'Poli Rehabilitasi %')->delete();
+    }
+
+    public function test_polyclinic_room_label_focuses_on_gedung_without_floor_label(): void
+    {
+        $patient = User::where('role', 'pasien')->firstOrFail();
+        $token = $patient->createToken('patient-token', ['surface:pasien'])->plainTextToken;
+
+        $masterPoliResponse = $this->withHeader('Authorization', 'Bearer '.$token)
+            ->getJson('/api/master-poli');
+
+        $masterPoliResponse->assertStatus(200);
+        $polyclinics = $masterPoliResponse->json('data');
+        $this->assertIsArray($polyclinics);
+        $this->assertNotEmpty($polyclinics);
+
+        foreach ($polyclinics as $polyclinic) {
+            $roomLabel = (string) ($polyclinic['room_label'] ?? '');
+            $this->assertStringStartsWith('Gedung Utama', $roomLabel);
+            $this->assertStringNotContainsStringIgnoringCase('lt.', $roomLabel);
+            $this->assertStringNotContainsStringIgnoringCase('lantai', $roomLabel);
+        }
+
+        $modelPolyclinic = Polyclinic::orderBy('id')->firstOrFail();
+        $this->assertSame('Gedung Utama • Ruang '.(100 + $modelPolyclinic->id), $modelPolyclinic->room_label);
+    }
+
+    public function test_doctor_available_dates_restricts_slots_and_patient_booking(): void
+    {
+        $admin = User::where('role', 'admin')->firstOrFail();
+        $adminToken = $admin->createToken('admin-token', ['surface:staf'])->plainTextToken;
+
+        $patient = User::where('email', 'pasien1@klinik.local')->first()
+            ?? User::where('role', 'pasien')->firstOrFail();
+        $patientToken = $patient->createToken('patient-token', ['surface:pasien'])->plainTextToken;
+
+        $poli = Polyclinic::orderBy('id')->firstOrFail();
+        $allowedDate1 = now()->addDays(19)->format('Y-m-d');
+        $allowedDate2 = now()->addDays(20)->format('Y-m-d');
+        $blockedDate = now()->addDays(21)->format('Y-m-d');
+
+        $createdDocRes = $this->withHeader('Authorization', 'Bearer '.$adminToken)
+            ->postJson('/api/admin/dokter', [
+                'polyclinic_id' => $poli->id,
+                'name' => 'dr. Jadwal Terbatas '.uniqid(),
+                'is_active' => true,
+            ]);
+
+        $createdDocRes->assertStatus(201);
+        $doctorId = (int) $createdDocRes->json('data.id');
+
+        try {
+            $scheduleRes = $this->withHeader('Authorization', 'Bearer '.$adminToken)
+                ->patchJson("/api/admin/dokter/{$doctorId}/jadwal", [
+                    'available_dates' => [$allowedDate2, $allowedDate1],
+                ]);
+
+            $scheduleRes->assertStatus(200)
+                ->assertJsonPath('data.available_dates', [$allowedDate1, $allowedDate2]);
+
+            $this->app['auth']->forgetGuards();
+
+            $masterRes = $this->withHeader('Authorization', 'Bearer '.$patientToken)
+                ->getJson('/api/master-poli');
+            $masterRes->assertStatus(200);
+            $matchedPoli = collect($masterRes->json('data'))->firstWhere('id', $poli->id);
+            $matchedDoc = collect($matchedPoli['doctors'] ?? [])->firstWhere('id', $doctorId);
+            $this->assertSame([$allowedDate1, $allowedDate2], $matchedDoc['available_dates'] ?? null);
+
+            $blockedSlotsRes = $this->withHeader('Authorization', 'Bearer '.$patientToken)
+                ->getJson("/api/slot-tersedia?doctor_id={$doctorId}&date={$blockedDate}");
+            $blockedSlotsRes->assertStatus(200)
+                ->assertJsonPath('date_available', false)
+                ->assertJsonPath('data', []);
+
+            $allowedSlotsRes = $this->withHeader('Authorization', 'Bearer '.$patientToken)
+                ->getJson("/api/slot-tersedia?doctor_id={$doctorId}&date={$allowedDate1}");
+            $allowedSlotsRes->assertStatus(200)
+                ->assertJsonPath('date_available', true);
+            $this->assertNotEmpty($allowedSlotsRes->json('data'));
+
+            $blockedBookRes = $this->withHeader('Authorization', 'Bearer '.$patientToken)
+                ->postJson('/api/janji-temu', [
+                    'polyclinic_id' => $poli->id,
+                    'doctor_id' => $doctorId,
+                    'appointment_date' => $blockedDate,
+                    'appointment_time' => '09:00',
+                ]);
+            $blockedBookRes->assertStatus(422)
+                ->assertJsonValidationErrors(['appointment_date']);
+
+            $allowedBookRes = $this->withHeader('Authorization', 'Bearer '.$patientToken)
+                ->postJson('/api/janji-temu', [
+                    'polyclinic_id' => $poli->id,
+                    'doctor_id' => $doctorId,
+                    'appointment_date' => $allowedDate1,
+                    'appointment_time' => '09:00',
+                ]);
+            $allowedBookRes->assertStatus(201);
+            $this->createdAppointmentIds[] = (int) $allowedBookRes->json('data.id');
+
+            $this->app['auth']->forgetGuards();
+
+            $resetRes = $this->withHeader('Authorization', 'Bearer '.$adminToken)
+                ->patchJson("/api/admin/dokter/{$doctorId}/jadwal", [
+                    'available_dates' => null,
+                ]);
+            $resetRes->assertStatus(200)
+                ->assertJsonPath('data.available_dates', null);
+        } finally {
+            Appointment::where('doctor_id', $doctorId)->delete();
+            Doctor::whereKey($doctorId)->delete();
+        }
     }
 }

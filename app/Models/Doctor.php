@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
 class Doctor extends Model
 {
@@ -18,12 +19,14 @@ class Doctor extends Model
         'polyclinic_id',
         'name',
         'is_active',
+        'available_dates',
     ];
 
     protected function casts(): array
     {
         return [
             'is_active' => 'boolean',
+            'available_dates' => 'array',
         ];
     }
 
@@ -34,6 +37,39 @@ class Doctor extends Model
     public function getScheduleLabelAttribute(): string
     {
         return '09:00 - 17:00 WIB';
+    }
+
+    /**
+     * Normalize explicit practice dates (Y-m-d), or return null for regular schedule.
+     *
+     * @return list<string>|null
+     */
+    public function normalizedAvailableDates(): ?array
+    {
+        if ($this->available_dates === null) {
+            return null;
+        }
+
+        $dates = array_values(array_unique(array_filter(array_map(
+            static fn ($date): string => trim((string) $date),
+            (array) $this->available_dates
+        ), static fn (string $date): bool => (bool) preg_match('/^\d{4}-\d{2}-\d{2}$/', $date))));
+
+        sort($dates);
+
+        return $dates;
+    }
+
+    public function isAvailableOnDate(string $date): bool
+    {
+        $configured = $this->normalizedAvailableDates();
+        if ($configured === null) {
+            return true;
+        }
+
+        $targetDate = Carbon::parse($date)->toDateString();
+
+        return in_array($targetDate, $configured, true);
     }
 
     public function user(): BelongsTo

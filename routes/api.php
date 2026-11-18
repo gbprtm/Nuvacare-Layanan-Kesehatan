@@ -68,6 +68,7 @@ Route::middleware(['surface.route:staf', 'staff.ip', 'auth:sanctum', 'surface.to
         Route::get('/dokter', [DoctorController::class, 'index']);
         Route::post('/dokter', [DoctorController::class, 'store']);
         Route::patch('/dokter/{id}', [DoctorController::class, 'updateStatus'])->whereNumber('id');
+        Route::patch('/dokter/{id}/jadwal', [DoctorController::class, 'updateAvailableDates'])->whereNumber('id');
         Route::get('/pasien', [AppointmentManagementController::class, 'patients']);
         Route::get('/slot-tambahan', [DoctorSlotApprovalController::class, 'index']);
         Route::post('/slot-tambahan/{id}/setujui', [DoctorSlotApprovalController::class, 'approve'])->whereNumber('id');

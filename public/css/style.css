@@ -1492,9 +1492,14 @@ button:disabled,
 .auth-field-label-row,
 .form-options-row {
   display: flex;
+  flex-direction: row;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
+}
+
+.form-options-row {
+  justify-content: flex-start;
 }
 
 .required-mark,
@@ -1520,6 +1525,8 @@ button:disabled,
 .form-checkbox {
   width: 18px;
   height: 18px;
+  margin: 0;
+  flex-shrink: 0;
   accent-color: var(--color-primary);
   cursor: pointer;
 }
@@ -2020,20 +2027,24 @@ tbody tr:hover,
 .booking-modal-backdrop {
   position: fixed;
   inset: 0;
+  width: 100%;
+  max-width: 100%;
   z-index: 1000;
   background-color: var(--color-backdrop);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: var(--space-4);
+  overflow-x: hidden;
   overflow-y: auto;
+  box-sizing: border-box;
 }
 
 .booking-modal-overlay {
   position: fixed;
   inset: 0;
   width: 100%;
-  width: 100vw;
+  max-width: 100%;
   height: 100%;
   height: 100dvh;
   z-index: 2000;
@@ -2044,6 +2055,7 @@ tbody tr:hover,
   align-items: center;
   justify-content: center;
   padding: var(--space-4);
+  overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
   box-sizing: border-box;
@@ -2056,6 +2068,8 @@ tbody tr:hover,
 body.modal-open,
 html.modal-open {
   overflow: hidden !important;
+  overflow-x: clip !important;
+  max-width: 100%;
   touch-action: none;
 }
 
@@ -2071,10 +2085,13 @@ html.modal-open {
 .booking-modal-card {
   position: relative;
   width: 100%;
+  min-width: 0;
   max-width: 560px;
   max-height: 90dvh;
+  overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
+  box-sizing: border-box;
   background-color: var(--color-surface);
   color: var(--color-ink);
   box-shadow: var(--shadow-lg);
@@ -2167,6 +2184,11 @@ html.modal-open {
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow: hidden;
   padding: var(--space-4);
   background-color: var(--color-surface);
   border: 1px solid var(--color-rule);
@@ -2175,9 +2197,24 @@ html.modal-open {
 
 .booking-ticket-qrcode,
 .medical-qr-box {
-  display: inline-flex;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow: hidden;
   padding: var(--space-2);
   background-color: var(--color-surface);
+  word-break: break-all;
+  overflow-wrap: anywhere;
+}
+
+.booking-ticket-qrcode svg,
+.medical-qr-box svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
 }
 
 .booking-ticket-qrcode-hint {
@@ -2624,7 +2661,7 @@ html.modal-open {
 .auth-split-card,
 .staff-login-card {
   width: 100%;
-  max-width: 580px;
+  max-width: 560px;
   background-color: var(--color-surface);
   color: var(--color-ink);
   border: 1px solid var(--color-rule);
@@ -2634,33 +2671,36 @@ html.modal-open {
 }
 
 .auth-canvas-pane,
-.staff-login-card,
-.auth-canvas-pane__inner {
+.staff-login-card {
   padding: var(--space-6);
 }
 
-.auth-stage-container {
+.auth-canvas-pane__inner {
   width: 100%;
-  max-width: 480px;
-  margin: 0 auto;
+  padding: 0;
 }
 
+.auth-stage-container,
 .auth-stage-container--register {
-  max-width: 540px;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
 }
 
 .auth-canvas-top-nav {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: var(--space-2);
+  gap: var(--space-3);
   padding-bottom: var(--space-4);
-  margin-bottom: var(--space-6);
+  margin-bottom: var(--space-5);
   border-bottom: 1px solid var(--color-rule);
 }
 
 .auth-top-back-btn {
+  grid-column: 1;
+  grid-row: 1;
+  justify-self: start;
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
@@ -2669,14 +2709,35 @@ html.modal-open {
   border: 1px solid var(--color-rule);
   background-color: var(--color-paper);
   color: var(--color-ink);
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   font-weight: 600;
+  white-space: nowrap;
+  transition: background-color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+}
+
+.auth-top-back-btn:hover {
+  background-color: var(--color-paper-2);
+  border-color: var(--color-control-border);
+  color: var(--color-ink);
+}
+
+.auth-canvas-top-nav .patient-theme-toggle {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: end;
+  width: var(--tap-min);
+  height: var(--tap-min);
+  min-width: var(--tap-min);
+  margin-left: 0 !important;
 }
 
 .auth-stage-tabs {
-  display: inline-flex;
+  grid-column: 1 / -1;
+  grid-row: 2;
+  display: flex;
   align-items: center;
   gap: var(--space-1);
+  width: 100%;
   padding: var(--space-1);
   background-color: var(--color-paper-2);
   border-radius: var(--radius-sm);
@@ -2684,7 +2745,11 @@ html.modal-open {
 }
 
 .auth-stage-tab {
-  min-height: 36px;
+  flex: 1 1 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
   padding: 0 var(--space-3);
   border-radius: var(--radius-xs);
   border: none;
@@ -2693,7 +2758,9 @@ html.modal-open {
   font-family: var(--font-body);
   font-size: 0.75rem;
   font-weight: 600;
+  white-space: nowrap;
   cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
 }
 
 .auth-stage-tab--active {
@@ -2706,7 +2773,167 @@ html.modal-open {
   display: none;
 }
 
-@media (max-width: 540px) {
+.auth-progress-counter {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: end;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-ink-2);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.auth-stage-tabs.auth-stage-progress {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 0;
+  margin: 0;
+  padding: var(--space-1) 0 0;
+  list-style: none;
+  background-color: transparent;
+  border: none;
+  border-radius: 0;
+}
+
+.auth-stage-progress__item {
+  position: relative;
+  min-width: 0;
+  list-style: none;
+}
+
+.auth-stage-progress .auth-stage-tab {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: var(--tap-min);
+  padding: var(--space-1) var(--space-2);
+  border: none;
+  border-radius: var(--radius-sm);
+  background-color: transparent;
+  color: var(--color-muted);
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.3;
+  text-align: center;
+  white-space: nowrap;
+  transition: color var(--dur-fast) var(--ease-out);
+}
+
+.auth-stage-progress .auth-stage-tab:disabled {
+  background-color: transparent;
+  opacity: 1;
+  color: var(--color-muted);
+  cursor: not-allowed;
+}
+
+.auth-stage-progress .auth-stage-tab:not(:disabled):hover {
+  color: var(--color-ink);
+}
+
+.auth-stage-progress__item:not(:first-child) .auth-stage-tab::before,
+.auth-stage-progress__item:not(:last-child) .auth-stage-tab::after {
+  content: "";
+  position: absolute;
+  top: 19px;
+  height: 2px;
+  background-color: var(--color-rule);
+  pointer-events: none;
+  transition: background-color var(--dur-fast) var(--ease-out);
+}
+
+.auth-stage-progress__item:not(:first-child) .auth-stage-tab::before {
+  left: 0;
+  right: calc(50% + 22px);
+}
+
+.auth-stage-progress__item:not(:last-child) .auth-stage-tab::after {
+  left: calc(50% + 22px);
+  right: 0;
+}
+
+.auth-stage-progress__item:not(:first-child) .auth-stage-tab--active::before,
+.auth-stage-progress__item:not(:first-child) .auth-stage-tab--completed::before,
+.auth-stage-progress__item:not(:last-child) .auth-stage-tab--completed::after {
+  background-color: var(--color-primary);
+}
+
+.auth-stage-step-dot {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  border: 1.5px solid var(--color-control-border);
+  background-color: var(--color-surface);
+  color: var(--color-muted);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  transition: background-color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+}
+
+.auth-stage-step-check {
+  display: none;
+}
+
+.auth-stage-progress .auth-stage-tab--active {
+  background-color: transparent;
+  box-shadow: none;
+  color: var(--color-ink);
+  font-weight: 700;
+}
+
+.auth-stage-progress .auth-stage-tab--active .auth-stage-step-dot {
+  border-color: var(--color-primary);
+  background-color: var(--color-primary);
+  color: var(--color-on-primary);
+  box-shadow: 0 0 0 4px var(--color-primary-soft);
+}
+
+.auth-stage-progress .auth-stage-tab--completed {
+  color: var(--color-ink-2);
+  font-weight: 600;
+}
+
+.auth-stage-progress .auth-stage-tab--completed .auth-stage-step-dot {
+  border-color: var(--color-primary);
+  background-color: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+
+.auth-stage-progress .auth-stage-tab--completed .auth-stage-step-num {
+  display: none;
+}
+
+.auth-stage-progress .auth-stage-tab--completed .auth-stage-step-check {
+  display: block;
+}
+
+@media (max-width: 560px) {
+  .auth-canvas-pane,
+  .staff-login-card {
+    padding: var(--space-4);
+  }
+
+  .auth-stage-tab {
+    padding: 0 var(--space-2);
+  }
+
+  .auth-stage-progress .auth-stage-tab {
+    padding: var(--space-1);
+  }
+
   .auth-stage-tab-full {
     display: none;
   }
@@ -2718,6 +2945,22 @@ html.modal-open {
 
 .auth-form-header {
   margin-bottom: var(--space-6);
+}
+
+.auth-form-header--centered {
+  text-align: center;
+}
+
+.auth-form-header--centered .auth-brand-badge {
+  justify-content: center;
+}
+
+.auth-form-header--centered .auth-stage-icon-badge {
+  margin-inline: auto;
+}
+
+.auth-form-header--centered .auth-form-subtitle {
+  margin-inline: auto;
 }
 
 .auth-brand-badge {
@@ -3877,8 +4120,7 @@ html.modal-open {
   color: var(--color-ink-2);
 }
 
-.summary-payment-note,
-.summary-privacy-note {
+.summary-payment-note {
   margin: 0;
   font-size: 0.75rem;
   color: var(--color-muted);
@@ -3946,6 +4188,11 @@ html.modal-open {
 }
 
 .booking-ticket-box {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow: hidden;
   padding: var(--space-4);
   border-radius: var(--radius-md);
   border: 1px solid var(--color-rule);
@@ -3959,9 +4206,15 @@ html.modal-open {
   justify-content: space-between;
   flex-wrap: wrap;
   gap: var(--space-2);
+  min-width: 0;
   padding-bottom: var(--space-3);
   margin-bottom: var(--space-3);
   border-bottom: 1px solid var(--color-rule);
+}
+
+.booking-ticket-top > div {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .booking-ticket-label {
@@ -3974,6 +4227,8 @@ html.modal-open {
 .booking-ticket-queue-badge {
   font-weight: 700;
   color: var(--color-ink);
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .booking-ticket-doctor-row {
@@ -4005,12 +4260,16 @@ html.modal-open {
   font-weight: 700;
   color: var(--color-ink);
   margin: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .booking-ticket-poli-name {
   font-size: 0.75rem;
   color: var(--color-ink-2);
   margin: var(--space-3xs) 0 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .booking-ticket-room {
@@ -4018,6 +4277,8 @@ html.modal-open {
   color: var(--color-primary);
   font-weight: 600;
   margin: var(--space-3xs) 0 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .booking-ticket-grid-2 {
@@ -4025,11 +4286,13 @@ html.modal-open {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-3);
   margin-bottom: var(--space-3);
+  min-width: 0;
 }
 
 .booking-ticket-grid-cell {
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .booking-ticket-cell-title {
@@ -4045,12 +4308,16 @@ html.modal-open {
   font-size: 0.875rem;
   font-weight: 700;
   color: var(--color-ink);
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .booking-ticket-cell-sub {
   display: block;
   font-size: 0.75rem;
   color: var(--color-ink-2);
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .booking-modal-instruction-box {
@@ -4147,7 +4414,43 @@ html.modal-open {
   justify-content: space-between;
   flex-wrap: wrap;
   gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.appt-minimal-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.appt-sort-wrap {
+  display: flex;
+  align-items: center;
+}
+
+.appt-sort-select {
+  width: auto;
+  min-width: 176px;
+  min-height: var(--control-h);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.appt-filter-chips {
   margin-bottom: var(--space-4);
+}
+
+@media (max-width: 640px) {
+  .appt-minimal-controls {
+    width: 100%;
+  }
+
+  .appt-sort-wrap,
+  .appt-sort-select {
+    flex: 1 1 180px;
+    width: 100%;
+  }
 }
 
 .appt-minimal-title {
@@ -4533,13 +4836,19 @@ html.modal-open {
   border-radius: var(--radius-sm);
   padding: var(--space-3);
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   border: 1px solid var(--color-rule);
 }
 
 .medical-modal-info-row {
   display: flex;
   justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
   gap: var(--space-3);
+  min-width: 0;
   font-size: 0.75rem;
   margin-bottom: var(--space-1);
 }
@@ -4550,12 +4859,16 @@ html.modal-open {
 
 .medical-modal-info-label {
   color: var(--color-muted);
+  flex-shrink: 0;
 }
 
 .medical-modal-info-value {
   font-weight: 600;
   color: var(--color-ink);
   text-align: right;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .medical-empty-icon {
@@ -4588,6 +4901,18 @@ html.modal-open {
 
 .medical-filter-dropdown-wrap {
   flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+  .medical-filter-dropdown-wrap {
+    flex: 1 1 150px;
+    min-width: 0;
+  }
+
+  .medical-select-container,
+  .medical-year-select {
+    width: 100%;
+  }
 }
 
 .medical-search-icon {
@@ -5273,43 +5598,89 @@ html.modal-open {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-4);
   padding: var(--space-4) 0;
   margin-top: var(--space-3);
   border-top: 1px solid var(--color-rule);
 }
 
-.clinical-page-btn {
+.segmented-pagination {
+  display: inline-flex;
+  align-items: stretch;
+  max-width: 100%;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  font-variant-numeric: tabular-nums;
+}
+
+.segmented-page-btn,
+.segmented-page-ellipsis {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-1);
-  min-height: 36px;
-  padding: 0 var(--space-4);
-  font-size: 0.8125rem;
-  font-weight: 600;
-  border-radius: var(--radius-pill);
-  border: 1px solid var(--color-control-border);
-  background-color: var(--color-paper);
-  color: var(--color-ink);
+  justify-content: center;
+  min-width: 44px;
+  min-height: var(--tap-min);
+  padding: 0 var(--space-3);
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1;
+  border: none;
+  border-right: 1px solid var(--color-rule);
+  border-radius: 0;
+  background-color: var(--color-surface);
+  color: var(--color-primary);
+  white-space: nowrap;
+}
+
+.segmented-page-btn:last-child {
+  border-right: none;
+}
+
+.segmented-page-btn {
   cursor: pointer;
-  transition: background-color var(--dur-micro) ease, border-color var(--dur-micro) ease, color var(--dur-micro) ease;
+  transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
 }
 
-.clinical-page-btn:hover:not(:disabled) {
+.segmented-page-btn:hover:not(:disabled):not(.is-active) {
   background-color: var(--color-paper-2);
-  border-color: var(--color-ink);
+  color: var(--color-primary-hover);
 }
 
-.clinical-page-btn:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
+.segmented-page-btn:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: -2px;
+  position: relative;
+  z-index: 1;
+}
+
+.segmented-page-btn.is-active {
+  background-color: var(--color-primary);
+  color: var(--color-on-primary);
+  font-weight: 700;
+}
+
+.segmented-page-btn:disabled {
+  background-color: var(--color-paper);
+  color: var(--color-muted);
   border-color: var(--color-rule);
+  opacity: 0.65;
+  cursor: not-allowed;
 }
 
-.clinical-page-indicator {
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--color-ink-2);
+.segmented-page-btn--nav {
+  padding: 0 var(--space-4);
+}
+
+.segmented-page-chevron {
+  display: none;
+}
+
+.segmented-page-ellipsis {
+  color: var(--color-muted);
+  cursor: default;
+  user-select: none;
 }
 
 /* Mobile Responsiveness (< 768px) */
@@ -5343,6 +5714,8 @@ html.modal-open {
   .clinical-ledger-date-col {
     grid-area: date;
     flex-direction: row;
+    flex-wrap: wrap;
+    min-width: 0;
     gap: var(--space-2);
     align-items: baseline;
   }
@@ -5354,10 +5727,12 @@ html.modal-open {
 
   .clinical-ledger-main-col {
     grid-area: main;
+    min-width: 0;
   }
 
   .clinical-ledger-actions-col {
     grid-area: actions;
+    flex-wrap: wrap;
     justify-content: flex-end;
     margin-top: var(--space-1);
     padding-top: var(--space-2);
@@ -5373,18 +5748,29 @@ html.modal-open {
 
   .clinical-pagination-nav {
     display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
     justify-content: center;
-    gap: var(--space-3);
+  }
+}
+
+@media (max-width: 480px) {
+  .segmented-page-btn,
+  .segmented-page-ellipsis {
+    min-width: 38px;
+    padding: 0 var(--space-2);
+    font-size: 0.8125rem;
   }
 
-  .clinical-page-btn {
-    width: auto;
-    min-height: 38px;
-    padding: 0 var(--space-4);
-    justify-content: center;
+  .segmented-page-btn--nav {
+    min-width: 44px;
+    padding: 0 var(--space-2);
+  }
+
+  .segmented-page-label {
+    display: none;
+  }
+
+  .segmented-page-chevron {
+    display: block;
   }
 }
 

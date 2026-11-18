@@ -26,13 +26,24 @@ class AppointmentController extends Controller
             'date' => ['required', 'date', 'after_or_equal:today'],
         ]);
 
+        $doctor = Doctor::findOrFail($validated['doctor_id']);
+        $targetDate = Carbon::parse((string) $validated['date'])->toDateString();
+
+        if (! $this->isDoctorAvailableOnDate($doctor, $targetDate)) {
+            return response()->json([
+                'data' => [],
+                'date_available' => false,
+                'available_dates' => $doctor->normalizedAvailableDates(),
+            ]);
+        }
+
         $allSlots = $this->resolveSlotsForDoctorDate(
             (int) $validated['doctor_id'],
-            (string) $validated['date'],
+            $targetDate,
         );
 
         $bookedTimes = Appointment::where('doctor_id', $validated['doctor_id'])
-            ->whereDate('appointment_date', $validated['date'])
+            ->whereDate('appointment_date', $targetDate)
             ->where('status', 'terjadwal')
             ->pluck('appointment_time')
             ->all();
@@ -44,6 +55,8 @@ class AppointmentController extends Controller
 
         return response()->json([
             'data' => $slots,
+            'date_available' => true,
+            'available_dates' => $doctor->normalizedAvailableDates(),
         ]);
     }
 
@@ -83,6 +96,10 @@ class AppointmentController extends Controller
             return response()->json([
                 'message' => 'Dokter yang dipilih tidak sesuai dengan poliklinik atau sedang tidak aktif.',
             ], 422);
+        }
+
+        if (! $this->isDoctorAvailableOnDate($doctor, (string) $validated['appointment_date'])) {
+            return $this->dateUnavailableResponse();
         }
 
         $allSlots = $this->resolveSlotsForDoctorDate(
@@ -303,6 +320,40 @@ class AppointmentController extends Controller
         }
 
         return $generated;
+    }
+
+    private function isDoctorAvailableOnDate(Doctor $doctor, string $date): bool
+    {
+        if (! $doctor->is_active) {
+            return false;
+        }
+
+        $targetDate = Carbon::parse($date)->toDateString();
+        if ($doctor->isAvailableOnDate($targetDate)) {
+            return true;
+        }
+
+        if (class_exists(DoctorSlotRequest::class) && Schema::hasTable('doctor_slot_requests')) {
+            return DoctorSlotRequest::query()
+                ->where('doctor_id', $doctor->id)
+                ->whereDate('schedule_date', $targetDate)
+                ->where('status', 'disetujui')
+                ->exists();
+        }
+
+        return false;
+    }
+
+    private function dateUnavailableResponse(): JsonResponse
+    {
+        $msg = 'Dokter tidak memiliki jadwal praktik pada tanggal yang dipilih. Silakan pilih tanggal praktik yang tersedia.';
+
+        return response()->json([
+            'message' => $msg,
+            'errors' => [
+                'appointment_date' => [$msg],
+            ],
+        ], 422);
     }
 
     private function slotUnavailableResponse(): JsonResponse

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Doctor;
 use App\Models\Polyclinic;
 use App\Models\User;
 use App\Models\WhatsappOtp;
@@ -549,8 +550,26 @@ class AuthController extends Controller
     public function masterPoli(): JsonResponse
     {
         $polyclinics = Polyclinic::with(['doctors' => function ($query) {
-            $query->orderBy('name', 'asc');
+            $query->with(['slotRequests' => function ($slotQuery) {
+                $slotQuery->where('status', 'disetujui')
+                    ->whereDate('schedule_date', '>=', now()->toDateString());
+            }])->orderBy('name', 'asc');
         }])->orderBy('name', 'asc')->get();
+
+        $polyclinics->each(function (Polyclinic $polyclinic): void {
+            $polyclinic->doctors->each(function (Doctor $doctor): void {
+                $configured = $doctor->normalizedAvailableDates();
+                if ($configured !== null) {
+                    $approvedDates = $doctor->slotRequests
+                        ->map(fn ($req): string => Carbon::parse($req->schedule_date)->toDateString())
+                        ->all();
+                    $merged = array_values(array_unique(array_merge($configured, $approvedDates)));
+                    sort($merged);
+                    $doctor->setAttribute('available_dates', $merged);
+                }
+                $doctor->unsetRelation('slotRequests');
+            });
+        });
 
         return response()->json([
             'data' => $polyclinics,

@@ -202,59 +202,25 @@ document.addEventListener('DOMContentLoaded', () => {
         loadPatientAppointments();
       });
     }
-    const prevApptBtn = document.getElementById('prevApptPageBtn');
-    if (prevApptBtn) {
-      prevApptBtn.addEventListener('click', () => {
-        if (currentApptPage > 1) {
-          currentApptPage--;
-          renderPatientAppointmentsTable();
-          document.getElementById('patientAppointmentsSection')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }
+    const sortSelect = document.getElementById('patientAppointmentsSort');
+    if (sortSelect) {
+      currentApptSort = sortSelect.value || 'schedule_desc';
+      sortSelect.addEventListener('change', () => {
+        currentApptSort = sortSelect.value || 'schedule_desc';
+        currentApptPage = 1;
+        renderPatientAppointmentsTable();
       });
     }
-    const nextApptBtn = document.getElementById('nextApptPageBtn');
-    if (nextApptBtn) {
-      nextApptBtn.addEventListener('click', () => {
-        const hiddenIds = getHiddenAppointmentIds();
-        const total = patientAppointmentsCache.filter(
-          a => a.status === 'terjadwal' && !hiddenIds.includes(String(a.id))
-        ).length;
-        const totalPages = Math.ceil(total / APPT_PAGE_SIZE) || 1;
-        if (currentApptPage < totalPages) {
-          currentApptPage++;
-          renderPatientAppointmentsTable();
-          document.getElementById('patientAppointmentsSection')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }
+    document.querySelectorAll('[data-appt-filter]').forEach((chip) => {
+      chip.addEventListener('click', () => {
+        setPatientAppointmentsFilter(chip.getAttribute('data-appt-filter') || 'all');
       });
-    }
+    });
     loadPatientAppointments();
   }
 
   if (document.getElementById('historyCardsContainer') || document.getElementById('historyTableBody')) {
     loadExaminationHistory();
-
-    const prevBtn = document.getElementById('prevPageBtn');
-    if (prevBtn) {
-      prevBtn.addEventListener('click', () => {
-        if (currentHistoryPage > 1) {
-          currentHistoryPage--;
-          renderHistoryCurrentPage();
-          document.getElementById('historyCardsContainer')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }
-      });
-    }
-
-    const nextBtn = document.getElementById('nextPageBtn');
-    if (nextBtn) {
-      nextBtn.addEventListener('click', () => {
-        const totalPages = Math.ceil(filteredHistoryRecords.length / HISTORY_PAGE_SIZE) || 1;
-        if (currentHistoryPage < totalPages) {
-          currentHistoryPage++;
-          renderHistoryCurrentPage();
-          document.getElementById('historyCardsContainer')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }
-      });
-    }
 
     const closeQrBtn = document.getElementById('closeModalQrBtn');
     if (closeQrBtn) closeQrBtn.addEventListener('click', closeMedicalQrModal);
@@ -278,6 +244,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const yearSelect = document.getElementById('medicalYearSelect');
     if (yearSelect) {
       yearSelect.addEventListener('change', () => {
+        currentHistoryPage = 1;
+        filterAndRenderHistory();
+      });
+    }
+
+    const historySortSelect = document.getElementById('medicalSortSelect');
+    if (historySortSelect) {
+      currentHistorySort = historySortSelect.value || 'date_desc';
+      historySortSelect.addEventListener('change', () => {
+        currentHistorySort = historySortSelect.value || 'date_desc';
         currentHistoryPage = 1;
         filterAndRenderHistory();
       });
@@ -609,7 +585,7 @@ async function initBookingPage() {
         syncPatientInfoUI(merged);
       }
     })
-    .catch(() => {});
+    .catch(() => { });
 
   // Update live reservation receipt sidebar
   const updateBookingSummary = () => {
@@ -633,7 +609,7 @@ async function initBookingPage() {
     }
     if (summaryRoom) {
       summaryRoom.textContent = poliObj
-        ? `Gedung Utama Lt. ${(poliObj.id % 3) + 1}, Ruang ${100 + poliObj.id}`
+        ? (poliObj.room_label || `Gedung Utama • Ruang ${100 + poliObj.id}`)
         : 'Gedung Utama Rawat Jalan';
     }
     if (summaryDate) {
@@ -664,6 +640,36 @@ async function initBookingPage() {
     }
 
     syncStepProgression();
+  };
+
+  const getSelectedDoctorObject = () => {
+    const docId = doctorSelect ? parseInt(doctorSelect.value, 10) : NaN;
+    if (!docId || !Array.isArray(poliData)) return null;
+    for (const poli of poliData) {
+      const found = (poli.doctors || []).find((d) => Number(d.id) === docId);
+      if (found) return found;
+    }
+    return null;
+  };
+
+  const getDoctorUpcomingAvailableDates = (doctor) => {
+    if (!doctor || !Array.isArray(doctor.available_dates)) return null;
+    return doctor.available_dates
+      .map((d) => String(d || '').trim().slice(0, 10))
+      .filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d) && d >= todayStr)
+      .filter((d, idx, arr) => arr.indexOf(d) === idx)
+      .sort();
+  };
+
+  const isDateAvailableForDoctor = (dateStr, doctor) => {
+    if (!dateStr || dateStr < todayStr) return false;
+    const dateObj = parseIsoDateLocal(dateStr);
+    const isSunday = dateObj.getDay() === 0;
+    if (doctor && Array.isArray(doctor.available_dates)) {
+      const upcoming = getDoctorUpcomingAvailableDates(doctor) || [];
+      return upcoming.includes(dateStr);
+    }
+    return !isSunday;
   };
 
   // Month Calendar Grid Renderer (Bebas Navigasi Bulan, Sinkron Jadwal Dokter)
@@ -702,6 +708,9 @@ async function initBookingPage() {
       `);
     }
 
+    const selectedDoc = getSelectedDoctorObject();
+    const hasRestrictedSchedule = Boolean(selectedDoc && Array.isArray(selectedDoc.available_dates));
+
     // Days in current month
     for (let d = 1; d <= daysInMonth; d++) {
       const dateObj = new Date(year, month, d);
@@ -710,7 +719,7 @@ async function initBookingPage() {
       const isToday = dateStr === todayStr;
       const isSunday = dayOfWeek === 0;
       const isPast = dateStr < todayStr;
-      const isAvailable = !isPast && !isSunday;
+      const isAvailable = isDateAvailableForDoctor(dateStr, selectedDoc);
       const isSelected = dateStr === selectedDateStr;
 
       if (isAvailable) {
@@ -727,10 +736,14 @@ async function initBookingPage() {
           </button>
         `);
       } else {
+        const disabledTitle = isPast
+          ? 'Tanggal sudah lewat'
+          : (hasRestrictedSchedule ? 'Dokter tidak praktik pada tanggal ini' : (isSunday ? 'Klinik Tutup (Hari Minggu)' : 'Tanggal tidak tersedia'));
+        const closedBadge = isSunday ? '<span class="calendar-day-status is-closed">Tutup</span>' : '';
         cells.push(`
-          <div class="calendar-day-cell is-disabled ${isSunday ? 'is-sunday' : ''} ${isToday ? 'is-today' : ''}" aria-disabled="true" title="${isSunday ? 'Klinik Tutup (Hari Minggu)' : 'Tanggal tidak tersedia'}">
+          <div class="calendar-day-cell is-disabled ${isSunday ? 'is-sunday' : ''} ${isToday ? 'is-today' : ''}" aria-disabled="true" title="${disabledTitle}">
             <span class="calendar-day-number">${d}</span>
-            ${isToday ? '<span class="calendar-day-badge">Hari ini</span>' : (isSunday ? '<span class="calendar-day-status is-closed">Tutup</span>' : '')}
+            ${isToday ? '<span class="calendar-day-badge">Hari ini</span>' : closedBadge}
           </div>
         `);
       }
@@ -796,6 +809,7 @@ async function initBookingPage() {
   const renderDateStrip = () => {
     if (!dateStripContainer || !dateInput) return;
     const selectedDateStr = dateInput.value || '';
+    const selectedDoc = getSelectedDoctorObject();
 
     const buttonsHtml = [];
     for (let i = 0; i < 5; i++) {
@@ -803,24 +817,26 @@ async function initBookingPage() {
       const currentObj = parseIsoDateLocal(currentStr);
       const dayShort = DAY_NAMES_SHORT[currentObj.getDay()];
       const dateNum = currentObj.getDate();
-      const isSelected = selectedDateStr ? currentStr === selectedDateStr : false;
+      const isAvailable = isDateAvailableForDoctor(currentStr, selectedDoc);
+      const isSelected = isAvailable && selectedDateStr ? currentStr === selectedDateStr : false;
 
       buttonsHtml.push(`
         <button
           type="button"
-          class="date-card-btn ${isSelected ? 'is-selected' : ''}"
+          class="date-card-btn ${isSelected ? 'is-selected' : ''} ${!isAvailable ? 'is-disabled' : ''}"
           data-date="${currentStr}"
           aria-pressed="${isSelected ? 'true' : 'false'}"
+          ${!isAvailable ? 'disabled aria-disabled="true"' : ''}
         >
           <span class="date-card-day">${dayShort}</span>
           <span class="date-card-num">${dateNum}</span>
-          <span class="date-card-status">${isSelected ? 'Terpilih' : 'Tersedia'}</span>
+          <span class="date-card-status">${!isAvailable ? 'Tutup' : (isSelected ? 'Terpilih' : 'Tersedia')}</span>
         </button>
       `);
     }
 
     dateStripContainer.innerHTML = buttonsHtml.join('');
-    dateStripContainer.querySelectorAll('.date-card-btn').forEach((btn) => {
+    dateStripContainer.querySelectorAll('.date-card-btn:not(:disabled)').forEach((btn) => {
       btn.addEventListener('click', () => {
         const targetDate = btn.getAttribute('data-date');
         if (!targetDate || !dateInput) return;
@@ -1021,8 +1037,22 @@ async function initBookingPage() {
       const isSelected = doctor.id === selectedDocId;
       const initials = getDoctorInitials(doctor.name);
       const shortPoliName = polyclinic.short_name || polyclinic.name.replace(/^Poli\s+/i, '');
-      const roomLabel = polyclinic.room_label || `Lt. ${(polyclinic.id % 3) || 3} • Ruang ${100 + polyclinic.id}`;
-      const scheduleLabel = doctor.schedule_label || polyclinic.schedule_label || '09:00 - 17:00 WIB';
+      const roomLabel = polyclinic.room_label || `Gedung Utama • Ruang ${100 + polyclinic.id}`;
+      const upcomingDates = getDoctorUpcomingAvailableDates(doctor);
+      let scheduleText = `Praktik: ${doctor.schedule_label || polyclinic.schedule_label || '09:00 - 17:00 WIB'}`;
+      if (upcomingDates !== null) {
+        if (upcomingDates.length === 0) {
+          scheduleText = 'Belum ada jadwal tanggal praktik';
+        } else if (upcomingDates.length <= 3) {
+          const formattedDates = upcomingDates.map((d) => {
+            const dt = parseIsoDateLocal(d);
+            return `${dt.getDate()} ${MONTH_NAMES_ID[dt.getMonth()].slice(0, 3)}`;
+          }).join(', ');
+          scheduleText = `Jadwal tersedia: ${formattedDates}`;
+        } else {
+          scheduleText = `Tersedia pada ${upcomingDates.length} tanggal`;
+        }
+      }
       return `
         <button
           type="button"
@@ -1039,7 +1069,7 @@ async function initBookingPage() {
             </div>
             <h3 class="doctor-card-name">${escapeHtml(doctor.name)}</h3>
             <p class="doctor-card-room">${escapeHtml(roomLabel)}</p>
-            <div class="doctor-card-schedule">Praktik: ${escapeHtml(scheduleLabel)}</div>
+            <div class="doctor-card-schedule">${escapeHtml(scheduleText)}</div>
           </div>
         </button>
       `;
@@ -1172,6 +1202,40 @@ async function initBookingPage() {
       poliSelect.appendChild(opt);
     });
 
+    const syncCalendarToSelectedDoctor = () => {
+      const selectedDoc = getSelectedDoctorObject();
+      const step2Sub = document.getElementById('step2Subtitle');
+      const upcoming = getDoctorUpcomingAvailableDates(selectedDoc);
+
+      if (step2Sub) {
+        if (selectedDoc && upcoming !== null) {
+          step2Sub.textContent = upcoming.length > 0
+            ? `Jadwal ${selectedDoc.name} tersedia pada ${upcoming.length} tanggal aktif. Tanggal lain tidak dapat dipilih.`
+            : `Belum ada tanggal praktik tersedia untuk ${selectedDoc.name}.`;
+        } else {
+          step2Sub.textContent = 'Pilih tanggal kunjungan yang tersedia';
+        }
+      }
+
+      if (dateInput && dateInput.value && !isDateAvailableForDoctor(dateInput.value, selectedDoc)) {
+        dateInput.value = '';
+        if (timeSelect) timeSelect.value = '';
+      }
+
+      if (upcoming && upcoming.length > 0) {
+        const currentMonthPrefix = `${currentCalYear}-${String(currentCalMonth + 1).padStart(2, '0')}`;
+        const hasDateInCurrentMonth = upcoming.some((d) => d.startsWith(currentMonthPrefix));
+        if (!hasDateInCurrentMonth) {
+          const firstObj = parseIsoDateLocal(upcoming[0]);
+          currentCalYear = firstObj.getFullYear();
+          currentCalMonth = firstObj.getMonth();
+        }
+      }
+
+      renderMonthCalendar(currentCalYear, currentCalMonth);
+      renderDateStrip();
+    };
+
     poliSelect.addEventListener('change', () => {
       const selectedId = parseInt(poliSelect.value, 10);
       populateDoctorSelectOptions(selectedId);
@@ -1179,6 +1243,7 @@ async function initBookingPage() {
       doctorSelect.value = '';
       if (timeSelect) timeSelect.value = '';
       renderPoliPillsAndDoctorCards();
+      syncCalendarToSelectedDoctor();
       updateBookingSummary();
       refreshAvailableSlots();
     });
@@ -1186,6 +1251,7 @@ async function initBookingPage() {
     doctorSelect.addEventListener('change', () => {
       if (timeSelect) timeSelect.value = '';
       renderPoliPillsAndDoctorCards();
+      syncCalendarToSelectedDoctor();
       updateBookingSummary();
       refreshAvailableSlots();
     });
@@ -1193,6 +1259,17 @@ async function initBookingPage() {
     if (dateInput) {
       dateInput.addEventListener('change', () => {
         const chosen = dateInput.value;
+        const selectedDoc = getSelectedDoctorObject();
+        if (chosen && !isDateAvailableForDoctor(chosen, selectedDoc)) {
+          dateInput.value = '';
+          if (timeSelect) timeSelect.value = '';
+          api.showAlert('bookingAlert', 'Dokter tidak memiliki jadwal praktik pada tanggal tersebut. Silakan pilih tanggal yang tersedia.');
+          renderMonthCalendar(currentCalYear, currentCalMonth);
+          renderDateStrip();
+          updateBookingSummary();
+          refreshAvailableSlots();
+          return;
+        }
         if (chosen) {
           const chosenObj = parseIsoDateLocal(chosen);
           currentCalYear = chosenObj.getFullYear();
@@ -1264,6 +1341,7 @@ async function initBookingPage() {
       }
 
       renderPoliPillsAndDoctorCards();
+      syncCalendarToSelectedDoctor();
       updateBookingSummary();
       refreshAvailableSlots();
 
@@ -1287,6 +1365,12 @@ async function initBookingPage() {
       if (!polyclinic_id || !doctor_id || !appointment_date || !appointment_time) {
         api.showAlert('bookingAlert', 'Pilih poliklinik, dokter, tanggal, dan jam kunjungan terlebih dahulu.');
         (!polyclinic_id ? poliSelect : !doctor_id ? doctorSelect : !appointment_date ? dateInput : timeSelect).focus();
+        return;
+      }
+
+      if (!isDateAvailableForDoctor(appointment_date, getSelectedDoctorObject())) {
+        api.showAlert('bookingAlert', 'Dokter yang dipilih tidak memiliki jadwal praktik pada tanggal tersebut. Pilih tanggal praktik yang tersedia.');
+        goToStep(2);
         return;
       }
 
@@ -1331,8 +1415,7 @@ async function initBookingPage() {
         lastLoadedSlots = [];
 
         syncPatientInfoUI(api.getUser());
-        renderMonthCalendar(currentCalYear, currentCalMonth);
-        renderDateStrip();
+        syncCalendarToSelectedDoctor();
         renderPoliPillsAndDoctorCards();
         renderTimeSlotColumns([], 'Pilih dokter dan tanggal terlebih dahulu untuk melihat jam kunjungan.');
         if (slotCountBadge) slotCountBadge.textContent = 'Pilih dokter & tanggal';
@@ -1371,8 +1454,185 @@ async function initBookingPage() {
 
 const APPT_PAGE_SIZE = 5;
 let currentApptPage = 1;
+let currentApptFilter = 'all';
+let currentApptSort = 'schedule_desc';
+let currentHistorySort = 'date_desc';
 const PATIENT_APPT_VISIBLE_LIMIT = 5;
 let patientAppointmentsCache = [];
+
+function getAppointmentCreatedMs(appt) {
+  const parsed = appt?.created_at ? Date.parse(appt.created_at) : NaN;
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
+
+function getAppointmentScheduleKey(appt) {
+  const datePart = String(appt?.appointment_date || '').trim().slice(0, 10);
+  const timePart = String(appt?.appointment_time || '').trim().slice(0, 5) || '00:00';
+  return `${datePart} ${timePart}`;
+}
+
+function compareAppointmentsByDate(a, b, direction = 'desc') {
+  const keyA = getAppointmentScheduleKey(a);
+  const keyB = getAppointmentScheduleKey(b);
+  const cmp = direction === 'asc' ? keyA.localeCompare(keyB) : keyB.localeCompare(keyA);
+  if (cmp !== 0) return cmp;
+  const createdDiff = getAppointmentCreatedMs(b) - getAppointmentCreatedMs(a);
+  if (createdDiff !== 0) return direction === 'asc' ? -createdDiff : createdDiff;
+  const idDiff = (Number(b?.id) || 0) - (Number(a?.id) || 0);
+  return direction === 'asc' ? -idDiff : idDiff;
+}
+
+function isRecentlyCreatedAppointment(appt) {
+  const createdMs = getAppointmentCreatedMs(appt);
+  if (!createdMs) return false;
+  const now = new Date();
+  const createdDate = new Date(createdMs);
+  const within24Hours = (now.getTime() - createdMs) <= 24 * 60 * 60 * 1000 && createdMs <= now.getTime() + 60000;
+  const sameLocalDay = createdDate.getFullYear() === now.getFullYear()
+    && createdDate.getMonth() === now.getMonth()
+    && createdDate.getDate() === now.getDate();
+  return within24Hours || sameLocalDay;
+}
+
+function getFilteredSortedPatientAppointments() {
+  const hiddenIds = getHiddenAppointmentIds();
+  const activePool = patientAppointmentsCache.filter(
+    a => a.status === 'terjadwal' && !hiddenIds.includes(String(a.id))
+  );
+  const recentCount = activePool.filter(isRecentlyCreatedAppointment).length;
+  const filteredPool = currentApptFilter === 'recent'
+    ? activePool.filter(isRecentlyCreatedAppointment)
+    : activePool.slice();
+
+  const visiblePool = filteredPool.sort((a, b) => {
+    if (currentApptSort === 'created_desc') {
+      return (getAppointmentCreatedMs(b) - getAppointmentCreatedMs(a)) || ((Number(b.id) || 0) - (Number(a.id) || 0));
+    }
+    if (currentApptSort === 'created_asc') {
+      return (getAppointmentCreatedMs(a) - getAppointmentCreatedMs(b)) || ((Number(a.id) || 0) - (Number(b.id) || 0));
+    }
+    if (currentApptSort === 'schedule_asc') {
+      return compareAppointmentsByDate(a, b, 'asc');
+    }
+    // Default: schedule_desc (tanggal terbaru di halaman 1, makin jauh halamannya makin lama)
+    return compareAppointmentsByDate(a, b, 'desc');
+  });
+
+  return {
+    activeCount: activePool.length,
+    recentCount,
+    visiblePool
+  };
+}
+
+function setPatientAppointmentsFilter(filterValue) {
+  currentApptFilter = filterValue === 'recent' ? 'recent' : 'all';
+  currentApptPage = 1;
+  document.querySelectorAll('[data-appt-filter]').forEach((chip) => {
+    const isSelected = chip.getAttribute('data-appt-filter') === currentApptFilter;
+    chip.classList.toggle('is-active', isSelected);
+    chip.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
+  });
+  renderPatientAppointmentsTable();
+}
+
+function buildPaginationSequence(currentPage, totalPages, isCompact) {
+  if (totalPages <= (isCompact ? 5 : 7)) {
+    return Array.from({ length: totalPages }, (_, idx) => idx + 1);
+  }
+  if (isCompact) {
+    if (currentPage <= 2) return [1, 2, '...', totalPages];
+    if (currentPage >= totalPages - 1) return [1, '...', totalPages - 1, totalPages];
+    return [1, '...', currentPage, '...', totalPages];
+  }
+  if (currentPage <= 3) return [1, 2, 3, 4, '...', totalPages];
+  if (currentPage >= totalPages - 2) {
+    return [1, '...', totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+  }
+  return [1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages];
+}
+
+function renderSegmentedPagination(navEl, { currentPage, totalPages, onPageChange }) {
+  if (!navEl) return;
+  if (totalPages <= 1) {
+    navEl.hidden = true;
+    navEl.style.display = 'none';
+    navEl.innerHTML = '';
+    return;
+  }
+
+  const isCompact = typeof window.matchMedia === 'function'
+    && window.matchMedia('(max-width: 540px)').matches;
+  const items = buildPaginationSequence(currentPage, totalPages, isCompact);
+
+  const prevChevron = '<svg class="segmented-page-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>';
+  const nextChevron = '<svg class="segmented-page-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>';
+
+  const itemButtonsHtml = items.map((entry) => {
+    if (entry === '...') {
+      return '<span class="segmented-page-ellipsis" aria-hidden="true">…</span>';
+    }
+    const isActive = entry === currentPage;
+    return `<button type="button" class="segmented-page-btn${isActive ? ' is-active' : ''}" data-page="${entry}" aria-label="Halaman ${entry}"${isActive ? ' aria-current="page"' : ''}>${entry}</button>`;
+  }).join('');
+
+  navEl.innerHTML = `
+    <div class="segmented-pagination" role="group" aria-label="Daftar halaman">
+      <button type="button" class="segmented-page-btn segmented-page-btn--nav" data-page-nav="prev" aria-label="Halaman sebelumnya"${currentPage <= 1 ? ' disabled' : ''}>
+        ${prevChevron}
+        <span class="segmented-page-label">Sebelumnya</span>
+      </button>
+      ${itemButtonsHtml}
+      <button type="button" class="segmented-page-btn segmented-page-btn--nav" data-page-nav="next" aria-label="Halaman berikutnya"${currentPage >= totalPages ? ' disabled' : ''}>
+        <span class="segmented-page-label">Berikutnya</span>
+        ${nextChevron}
+      </button>
+    </div>
+  `;
+
+  navEl.hidden = false;
+  navEl.style.display = 'flex';
+
+  navEl.querySelectorAll('[data-page]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const target = Number(btn.getAttribute('data-page'));
+      if (target >= 1 && target <= totalPages && target !== currentPage) {
+        onPageChange(target);
+      }
+    });
+  });
+
+  const prevBtn = navEl.querySelector('[data-page-nav="prev"]');
+  if (prevBtn) {
+    prevBtn.addEventListener('click', () => {
+      if (currentPage > 1) onPageChange(currentPage - 1);
+    });
+  }
+
+  const nextBtn = navEl.querySelector('[data-page-nav="next"]');
+  if (nextBtn) {
+    nextBtn.addEventListener('click', () => {
+      if (currentPage < totalPages) onPageChange(currentPage + 1);
+    });
+  }
+}
+
+if (typeof window.matchMedia === 'function') {
+  const paginationMq = window.matchMedia('(max-width: 540px)');
+  const onPaginationMqChange = () => {
+    if (document.getElementById('patientAppointmentsPagination') && patientAppointmentsCache.length > 0) {
+      renderPatientAppointmentsTable();
+    }
+    if (document.getElementById('riwayatPagination') && filteredHistoryRecords.length > 0) {
+      renderHistoryCurrentPage();
+    }
+  };
+  if (typeof paginationMq.addEventListener === 'function') {
+    paginationMq.addEventListener('change', onPaginationMqChange);
+  }
+}
+
+window.setPatientAppointmentsFilter = setPatientAppointmentsFilter;
 
 function getStoredIdList(storageKey) {
   try {
@@ -1391,7 +1651,7 @@ function appendStoredId(storageKey, id) {
       list.push(strId);
       localStorage.setItem(storageKey, JSON.stringify(list));
     }
-  } catch {}
+  } catch { }
 }
 
 function getHiddenAppointmentsStorageKey() {
@@ -1406,36 +1666,57 @@ function saveHiddenAppointmentId(id) {
   appendStoredId(getHiddenAppointmentsStorageKey(), id);
 }
 
+function formatAppointmentGroupLabel(item) {
+  if (currentApptSort === 'created_desc' || currentApptSort === 'created_asc') {
+    const createdMs = getAppointmentCreatedMs(item);
+    if (!createdMs) return 'Dibuat: Lainnya';
+    const d = new Date(createdMs);
+    const localIso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    return `Dibuat ${formatMonthYear(localIso)}`;
+  }
+  return formatMonthYear(item.appointment_date);
+}
+
 function renderPatientAppointmentsTable() {
   const container = document.getElementById('patientAppointmentsContainer');
   const tableBody = document.getElementById('appointmentTableBody');
   const subtitleEl = document.getElementById('patientAppointmentsSub');
   if (!container && !tableBody) return;
 
-  const hiddenIds = getHiddenAppointmentIds();
-  const visiblePool = patientAppointmentsCache.filter(
-    a => a.status === 'terjadwal' && !hiddenIds.includes(String(a.id))
-  ).sort((a, b) => {
-    const dateA = `${a.appointment_date || ''} ${a.appointment_time || ''}`;
-    const dateB = `${b.appointment_date || ''} ${b.appointment_time || ''}`;
-    return dateA.localeCompare(dateB);
-  });
+  const { activeCount, recentCount, visiblePool } = getFilteredSortedPatientAppointments();
+
+  const countAllEl = document.getElementById('apptFilterCountAll');
+  const countRecentEl = document.getElementById('apptFilterCountRecent');
+  if (countAllEl) countAllEl.textContent = String(activeCount);
+  if (countRecentEl) countRecentEl.textContent = String(recentCount);
 
   const quickCountEl = document.getElementById('activeApptsQuickCount');
   if (quickCountEl) {
-    quickCountEl.textContent = String(visiblePool.length);
-    quickCountEl.hidden = visiblePool.length === 0;
+    quickCountEl.textContent = String(activeCount);
+    quickCountEl.hidden = activeCount === 0;
   }
 
   if (subtitleEl) {
-    subtitleEl.textContent = visiblePool.length > 0
-      ? `Terdapat ${visiblePool.length} janji temu aktif terjadwal.`
-      : 'Pantau status kunjungan poliklinik Anda.';
+    if (activeCount === 0) {
+      subtitleEl.textContent = 'Pantau status kunjungan poliklinik Anda.';
+    } else if (currentApptFilter === 'recent') {
+      subtitleEl.textContent = `Menampilkan ${visiblePool.length} janji baru dibuat dari ${activeCount} janji aktif.`;
+    } else {
+      subtitleEl.textContent = `Terdapat ${activeCount} janji temu aktif terjadwal.`;
+    }
   }
 
   if (visiblePool.length === 0) {
     const paginationNav = document.getElementById('patientAppointmentsPagination');
-    if (paginationNav) paginationNav.style.display = 'none';
+    renderSegmentedPagination(paginationNav, { currentPage: 1, totalPages: 1, onPageChange: () => { } });
+    const isFilteredEmpty = activeCount > 0 && currentApptFilter === 'recent';
+    const emptyTitle = isFilteredEmpty ? 'Belum ada janji temu yang baru dibuat' : 'Belum ada janji temu aktif';
+    const emptySub = isFilteredEmpty
+      ? 'Belum ada janji temu yang dibuat dalam 24 jam terakhir.'
+      : 'Pilih dokter dan jadwal di atas untuk membuat janji temu baru.';
+    const emptyAction = isFilteredEmpty
+      ? '<button type="button" class="btn btn-secondary btn-sm mt-3" onclick="setPatientAppointmentsFilter(\'all\')">Tampilkan Semua</button>'
+      : '';
     const emptyHtml = `
       <div class="medical-empty-card">
         <div class="medical-empty-icon" aria-hidden="true">
@@ -1446,12 +1727,13 @@ function renderPatientAppointmentsTable() {
             <line x1="3" y1="10" x2="21" y2="10"></line>
           </svg>
         </div>
-        <h3 class="medical-empty-title">Belum ada janji temu aktif</h3>
-        <p class="medical-empty-sub">Pilih dokter dan jadwal di atas untuk membuat janji temu baru.</p>
+        <h3 class="medical-empty-title">${emptyTitle}</h3>
+        <p class="medical-empty-sub">${emptySub}</p>
+        ${emptyAction}
       </div>
     `;
     if (container) container.innerHTML = emptyHtml;
-    if (tableBody) tableBody.innerHTML = '<tr><td colspan="5" class="text-muted text-center" style="padding: var(--space-6);">Belum ada janji temu aktif.</td></tr>';
+    if (tableBody) tableBody.innerHTML = `<tr><td colspan="5" class="text-muted text-center" style="padding: var(--space-6);">${emptyTitle}.</td></tr>`;
     return;
   }
 
@@ -1467,7 +1749,7 @@ function renderPatientAppointmentsTable() {
     // Group by month
     const groupsMap = new Map();
     pageItems.forEach(item => {
-      const monthKey = formatMonthYear(item.appointment_date);
+      const monthKey = formatAppointmentGroupLabel(item);
       if (!groupsMap.has(monthKey)) groupsMap.set(monthKey, []);
       groupsMap.get(monthKey).push(item);
     });
@@ -1492,7 +1774,7 @@ function renderPatientAppointmentsTable() {
       `;
 
       groupItems.forEach(a => {
-        const poliRoom = a.polyclinic?.room || 'Gedung Rawat Jalan, Lantai 2 • Ruang Konsultasi';
+        const poliRoom = a.polyclinic?.room_label || a.polyclinic?.room || 'Gedung Utama • Ruang Konsultasi';
         const visitType = a.type === 'kontrol_rutin' ? 'Jadwal Kontrol Rutin' : 'Janji Temu Baru';
 
         html += `
@@ -1561,20 +1843,15 @@ function renderPatientAppointmentsTable() {
     container.innerHTML = html;
 
     const paginationNav = document.getElementById('patientAppointmentsPagination');
-    const pageIndicator = document.getElementById('apptPageIndicator');
-    const prevBtn = document.getElementById('prevApptPageBtn');
-    const nextBtn = document.getElementById('nextApptPageBtn');
-
-    if (paginationNav) {
-      if (visiblePool.length > APPT_PAGE_SIZE) {
-        paginationNav.style.display = 'flex';
-        if (pageIndicator) pageIndicator.textContent = `Halaman ${currentApptPage} dari ${totalApptPages}`;
-        if (prevBtn) prevBtn.disabled = currentApptPage <= 1;
-        if (nextBtn) nextBtn.disabled = currentApptPage >= totalApptPages;
-      } else {
-        paginationNav.style.display = 'none';
+    renderSegmentedPagination(paginationNav, {
+      currentPage: currentApptPage,
+      totalPages: totalApptPages,
+      onPageChange: (nextPage) => {
+        currentApptPage = nextPage;
+        renderPatientAppointmentsTable();
+        document.getElementById('patientAppointmentsSection')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       }
-    }
+    });
   }
 
   // Fallback to tableBody if present
@@ -1909,7 +2186,7 @@ function renderUpcomingFocusCard(upcomingItems) {
         <div class="upcoming-meta-grid">
           <div class="upcoming-meta-cell">
             <span class="upcoming-meta-label">Ruang Klinik</span>
-            <span class="upcoming-meta-value">${escapeHtml(nextAppt.polyclinic?.room || 'Gedung Rawat Jalan, Lantai 2')}</span>
+            <span class="upcoming-meta-value">${escapeHtml(nextAppt.polyclinic?.room_label || nextAppt.polyclinic?.room || 'Gedung Utama Rawat Jalan')}</span>
           </div>
           <div class="upcoming-meta-cell">
             <span class="upcoming-meta-label">Dibuat di Sistem</span>
@@ -1996,7 +2273,7 @@ function populateYearDropdown(items) {
 
   const currentVal = yearSelect.value || 'all';
   const yearsSet = new Set();
-  
+
   if (Array.isArray(items)) {
     items.forEach(item => {
       const year = (item.appointment_date || '').split('-')[0];
@@ -2049,17 +2326,14 @@ function filterAndRenderHistory() {
     const complaint = (item.complaint || '').toLowerCase();
     const doctorNotes = (item.doctor_notes || '').toLowerCase();
     return doctorName.includes(query) || poliName.includes(query) || complaint.includes(query) || doctorNotes.includes(query);
-  });
+  }).sort((a, b) => compareAppointmentsByDate(a, b, currentHistorySort === 'date_asc' ? 'asc' : 'desc'));
 
   renderHistoryCurrentPage();
 }
 
 function renderHistoryCurrentPage() {
   const cardsContainer = document.getElementById('historyCardsContainer');
-  const paginationNav = document.getElementById('historyPagination');
-  const pageIndicator = document.getElementById('pageIndicator');
-  const prevBtn = document.getElementById('prevPageBtn');
-  const nextBtn = document.getElementById('nextPageBtn');
+  const paginationNav = document.getElementById('riwayatPagination');
   if (!cardsContainer) return;
 
   if (filteredHistoryRecords.length === 0) {
@@ -2075,7 +2349,7 @@ function renderHistoryCurrentPage() {
         <p class="medical-empty-sub">Tidak ditemukan catatan kunjungan yang sesuai dengan filter Anda.</p>
       </div>
     `;
-    if (paginationNav) paginationNav.style.display = 'none';
+    renderSegmentedPagination(paginationNav, { currentPage: 1, totalPages: 1, onPageChange: () => { } });
     return;
   }
 
@@ -2144,7 +2418,7 @@ function renderHistoryCurrentPage() {
 
       const noteLabel = isCancelled ? 'Alasan Pembatalan' : 'Catatan Dokter';
       const noteValue = a.doctor_notes || (isCancelled ? 'Janji temu telah dibatalkan.' : 'Pemeriksaan rutin berkala.');
-      const poliRoom = a.polyclinic?.room || 'Gedung Rawat Jalan, Lantai 2 • Ruang Konsultasi';
+      const poliRoom = a.polyclinic?.room_label || a.polyclinic?.room || 'Gedung Utama • Ruang Konsultasi';
       const visitType = a.type === 'kontrol_rutin' ? 'Jadwal Kontrol Rutin' : 'Janji Temu Baru';
 
       html += `
@@ -2213,16 +2487,15 @@ function renderHistoryCurrentPage() {
 
   cardsContainer.innerHTML = html;
 
-  if (paginationNav) {
-    if (filteredHistoryRecords.length > HISTORY_PAGE_SIZE) {
-      paginationNav.style.display = 'flex';
-      if (pageIndicator) pageIndicator.textContent = `Halaman ${currentHistoryPage} dari ${totalPages}`;
-      if (prevBtn) prevBtn.disabled = currentHistoryPage <= 1;
-      if (nextBtn) nextBtn.disabled = currentHistoryPage >= totalPages;
-    } else {
-      paginationNav.style.display = 'none';
+  renderSegmentedPagination(paginationNav, {
+    currentPage: currentHistoryPage,
+    totalPages,
+    onPageChange: (nextPage) => {
+      currentHistoryPage = nextPage;
+      renderHistoryCurrentPage();
+      document.getElementById('historyCardsContainer')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
-  }
+  });
 }
 
 window.renderHistoryCurrentPage = renderHistoryCurrentPage;
@@ -2248,11 +2521,8 @@ async function loadExaminationHistory() {
     const history = (Array.isArray(historyRes) ? historyRes : (Array.isArray(historyRes?.data) ? historyRes.data : [])).filter(item => item.status !== 'terjadwal');
 
     upcomingAppointmentsData = scheduled;
-    historicalRecordsData = history.sort((a, b) => {
-      const dateA = `${a.appointment_date || ''} ${a.appointment_time || ''}`;
-      const dateB = `${b.appointment_date || ''} ${b.appointment_time || ''}`;
-      return dateB.localeCompare(dateA);
-    });
+    historicalRecordsData = history.sort((a, b) => compareAppointmentsByDate(a, b, 'desc'));
+    examinationHistoryData = historicalRecordsData;
 
     renderUpcomingFocusCard(upcomingAppointmentsData);
     updateStatusFilterCounts(historicalRecordsData);
@@ -2860,7 +3130,7 @@ function openBookingSuccessModal(appointment, fallbackForm) {
   const queueBadge = `Poli #${String(apptId % 50 || 1).padStart(2, '0')}`;
   const docName = appointment?.doctor?.name || docObj?.name || 'dr. Spesialis Nuvacare';
   const poliName = appointment?.polyclinic?.name || poliObj?.name || 'Poliklinik Nuvacare';
-  const roomName = `Gedung Utama Lt. ${(parseInt(poliId, 10) % 3) + 1} \u2022 Ruang ${100 + parseInt(poliId, 10)}`;
+  const roomName = appointment?.polyclinic?.room_label || poliObj?.room_label || `Gedung Utama \u2022 Ruang ${100 + parseInt(poliId, 10)}`;
 
   let hour = parseInt(String(timeStr).split(':')[0], 10) || 9;
   let endHour = String(hour + 1).padStart(2, '0');
@@ -2929,6 +3199,16 @@ function openBookingSuccessModal(appointment, fallbackForm) {
     }
   };
 }
+
+function openPatientTicketModal(appointmentId) {
+  const item = Array.isArray(patientAppointmentsCache)
+    ? patientAppointmentsCache.find(a => Number(a.id) === Number(appointmentId))
+    : null;
+  if (!item) return;
+  openBookingSuccessModal(item, null);
+}
+
+window.openPatientTicketModal = openPatientTicketModal;
 
 function escapeHtml(str) {
   if (!str) return '';

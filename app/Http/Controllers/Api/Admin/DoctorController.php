@@ -38,12 +38,19 @@ class DoctorController extends Controller
             'polyclinic_id' => ['required', 'exists:polyclinics,id'],
             'name' => ['required', 'string', 'max:255'],
             'is_active' => ['boolean'],
+            'available_dates' => ['nullable', 'array'],
+            'available_dates.*' => ['date_format:Y-m-d'],
         ]);
+
+        $availableDates = array_key_exists('available_dates', $validated)
+            ? $this->normalizeDateList($validated['available_dates'])
+            : null;
 
         $doctor = Doctor::create([
             'polyclinic_id' => $validated['polyclinic_id'],
             'name' => $validated['name'],
             'is_active' => $validated['is_active'] ?? true,
+            'available_dates' => $availableDates,
         ]);
 
         $doctor->load('polyclinic');
@@ -73,6 +80,33 @@ class DoctorController extends Controller
         return response()->json([
             'message' => 'Status ketersediaan dokter berhasil diperbarui',
             'data' => $doctor,
+        ]);
+    }
+
+    public function updateAvailableDates(Request $request, int $id): JsonResponse
+    {
+        Gate::authorize('dokter.kelola');
+
+        $doctor = Doctor::findOrFail($id);
+
+        $validated = $request->validate([
+            'available_dates' => ['nullable', 'array'],
+            'available_dates.*' => ['date_format:Y-m-d'],
+        ]);
+
+        $normalizedDates = $this->normalizeDateList($validated['available_dates'] ?? null);
+
+        $doctor->update([
+            'available_dates' => $normalizedDates,
+        ]);
+
+        $doctor->load(['polyclinic', 'user:id,name,email,phone_number,disabled_at']);
+
+        return response()->json([
+            'message' => $normalizedDates === null
+                ? 'Jadwal praktik dokter dikembalikan ke jadwal reguler.'
+                : 'Tanggal praktik tersedia dokter berhasil diperbarui.',
+            'data' => $this->formatAdminDoctorPayload($doctor),
         ]);
     }
 
@@ -187,6 +221,22 @@ class DoctorController extends Controller
         ]);
     }
 
+    private function normalizeDateList(?array $dates): ?array
+    {
+        if ($dates === null) {
+            return null;
+        }
+
+        $clean = array_values(array_unique(array_filter(array_map(
+            static fn ($date): string => trim((string) $date),
+            $dates
+        ), static fn (string $date): bool => $date !== '')));
+
+        sort($clean);
+
+        return $clean;
+    }
+
     private function formatAdminDoctorPayload(Doctor $doctor): array
     {
         $account = $doctor->user;
@@ -197,6 +247,7 @@ class DoctorController extends Controller
             'polyclinic_id' => $doctor->polyclinic_id,
             'name' => $doctor->name,
             'is_active' => $doctor->is_active,
+            'available_dates' => $doctor->normalizedAvailableDates(),
             'polyclinic' => $doctor->polyclinic ? [
                 'id' => $doctor->polyclinic->id,
                 'name' => $doctor->polyclinic->name,

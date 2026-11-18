@@ -231,6 +231,27 @@
             </span>
           </div>
         </div>
+        <div class="medical-filter-dropdown-wrap">
+          <label for="medicalSortSelect" class="sr-only">Urutkan Riwayat</label>
+          <div class="medical-select-container">
+            <span class="medical-select-icon-left" aria-hidden="true">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 6h18"></path>
+                <path d="M6 12h12"></path>
+                <path d="M10 18h4"></path>
+              </svg>
+            </span>
+            <select id="medicalSortSelect" class="medical-year-select" aria-label="Urutkan riwayat berdasarkan tanggal">
+              <option value="date_desc" selected>Terbaru (Tanggal)</option>
+              <option value="date_asc">Terlama (Tanggal)</option>
+            </select>
+            <span class="medical-select-arrow" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </span>
+          </div>
+        </div>
       </div>
 
       <!-- Filter Status Riwayat: Semua, Selesai, Dibatalkan -->
@@ -256,22 +277,8 @@
         </div>
       </div>
 
-      <!-- Paginasi Ramping (Pagination 5-6 item per halaman) -->
-      <nav id="historyPagination" class="clinical-pagination-nav" aria-label="Navigasi halaman riwayat" style="display: none;">
-        <button type="button" id="prevPageBtn" class="clinical-page-btn" aria-label="Halaman sebelumnya">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <polyline points="15 18 9 12 15 6"></polyline>
-          </svg>
-          <span>Sebelumnya</span>
-        </button>
-        <span class="clinical-page-indicator" id="pageIndicator" aria-live="polite">Halaman 1 dari 1</span>
-        <button type="button" id="nextPageBtn" class="clinical-page-btn" aria-label="Halaman berikutnya">
-          <span>Berikutnya</span>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <polyline points="9 18 15 12 9 6"></polyline>
-          </svg>
-        </button>
-      </nav>
+      <!-- Paginasi Bernomor -->
+      <nav id="riwayatPagination" class="clinical-pagination-nav" aria-label="Navigasi halaman riwayat" hidden></nav>
     </section>
   </main>
 

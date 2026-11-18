@@ -15,7 +15,8 @@
   <link rel="stylesheet" href="/css/style.css" fetchpriority="high">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Rethink+Sans:wght@600;700&display=swap">
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Rethink+Sans:wght@600;700&display=swap">
   <script src="/js/api.js" defer fetchpriority="high"></script>
   <script src="/js/auth.js" defer></script>
   <script type="speculationrules">
@@ -38,7 +39,7 @@
       <section class="auth-canvas-pane" aria-labelledby="loginHeading">
         <div class="auth-canvas-pane__inner">
 
-          <!-- Top Navigation & Stage Switcher (Tombol Kembali Utama Tunggal) -->
+          <!-- Top Navigation & Progress Indicator -->
           <nav class="auth-canvas-top-nav" aria-label="Navigasi tahap">
             <a href="/index.html" class="auth-top-back-btn" id="btnTopBack">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
@@ -49,46 +50,64 @@
               <span>Kembali</span>
             </a>
 
-            <!-- Tab Pills 3 Tahap (Tahap Berikutnya Disabled sampai Tahap Sebelumnya Selesai) -->
-            <div class="auth-stage-tabs" role="tablist" aria-label="Pilihan tahap autentikasi">
-              <button type="button" role="tab" id="tabBtn1" class="auth-stage-tab auth-stage-tab--active"
-                aria-selected="true" aria-controls="stagePanel1" onclick="switchAuthStage(1)">
-                <span class="auth-stage-tab-full">Tahap 1: Login</span>
-                <span class="auth-stage-tab-short">1. Login</span>
-              </button>
-              <button type="button" role="tab" id="tabBtn2" class="auth-stage-tab" aria-selected="false"
-                aria-controls="stagePanel2" disabled aria-disabled="true" onclick="switchAuthStage(2)">
-                <span class="auth-stage-tab-full">Tahap 2: Nomor WhatsApp</span>
-                <span class="auth-stage-tab-short">2. WhatsApp</span>
-              </button>
-              <button type="button" role="tab" id="tabBtn3" class="auth-stage-tab" aria-selected="false"
-                aria-controls="stagePanel3" disabled aria-disabled="true" onclick="switchAuthStage(3)">
-                <span class="auth-stage-tab-full">Tahap 3: Verifikasi OTP</span>
-                <span class="auth-stage-tab-short">3. OTP</span>
-              </button>
-            </div>
+            <span class="auth-progress-counter" id="authStageCounter" aria-live="polite">Langkah 1 dari 3</span>
 
-            <button type="button" class="patient-theme-toggle" data-theme-toggle aria-label="Ganti ke tema gelap" title="Ganti tema" style="margin-left: auto;">
-              <svg class="theme-icon theme-icon--sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <circle cx="12" cy="12" r="4"></circle>
-                <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
-              </svg>
-              <svg class="theme-icon theme-icon--moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-              </svg>
-            </button>
+            <!-- Progress Indicator 3 Tahap (Tahap Berikutnya Terkunci sampai Tahap Sebelumnya Selesai) -->
+            <ol class="auth-stage-tabs auth-stage-progress" aria-label="Progres tahapan masuk">
+              <li class="auth-stage-progress__item">
+                <button type="button" id="tabBtn1" class="auth-stage-tab auth-stage-tab--active"
+                  aria-current="step" onclick="switchAuthStage(1)">
+                  <span class="auth-stage-step-dot" aria-hidden="true">
+                    <span class="auth-stage-step-num">1</span>
+                    <svg class="auth-stage-step-check" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                  </span>
+                  <span class="auth-stage-tab-full">Login</span>
+                  <span class="auth-stage-tab-short">Login</span>
+                </button>
+              </li>
+              <li class="auth-stage-progress__item">
+                <button type="button" id="tabBtn2" class="auth-stage-tab"
+                  disabled aria-disabled="true" onclick="switchAuthStage(2)">
+                  <span class="auth-stage-step-dot" aria-hidden="true">
+                    <span class="auth-stage-step-num">2</span>
+                    <svg class="auth-stage-step-check" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                  </span>
+                  <span class="auth-stage-tab-full">Nomor WhatsApp</span>
+                  <span class="auth-stage-tab-short">WhatsApp</span>
+                </button>
+              </li>
+              <li class="auth-stage-progress__item">
+                <button type="button" id="tabBtn3" class="auth-stage-tab"
+                  disabled aria-disabled="true" onclick="switchAuthStage(3)">
+                  <span class="auth-stage-step-dot" aria-hidden="true">
+                    <span class="auth-stage-step-num">3</span>
+                    <svg class="auth-stage-step-check" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                  </span>
+                  <span class="auth-stage-tab-full">Verifikasi OTP</span>
+                  <span class="auth-stage-tab-short">OTP</span>
+                </button>
+              </li>
+            </ol>
           </nav>
 
           <!-- Konten Tahap 1: Form Login (Default & Aktif) -->
-          <div class="auth-stage-container" id="stagePanel1" role="tabpanel" aria-labelledby="tabBtn1">
+          <div class="auth-stage-container" id="stagePanel1">
 
-            <header class="auth-form-header">
+            <header class="auth-form-header auth-form-header--centered">
               <div class="auth-brand-badge">
                 <span class="brand auth-brand-logo" translate="no"><span class="brand-text">Nuvacare</span></span>
-                <p class="auth-brand-badge__sub">Website Layanan Kesehatan</p>
               </div>
               <h1 id="loginHeading" class="auth-form-title">Masuk ke Akun Pasien</h1>
-              <p class="auth-form-subtitle">Masukkan kredensial Anda untuk mengakses layanan Nuvacare.</p>
+              <p class="auth-form-subtitle">Gunakan email kamu.</p>
             </header>
 
             <div id="loginAlert" class="alert alert-danger" role="alert" aria-live="polite"></div>
@@ -188,9 +207,8 @@
           </div>
 
           <!-- Konten Tahap 2: Tautkan WhatsApp (Interaktif dengan Validasi Ketat) -->
-          <div class="auth-stage-container auth-stage-container--hidden" id="stagePanel2" role="tabpanel"
-            aria-labelledby="tabBtn2">
-            <header class="auth-form-header">
+          <div class="auth-stage-container auth-stage-container--hidden" id="stagePanel2">
+            <header class="auth-form-header auth-form-header--centered">
               <div class="auth-stage-icon-badge" aria-hidden="true">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                   stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -198,8 +216,7 @@
                 </svg>
               </div>
               <h2 class="auth-form-title">Tautkan Nomor WhatsApp</h2>
-              <p class="auth-form-subtitle">Dapatkan pengingat jadwal konsultasi dan nomor antrean poliklinik langsung
-                di pesan WhatsApp Anda.</p>
+              <p class="auth-form-subtitle">Gunakan nomor WhatsApp aktif untuk menerima kode OTP.</p>
             </header>
 
             <div id="stagePhoneAlert" class="alert alert-danger" role="alert" aria-live="polite"></div>
@@ -216,7 +233,8 @@
                   <input type="tel" id="stagePhoneInput" name="phone_number" class="form-input form-input-with-pill"
                     required inputmode="tel" autocomplete="tel" placeholder="812-xxxx-xxxx">
                 </div>
-                <p id="stagePhoneError" class="form-help-text text-xs mt-1" style="display: none; color: #DC2626; font-weight: 500;" role="alert"></p>
+                <p id="stagePhoneError" class="form-help-text text-xs mt-1"
+                  style="display: none; color: #DC2626; font-weight: 500;" role="alert"></p>
                 <p class="form-help-text text-muted text-xs mt-1">Masukkan minimal 9 hingga 13 digit angka.</p>
               </div>
 
@@ -252,9 +270,8 @@
           </div>
 
           <!-- Konten Tahap 3: Verifikasi OTP (Interaktif dengan Validasi Ketat 4 Digit) -->
-          <div class="auth-stage-container auth-stage-container--hidden" id="stagePanel3" role="tabpanel"
-            aria-labelledby="tabBtn3">
-            <header class="auth-form-header">
+          <div class="auth-stage-container auth-stage-container--hidden" id="stagePanel3">
+            <header class="auth-form-header auth-form-header--centered">
               <div class="auth-stage-icon-badge" aria-hidden="true">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                   stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -262,7 +279,7 @@
                 </svg>
               </div>
               <h2 class="auth-form-title">Verifikasi Kode OTP</h2>
-              <p class="auth-form-subtitle">Masukkan 4 digit kode keamanan yang dikirimkan ke nomor WhatsApp <strong
+              <p class="auth-form-subtitle">Masukkan 4 digit kode OTP yang dikirim ke <strong
                   id="stageOtpPhoneDisplay">+62 -</strong>.</p>
             </header>
 
@@ -383,7 +400,8 @@
           if (panel) panel.classList.remove('auth-stage-container--hidden');
           if (tabBtn) {
             tabBtn.classList.add('auth-stage-tab--active');
-            tabBtn.setAttribute('aria-selected', 'true');
+            tabBtn.classList.remove('auth-stage-tab--completed');
+            tabBtn.setAttribute('aria-current', 'step');
           }
           if (stepItem) {
             stepItem.className = 'auth-step-item auth-step-item--active';
@@ -393,7 +411,8 @@
           if (panel) panel.classList.add('auth-stage-container--hidden');
           if (tabBtn) {
             tabBtn.classList.remove('auth-stage-tab--active');
-            tabBtn.setAttribute('aria-selected', 'false');
+            tabBtn.classList.add('auth-stage-tab--completed');
+            tabBtn.removeAttribute('aria-current');
           }
           if (stepItem) {
             stepItem.className = 'auth-step-item auth-step-item--completed';
@@ -402,8 +421,8 @@
         } else {
           if (panel) panel.classList.add('auth-stage-container--hidden');
           if (tabBtn) {
-            tabBtn.classList.remove('auth-stage-tab--active');
-            tabBtn.setAttribute('aria-selected', 'false');
+            tabBtn.classList.remove('auth-stage-tab--active', 'auth-stage-tab--completed');
+            tabBtn.removeAttribute('aria-current');
           }
           if (stepItem) {
             stepItem.className = 'auth-step-item';
@@ -411,6 +430,11 @@
           }
         }
       });
+
+      const counterEl = document.getElementById('authStageCounter');
+      if (counterEl) {
+        counterEl.textContent = 'Langkah ' + stageNum + ' dari 3';
+      }
 
       const captionEl = document.getElementById('sidebarStageCaption');
       if (captionEl && captionMap[stageNum]) {
