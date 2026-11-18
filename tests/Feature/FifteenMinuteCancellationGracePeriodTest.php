@@ -94,7 +94,11 @@ class FifteenMinuteCancellationGracePeriodTest extends TestCase
         $dokterToken = $dokterUser->createToken('dokter-token', ['surface:staf'])->plainTextToken;
 
         $targetDate = '2030-06-15';
-        Appointment::where('doctor_id', $doctor->id)->whereDate('appointment_date', $targetDate)->delete();
+        $oldAppts = Appointment::where('doctor_id', $doctor->id)->whereDate('appointment_date', $targetDate)->pluck('id');
+        if ($oldAppts->isNotEmpty()) {
+            CancellationRequest::whereIn('appointment_id', $oldAppts)->delete();
+            Appointment::whereIn('id', $oldAppts)->delete();
+        }
 
         $appointment = Appointment::create([
             'user_id' => $patient->id,
@@ -161,7 +165,11 @@ class FifteenMinuteCancellationGracePeriodTest extends TestCase
         $dokterToken = $dokterUser->createToken('dokter-token', ['surface:staf'])->plainTextToken;
 
         $targetDate = '2030-06-16';
-        Appointment::where('doctor_id', $doctor->id)->whereDate('appointment_date', $targetDate)->delete();
+        $oldAppts = Appointment::where('doctor_id', $doctor->id)->whereDate('appointment_date', $targetDate)->pluck('id');
+        if ($oldAppts->isNotEmpty()) {
+            CancellationRequest::whereIn('appointment_id', $oldAppts)->delete();
+            Appointment::whereIn('id', $oldAppts)->delete();
+        }
 
         $appointment = Appointment::create([
             'user_id' => $patient->id,
@@ -205,7 +213,11 @@ class FifteenMinuteCancellationGracePeriodTest extends TestCase
         $dokterToken = $dokterUser->createToken('dokter-token', ['surface:staf'])->plainTextToken;
 
         $targetDate = '2030-06-17';
-        Appointment::whereIn('doctor_id', [$doctor1->id, $otherDoctor->id])->whereDate('appointment_date', $targetDate)->delete();
+        $oldAppts = Appointment::whereIn('doctor_id', [$doctor1->id, $otherDoctor->id])->whereDate('appointment_date', $targetDate)->pluck('id');
+        if ($oldAppts->isNotEmpty()) {
+            CancellationRequest::whereIn('appointment_id', $oldAppts)->delete();
+            Appointment::whereIn('id', $oldAppts)->delete();
+        }
 
         $otherAppointment = Appointment::create([
             'user_id' => $patient->id,
@@ -259,7 +271,11 @@ class FifteenMinuteCancellationGracePeriodTest extends TestCase
         $patient2Token = $patient2->createToken('pasien2-token', ['surface:pasien'])->plainTextToken;
 
         $targetDate = now()->addDays(18)->format('Y-m-d');
-        Appointment::where('doctor_id', $doctor->id)->whereDate('appointment_date', $targetDate)->delete();
+        $oldApptIds = Appointment::where('doctor_id', $doctor->id)->whereDate('appointment_date', $targetDate)->pluck('id');
+        if ($oldApptIds->isNotEmpty()) {
+            CancellationRequest::whereIn('appointment_id', $oldApptIds)->delete();
+            Appointment::whereIn('id', $oldApptIds)->delete();
+        }
 
         $appointment = Appointment::create([
             'user_id' => $patient1->id,
@@ -299,7 +315,8 @@ class FifteenMinuteCancellationGracePeriodTest extends TestCase
 
         $cancelRes->assertStatus(200)
             ->assertJsonPath('data.status', 'dibatalkan')
-            ->assertJsonPath('voided_requests_count', 1);
+            ->assertJsonPath('voided_requests_count', 1)
+            ->assertJsonPath('whatsapp.sent', true);
 
         $this->assertDatabaseHas('klinik.appointments', [
             'id' => $appointment->id,
@@ -330,6 +347,11 @@ class FifteenMinuteCancellationGracePeriodTest extends TestCase
         if (! empty($dokterUser->phone_number)) {
             Http::assertSent(fn ($req) => $req->url() === 'https://api.wa-gateway.test/send'
                 && str_contains((string) $req['message'], 'berstatus gugur'));
+        }
+
+        if (! empty($patient1->phone_number)) {
+            Http::assertSent(fn ($req) => $req->url() === 'https://api.wa-gateway.test/send'
+                && str_contains((string) $req['message'], 'telah berhasil dibatalkan sesuai permintaan Anda'));
         }
 
         // Re-cancelling returns 409

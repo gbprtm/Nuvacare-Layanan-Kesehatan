@@ -355,6 +355,16 @@ class WhatsAppNotificationService
         $timeFormatted = $appointment->appointment_time ?? '09:00';
         $notes = trim((string) ($appointment->doctor_notes ?? ''));
 
+        if ($reasonType === 'patient_cancelled') {
+            $text = "Halo {$patientName}, konfirmasi dari Nuvacare: Janji temu Anda di {$poliName} bersama {$doctorName} pada tanggal {$dateFormatted} pukul {$timeFormatted} WIB telah berhasil dibatalkan sesuai permintaan Anda.";
+            if ($notes !== '') {
+                $text .= " Catatan: {$notes}";
+            }
+            $text .= ' Anda dapat menjadwalkan janji temu baru kapan saja melalui website Nuvacare.';
+
+            return $text;
+        }
+
         if ($appointment->status === 'dibatalkan' || $reasonType === 'cancelled') {
             $text = "Halo {$patientName}, informasi dari Nuvacare: Janji temu Anda di {$poliName} bersama {$doctorName} pada tanggal {$dateFormatted} pukul {$timeFormatted} WIB terpaksa dibatalkan karena kendala jadwal rumah sakit.";
             if ($notes !== '') {

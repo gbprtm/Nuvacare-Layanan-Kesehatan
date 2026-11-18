@@ -85,7 +85,6 @@ class DoctorAppointmentController extends Controller
         Gate::authorize('viewAnyAsDoctor', Appointment::class);
 
         $doctor = $this->resolveDoctor($request);
-        $service->expireOverdueRequests($doctor->id);
 
         $appointment = Appointment::query()
             ->where('id', $id)

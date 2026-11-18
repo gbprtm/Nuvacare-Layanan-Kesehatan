@@ -9,6 +9,7 @@ use App\Models\DoctorSlotRequest;
 use App\Models\StatusChangeLog;
 use App\Services\CancellationRequestService;
 use App\Services\StatusChangeLogger;
+use App\Services\WhatsAppNotificationService;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -137,6 +138,7 @@ class AppointmentController extends Controller
         int $id,
         CancellationRequestService $cancellationService,
         StatusChangeLogger $logger,
+        WhatsAppNotificationService $whatsApp,
     ): JsonResponse {
         $user = $request->user();
 
@@ -221,10 +223,13 @@ class AppointmentController extends Controller
             'Janji temu dibatalkan mandiri oleh pasien.',
         );
 
+        $whatsappNotification = $whatsApp->notifyScheduleUpdate($cancelledAppointment, 'patient_cancelled');
+
         return response()->json([
             'message' => 'Janji temu berhasil dibatalkan.',
             'data' => $cancelledAppointment,
             'voided_requests_count' => $voidedCount,
+            'whatsapp' => $whatsappNotification,
         ]);
     }
 
