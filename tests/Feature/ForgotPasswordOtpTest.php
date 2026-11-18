@@ -278,4 +278,46 @@ class ForgotPasswordOtpTest extends TestCase
             $user->delete();
         }
     }
+
+    public function test_production_hides_otp_and_whatsapp_url_when_gateway_unconfigured(): void
+    {
+        config([
+            'app.env' => 'production',
+            'app.debug' => false,
+            'services.whatsapp.url' => '',
+            'services.whatsapp.token' => '',
+        ]);
+
+        $rawPhone = '0812'.random_int(10000000, 99999999);
+        $normalizedPhone = '62'.substr($rawPhone, 1);
+
+        $user = User::create([
+            'name' => 'Pasien Produksi OTP',
+            'email' => 'pasien_prod_'.uniqid().'@example.com',
+            'password' => Hash::make('Password123!'),
+            'role' => 'pasien',
+            'phone_number' => $normalizedPhone,
+            'phone_verified_at' => now(),
+        ]);
+
+        try {
+            $res = $this->postJson('/api/auth/forgot-password/send-otp', [
+                'identifier' => $user->email,
+            ]);
+
+            $res->assertStatus(503);
+            $this->assertNull($res->json('data.whatsapp_url'));
+            $this->assertNull($res->json('data.debug_otp'));
+
+            // Un-sent OTP must be cleaned up so user is not locked by cooldown
+            $this->assertDatabaseMissing('whatsapp_otps', [
+                'phone_number' => $normalizedPhone,
+                'purpose' => 'reset_password',
+            ]);
+        } finally {
+            WhatsappOtp::where('phone_number', $normalizedPhone)->delete();
+            $user->tokens()->delete();
+            $user->delete();
+        }
+    }
 }

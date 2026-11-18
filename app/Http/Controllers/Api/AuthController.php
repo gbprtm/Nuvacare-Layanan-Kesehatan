@@ -55,7 +55,9 @@ class AuthController extends Controller
                 'clinic_name' => 'Nuvacare',
                 'description' => 'Layanan kesehatan terpercaya untuk Anda dan keluarga dengan dokter spesialis profesional.',
                 'address' => 'Jl. Kesehatan Raya No. 45, Jakarta Pusat',
-                'contact' => '+62 21 555-0199',
+                'clinic_address' => 'Jl. Kesehatan Raya No. 45, Jakarta Pusat',
+                'contact' => '081371484278',
+                'clinic_contact' => '081371484278',
                 'google_client_id' => config('services.google.client_id'),
                 'polyclinics' => $polyclinics,
             ],
@@ -141,20 +143,14 @@ class AuthController extends Controller
 
         $dispatch = $whatsApp->sendOtp($normalizedPhone, $otpCode, 'register');
 
-        $isDev = app()->isLocal() || (bool) config('app.debug');
-
-        return response()->json([
-            'message' => 'Kode OTP 4 digit telah dikirim ke nomor WhatsApp Anda.',
-            'data' => [
-                'phone_number' => $normalizedPhone,
-                'masked_phone' => $this->maskPhone($normalizedPhone),
-                'expires_in' => self::OTP_TTL_MINUTES * 60,
-                'resend_in' => self::OTP_COOLDOWN_SECONDS,
-                'sent_via_gateway' => $dispatch['sent'],
-                'whatsapp_url' => $dispatch['whatsapp_url'] ?? null,
-                'debug_otp' => $isDev ? $otpCode : null,
-            ],
-        ]);
+        return $this->buildOtpDispatchResponse(
+            purpose: 'register',
+            normalizedPhone: $normalizedPhone,
+            maskedPhone: $this->maskPhone($normalizedPhone),
+            otpCode: $otpCode,
+            dispatch: $dispatch,
+            successMessage: 'Kode OTP 4 digit telah dikirim ke nomor WhatsApp Anda.',
+        );
     }
 
     public function verifyRegisterOtp(Request $request, WhatsAppNotificationService $whatsApp): JsonResponse
@@ -467,20 +463,14 @@ class AuthController extends Controller
 
         $dispatch = $whatsApp->sendOtp($normalizedPhone, $otpCode, 'verify_phone');
 
-        $isDev = app()->isLocal() || (bool) config('app.debug');
-
-        return response()->json([
-            'message' => 'Kode OTP verifikasi telah dikirim ke WhatsApp Anda.',
-            'data' => [
-                'phone_number' => $normalizedPhone,
-                'masked_phone' => $this->maskPhone($normalizedPhone),
-                'expires_in' => self::OTP_TTL_MINUTES * 60,
-                'resend_in' => self::OTP_COOLDOWN_SECONDS,
-                'sent_via_gateway' => $dispatch['sent'],
-                'whatsapp_url' => $dispatch['whatsapp_url'] ?? null,
-                'debug_otp' => $isDev ? $otpCode : null,
-            ],
-        ]);
+        return $this->buildOtpDispatchResponse(
+            purpose: 'verify_phone',
+            normalizedPhone: $normalizedPhone,
+            maskedPhone: $this->maskPhone($normalizedPhone),
+            otpCode: $otpCode,
+            dispatch: $dispatch,
+            successMessage: 'Kode OTP verifikasi telah dikirim ke WhatsApp Anda.',
+        );
     }
 
     public function verifyPhoneOtp(Request $request, WhatsAppNotificationService $whatsApp): JsonResponse
@@ -651,17 +641,46 @@ class AuthController extends Controller
 
         $dispatch = $whatsApp->sendOtp($normalizedUserPhone, $otpCode, 'reset_password');
 
+        return $this->buildOtpDispatchResponse(
+            purpose: 'reset_password',
+            normalizedPhone: $normalizedUserPhone,
+            maskedPhone: $this->maskPhone($userPhone),
+            otpCode: $otpCode,
+            dispatch: $dispatch,
+            successMessage: 'Kode OTP 4 digit untuk pemulihan kata sandi telah dikirim ke nomor WhatsApp Anda.',
+        );
+    }
+
+    private function buildOtpDispatchResponse(
+        string $purpose,
+        string $normalizedPhone,
+        string $maskedPhone,
+        string $otpCode,
+        array $dispatch,
+        string $successMessage,
+    ): JsonResponse {
         $isDev = app()->isLocal() || (bool) config('app.debug');
+        $sent = (bool) ($dispatch['sent'] ?? false);
+
+        if (! $isDev && ! $sent) {
+            WhatsappOtp::where('phone_number', $normalizedPhone)
+                ->where('purpose', $purpose)
+                ->delete();
+
+            return response()->json([
+                'message' => 'Layanan pengiriman OTP WhatsApp sedang tidak tersedia atau belum terkonfigurasi. Pastikan WA_API_URL dan WA_API_TOKEN aktif pada server deploy.',
+            ], 503);
+        }
 
         return response()->json([
-            'message' => 'Kode OTP 4 digit untuk pemulihan kata sandi telah dikirim ke nomor WhatsApp Anda.',
+            'message' => $successMessage,
             'data' => [
-                'phone_number' => $normalizedUserPhone,
-                'masked_phone' => $this->maskPhone($userPhone),
+                'phone_number' => $normalizedPhone,
+                'masked_phone' => $maskedPhone,
                 'expires_in' => self::OTP_TTL_MINUTES * 60,
                 'resend_in' => self::OTP_COOLDOWN_SECONDS,
-                'sent_via_gateway' => $dispatch['sent'],
-                'whatsapp_url' => $dispatch['whatsapp_url'] ?? null,
+                'sent_via_gateway' => $sent,
+                'whatsapp_url' => $isDev ? ($dispatch['whatsapp_url'] ?? null) : null,
                 'debug_otp' => $isDev ? $otpCode : null,
             ],
         ]);

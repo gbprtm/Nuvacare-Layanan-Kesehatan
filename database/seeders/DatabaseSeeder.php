@@ -19,7 +19,7 @@ class DatabaseSeeder extends Seeder
                 'name' => 'Admin Klinik',
                 'password' => Hash::make('AdminKlinik2026!'),
                 'role' => 'admin',
-                'phone_number' => '081122334455',
+                'phone_number' => '081371484278',
                 'birth_date' => '1985-01-01',
                 'address' => 'Klinik Sehat',
             ]

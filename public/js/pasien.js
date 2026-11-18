@@ -2516,7 +2516,7 @@ async function loadExaminationHistory() {
 const controlScheduleState = {
   items: [],
   filter: 'all',
-  clinicWhatsappDigits: '6281123456789',
+  clinicWhatsappDigits: '6281371484278',
   activeModal: null,
   lastModalTrigger: null,
   initialized: false,
@@ -2971,17 +2971,21 @@ function bindControlScheduleInteractions() {
 
 async function loadControlClinicInfo() {
   try {
-    const info = await api.request('/public-info');
-    if (info?.clinic_address) {
+    const res = await api.request('/public-info');
+    const info = res?.data || res || {};
+    const clinicAddress = info.clinic_address || info.address;
+    const clinicContact = info.clinic_contact || info.contact;
+
+    if (clinicAddress) {
       const footerAddr = document.getElementById('footerClinicAddress');
-      if (footerAddr) footerAddr.textContent = info.clinic_address;
+      if (footerAddr) footerAddr.textContent = clinicAddress;
     }
 
-    if (info?.clinic_contact) {
+    if (clinicContact) {
       const footerContact = document.getElementById('footerClinicContact');
-      if (footerContact) footerContact.textContent = info.clinic_contact;
+      if (footerContact) footerContact.textContent = clinicContact;
 
-      const rawDigits = String(info.clinic_contact).replace(/[^0-9]/g, '');
+      const rawDigits = String(clinicContact).replace(/[^0-9]/g, '');
       const waDigits = rawDigits.startsWith('0') ? `62${rawDigits.slice(1)}` : rawDigits;
       if (waDigits.length >= 8) {
         controlScheduleState.clinicWhatsappDigits = waDigits;

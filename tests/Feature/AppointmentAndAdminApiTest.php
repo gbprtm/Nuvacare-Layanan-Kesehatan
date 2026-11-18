@@ -8,6 +8,7 @@ use App\Models\Doctor;
 use App\Models\Polyclinic;
 use App\Models\StatusChangeLog;
 use App\Models\User;
+use App\Services\WhatsAppNotificationService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
@@ -66,7 +67,8 @@ class AppointmentAndAdminApiTest extends TestCase
 
     public function test_patient_can_create_appointment(): void
     {
-        $patient = User::where('role', 'pasien')->first();
+        $patient = User::where('email', 'pasien1@klinik.local')->first()
+            ?? User::where('role', 'pasien')->orderBy('id')->firstOrFail();
         $token = $patient->createToken('patient-token')->plainTextToken;
 
         $doctor = Doctor::where('is_active', true)->first();
@@ -105,6 +107,15 @@ class AppointmentAndAdminApiTest extends TestCase
 
     public function test_available_slots_and_double_booking_prevention(): void
     {
+        Http::fake([
+            'https://api.wa-gateway.test/*' => Http::response(['status' => true], 200),
+        ]);
+
+        config([
+            'services.whatsapp.url' => 'https://api.wa-gateway.test/send',
+            'services.whatsapp.token' => 'test-wa-token',
+        ]);
+
         $patient1 = User::where('email', 'pasien1@klinik.local')->first();
         $patient2 = User::where('email', 'pasien2@klinik.local')->first();
         $admin = User::where('role', 'admin')->first();
@@ -260,7 +271,8 @@ class AppointmentAndAdminApiTest extends TestCase
         $admin = User::where('role', 'admin')->first();
         $adminToken = $admin->createToken('admin-token')->plainTextToken;
 
-        $patient = User::where('role', 'pasien')->first();
+        $patient = User::where('email', 'pasien1@klinik.local')->first()
+            ?? User::where('role', 'pasien')->orderBy('id')->firstOrFail();
         $patientToken = $patient->createToken('patient-token')->plainTextToken;
 
         $doctor = Doctor::first();
@@ -294,7 +306,8 @@ class AppointmentAndAdminApiTest extends TestCase
 
     public function test_patient_can_list_own_appointments_including_cancelled_notes(): void
     {
-        $patient = User::where('role', 'pasien')->first();
+        $patient = User::where('email', 'pasien1@klinik.local')->first()
+            ?? User::where('role', 'pasien')->orderBy('id')->firstOrFail();
         $token = $patient->createToken('patient-token')->plainTextToken;
 
         $response = $this->withHeader('Authorization', 'Bearer '.$token)
@@ -319,7 +332,8 @@ class AppointmentAndAdminApiTest extends TestCase
 
     public function test_patient_cannot_access_admin_endpoints(): void
     {
-        $patient = User::where('role', 'pasien')->first();
+        $patient = User::where('email', 'pasien1@klinik.local')->first()
+            ?? User::where('role', 'pasien')->orderBy('id')->firstOrFail();
         $token = $patient->createToken('patient-token')->plainTextToken;
 
         $response = $this->withHeader('Authorization', 'Bearer '.$token)
@@ -384,10 +398,20 @@ class AppointmentAndAdminApiTest extends TestCase
 
     public function test_admin_can_update_appointment_status_and_notes(): void
     {
+        Http::fake([
+            'https://api.wa-gateway.test/*' => Http::response(['status' => true], 200),
+        ]);
+
+        config([
+            'services.whatsapp.url' => 'https://api.wa-gateway.test/send',
+            'services.whatsapp.token' => 'test-wa-token',
+        ]);
+
         $admin = User::where('role', 'admin')->first();
         $token = $admin->createToken('admin-token', ['surface:staf'])->plainTextToken;
 
-        $patient = User::where('role', 'pasien')->first();
+        $patient = User::where('email', 'pasien1@klinik.local')->first()
+            ?? User::where('role', 'pasien')->orderBy('id')->firstOrFail();
         $doctor = Doctor::where('is_active', true)
             ->whereNotNull('user_id')
             ->whereHas('user', fn ($q) => $q->whereNull('disabled_at'))
@@ -528,7 +552,8 @@ class AppointmentAndAdminApiTest extends TestCase
 
     public function test_polyclinic_room_label_focuses_on_gedung_without_floor_label(): void
     {
-        $patient = User::where('role', 'pasien')->firstOrFail();
+        $patient = User::where('email', 'pasien1@klinik.local')->first()
+            ?? User::where('role', 'pasien')->orderBy('id')->firstOrFail();
         $token = $patient->createToken('patient-token', ['surface:pasien'])->plainTextToken;
 
         $masterPoliResponse = $this->withHeader('Authorization', 'Bearer '.$token)
@@ -699,5 +724,33 @@ class AppointmentAndAdminApiTest extends TestCase
                 User::whereKey($doctorUser->id)->delete();
             });
         }
+    }
+
+    public function test_testing_environment_blocks_live_whatsapp_gateway_by_default(): void
+    {
+        $this->assertSame('', (string) config('services.whatsapp.url'));
+        $this->assertSame('', (string) config('services.whatsapp.token'));
+
+        $patient = User::where('email', 'pasien1@klinik.local')->first()
+            ?? User::where('role', 'pasien')->orderBy('id')->firstOrFail();
+
+        $doctor = Doctor::where('is_active', true)->firstOrFail();
+        $appointment = Appointment::create([
+            'user_id' => $patient->id,
+            'polyclinic_id' => $doctor->polyclinic_id,
+            'doctor_id' => $doctor->id,
+            'appointment_date' => now()->addDays(22)->format('Y-m-d'),
+            'appointment_time' => '10:00',
+            'type' => 'janji_baru',
+            'status' => 'selesai',
+            'doctor_notes' => 'Uji pencegahan pengiriman WA langsung.',
+        ]);
+        $this->createdAppointmentIds[] = $appointment->id;
+
+        $service = app(WhatsAppNotificationService::class);
+        $result = $service->notifyScheduleUpdate($appointment, 'update');
+
+        $this->assertFalse($result['sent']);
+        Http::assertNothingSent();
     }
 }
