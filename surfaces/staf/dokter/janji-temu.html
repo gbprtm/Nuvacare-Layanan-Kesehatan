@@ -113,6 +113,17 @@
               </svg>
               <span>Slot Tambahan</span>
             </button>
+            <button type="button" role="tab" id="tabBtnPracticeSchedule" class="portal-tab-btn"
+              data-view="practiceSchedule" aria-selected="false" aria-controls="viewPracticeSchedule">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+                <polyline points="9 16 11 18 15 14"></polyline>
+              </svg>
+              <span>Jadwal Praktik</span>
+            </button>
           </div>
         </nav>
 
@@ -137,6 +148,7 @@
         <div class="staff-sidebar__section staff-sidebar__shortcuts">
           <p class="staff-sidebar__label">Pintasan praktik</p>
           <div class="staff-sidebar__nav">
+            <button type="button" id="openPracticeScheduleBtn" class="staff-shortcut-btn">+ Atur jadwal praktik</button>
             <button type="button" id="openBatchCancelBtn" class="staff-shortcut-btn">+ Ajukan cuti terjadwal</button>
             <button type="button" id="openSlotRequestBtn" class="staff-shortcut-btn">+ Ajukan slot tambahan</button>
           </div>
@@ -250,6 +262,10 @@
                 Pilih salah satu janji temu untuk melihat rincian.
               </div>
 
+              <div id="detailLoading" class="text-sm text-muted" hidden>
+                Memuat rincian janji temu…
+              </div>
+
               <div id="detailContent" hidden>
                 <dl class="detail-kv-list">
                   <div class="detail-kv-row">
@@ -275,6 +291,14 @@
                   <div class="detail-kv-row">
                     <dt class="detail-kv-label">Status Janji</dt>
                     <dd id="detailStatus" class="detail-kv-value">-</dd>
+                  </div>
+                  <div class="detail-kv-row">
+                    <dt class="detail-kv-label">Keluhan Pasien</dt>
+                    <dd id="detailComplaint" class="detail-kv-value">-</dd>
+                  </div>
+                  <div class="detail-kv-row" id="detailDoctorNotesRow" hidden>
+                    <dt class="detail-kv-label">Catatan Dokter</dt>
+                    <dd id="detailDoctorNotes" class="detail-kv-value">-</dd>
                   </div>
                 </dl>
 
@@ -392,6 +416,60 @@
           <div id="doctorRequestsCards" class="mobile-card-list mt-4" aria-live="polite"></div>
         </div>
       </section>
+
+      <section id="viewPracticeSchedule" role="tabpanel" aria-labelledby="tabBtnPracticeSchedule" hidden>
+        <div class="card">
+          <div class="portal-toolbar mb-4">
+            <div>
+              <h2 class="card-title mb-1">Jadwal Praktik Saya</h2>
+              <p class="text-sm text-muted" style="margin: 0;">Tentukan tanggal praktik yang tersedia bagi pasien untuk membuat janji temu. Tanggal di luar daftar ini tidak dapat dipilih pasien.</p>
+            </div>
+            <button type="button" id="docReloadPracticeScheduleBtn" class="btn btn-secondary btn-touch">Muat ulang</button>
+          </div>
+
+          <div id="docScheduleAlert" class="alert" role="status" aria-live="polite"></div>
+
+          <div class="grid-2 mb-4">
+            <div class="form-group">
+              <label class="form-label" for="docPracticeRangeStart">Dari Tanggal</label>
+              <input type="date" id="docPracticeRangeStart" class="form-input">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="docPracticeRangeEnd">Sampai Tanggal</label>
+              <input type="date" id="docPracticeRangeEnd" class="form-input">
+            </div>
+          </div>
+
+          <div class="flex-between mb-6">
+            <label for="docPracticeIncludeSunday" class="checkbox-inline">
+              <input type="checkbox" id="docPracticeIncludeSunday" class="form-checkbox">
+              <span>Sertakan hari Minggu</span>
+            </label>
+            <button type="button" id="docAddRangeBtn" class="btn btn-secondary btn-touch">Tambahkan Rentang Tanggal</button>
+          </div>
+
+          <div class="form-group mb-6">
+            <label class="form-label" for="docPracticeSingleDate">Atau Tambah Satu Tanggal Spesifik</label>
+            <div class="flex-gap">
+              <input type="date" id="docPracticeSingleDate" class="form-input" style="max-width: 240px;">
+              <button type="button" id="docAddSingleDateBtn" class="btn btn-secondary btn-touch">Tambah Tanggal</button>
+            </div>
+          </div>
+
+          <div class="mb-6">
+            <div class="flex-between mb-2">
+              <span id="docPracticeCountText" class="form-label" style="margin: 0;">Tanggal Praktik Aktif (0)</span>
+              <button type="button" id="docClearPracticeDatesBtn" class="btn btn-ghost btn-sm btn-touch" hidden>Hapus Semua</button>
+            </div>
+            <div id="docPracticeDatesList" class="medical-filter-chips" aria-live="polite"></div>
+          </div>
+
+          <div class="flex-between">
+            <span class="text-xs text-muted">Perubahan jadwal langsung berlaku pada kalender pemesanan pasien setelah disimpan.</span>
+            <button type="button" id="docSavePracticeScheduleBtn" class="btn btn-primary btn-touch">Simpan Jadwal Praktik</button>
+          </div>
+        </div>
+      </section>
       </main>
     </div>
   </div>
@@ -427,6 +505,14 @@
         <li class="patient-drawer__item">
           <button type="button" id="drawerTabSlotRequests" class="patient-drawer__link" data-drawer-doc-tab="slotRequests">
             <span>Slot Tambahan</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+          </button>
+        </li>
+        <li class="patient-drawer__item">
+          <button type="button" id="drawerTabPracticeSchedule" class="patient-drawer__link" data-drawer-doc-tab="practiceSchedule">
+            <span>Jadwal Praktik</span>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
               <polyline points="9 18 15 12 9 6"></polyline>
             </svg>

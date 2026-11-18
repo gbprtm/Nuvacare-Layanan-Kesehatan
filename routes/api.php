@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\Admin\PolyclinicController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\Doctor\CancellationRequestController as DoctorCancellationRequestController;
 use App\Http\Controllers\Api\Doctor\DoctorAppointmentController;
+use App\Http\Controllers\Api\Doctor\DoctorScheduleController;
 use App\Http\Controllers\Api\Doctor\DoctorSlotRequestController;
 use App\Http\Controllers\Api\Patient\AppointmentController;
 use App\Http\Controllers\Api\Patient\ControlScheduleController;
@@ -68,7 +69,6 @@ Route::middleware(['surface.route:staf', 'staff.ip', 'auth:sanctum', 'surface.to
         Route::get('/dokter', [DoctorController::class, 'index']);
         Route::post('/dokter', [DoctorController::class, 'store']);
         Route::patch('/dokter/{id}', [DoctorController::class, 'updateStatus'])->whereNumber('id');
-        Route::patch('/dokter/{id}/jadwal', [DoctorController::class, 'updateAvailableDates'])->whereNumber('id');
         Route::get('/pasien', [AppointmentManagementController::class, 'patients']);
         Route::get('/slot-tambahan', [DoctorSlotApprovalController::class, 'index']);
         Route::post('/slot-tambahan/{id}/setujui', [DoctorSlotApprovalController::class, 'approve'])->whereNumber('id');
@@ -103,4 +103,7 @@ Route::middleware(['surface.route:staf', 'staff.ip', 'feature:doctor_portal', 'a
 
         Route::get('/slot-tambahan', [DoctorSlotRequestController::class, 'index']);
         Route::post('/slot-tambahan', [DoctorSlotRequestController::class, 'store']);
+
+        Route::get('/jadwal', [DoctorScheduleController::class, 'show']);
+        Route::patch('/jadwal', [DoctorScheduleController::class, 'update']);
     });

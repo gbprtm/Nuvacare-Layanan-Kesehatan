@@ -8,6 +8,7 @@ use App\Models\Doctor;
 use App\Models\Polyclinic;
 use App\Models\StatusChangeLog;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
@@ -31,20 +32,26 @@ class AppointmentAndAdminApiTest extends TestCase
             return;
         }
 
-        $requestIds = CancellationRequest::whereIn('appointment_id', $ids)->pluck('id')->all();
-        if (! empty($requestIds)) {
-            StatusChangeLog::where('subject_type', StatusChangeLog::SUBJECT_CANCELLATION_REQUEST)
-                ->whereIn('subject_id', $requestIds)
+        DB::transaction(function () use ($ids): void {
+            if (DB::getDriverName() === 'pgsql') {
+                DB::statement('SET LOCAL search_path TO klinik, public');
+            }
+
+            $requestIds = CancellationRequest::whereIn('appointment_id', $ids)->pluck('id')->all();
+            if (! empty($requestIds)) {
+                StatusChangeLog::where('subject_type', StatusChangeLog::SUBJECT_CANCELLATION_REQUEST)
+                    ->whereIn('subject_id', $requestIds)
+                    ->delete();
+
+                CancellationRequest::whereIn('id', $requestIds)->delete();
+            }
+
+            StatusChangeLog::where('subject_type', StatusChangeLog::SUBJECT_APPOINTMENT)
+                ->whereIn('subject_id', $ids)
                 ->delete();
 
-            CancellationRequest::whereIn('id', $requestIds)->delete();
-        }
-
-        StatusChangeLog::where('subject_type', StatusChangeLog::SUBJECT_APPOINTMENT)
-            ->whereIn('subject_id', $ids)
-            ->delete();
-
-        Appointment::whereIn('id', $ids)->delete();
+            Appointment::whereIn('id', $ids)->delete();
+        });
     }
 
     private function cleanupDoctorDateAppointments(int $doctorId, string $date): void
@@ -63,31 +70,37 @@ class AppointmentAndAdminApiTest extends TestCase
         $token = $patient->createToken('patient-token')->plainTextToken;
 
         $doctor = Doctor::where('is_active', true)->first();
+        $originalDates = $doctor->available_dates;
         $targetDate = now()->addDays(15)->format('Y-m-d');
+        $doctor->update(['available_dates' => [$targetDate]]);
         $this->cleanupDoctorDateAppointments($doctor->id, $targetDate);
 
-        $response = $this->withHeader('Authorization', 'Bearer '.$token)
-            ->postJson('/api/janji-temu', [
-                'polyclinic_id' => $doctor->polyclinic_id,
-                'doctor_id' => $doctor->id,
-                'appointment_date' => $targetDate,
-                'appointment_time' => '11:00',
-                'complaint' => 'Batuk dan flu sejak 3 hari lalu',
-            ]);
-
-        $response->assertStatus(201)
-            ->assertJson([
-                'message' => 'Janji temu berhasil dibuat',
-                'data' => [
-                    'user_id' => $patient->id,
+        try {
+            $response = $this->withHeader('Authorization', 'Bearer '.$token)
+                ->postJson('/api/janji-temu', [
                     'polyclinic_id' => $doctor->polyclinic_id,
                     'doctor_id' => $doctor->id,
-                    'type' => 'janji_baru',
-                    'status' => 'terjadwal',
-                ],
-            ]);
+                    'appointment_date' => $targetDate,
+                    'appointment_time' => '11:00',
+                    'complaint' => 'Batuk dan flu sejak 3 hari lalu',
+                ]);
 
-        $this->createdAppointmentIds[] = $response->json('data.id');
+            $response->assertStatus(201)
+                ->assertJson([
+                    'message' => 'Janji temu berhasil dibuat',
+                    'data' => [
+                        'user_id' => $patient->id,
+                        'polyclinic_id' => $doctor->polyclinic_id,
+                        'doctor_id' => $doctor->id,
+                        'type' => 'janji_baru',
+                        'status' => 'terjadwal',
+                    ],
+                ]);
+
+            $this->createdAppointmentIds[] = $response->json('data.id');
+        } finally {
+            $doctor->update(['available_dates' => $originalDates]);
+        }
     }
 
     public function test_available_slots_and_double_booking_prevention(): void
@@ -101,81 +114,87 @@ class AppointmentAndAdminApiTest extends TestCase
         $adminToken = $admin->createToken('admin-token')->plainTextToken;
 
         $doctor = Doctor::where('is_active', true)->first();
+        $originalDates = $doctor->available_dates;
         $targetDate = now()->addDays(12)->format('Y-m-d');
+        $doctor->update(['available_dates' => [$targetDate]]);
 
         $this->cleanupDoctorDateAppointments($doctor->id, $targetDate);
 
-        $firstBooking = $this->withHeader('Authorization', 'Bearer '.$token1)
-            ->postJson('/api/janji-temu', [
-                'polyclinic_id' => $doctor->polyclinic_id,
-                'doctor_id' => $doctor->id,
-                'appointment_date' => $targetDate,
-                'appointment_time' => '10:00',
-                'complaint' => 'Pemeriksaan umum',
-            ]);
+        try {
+            $firstBooking = $this->withHeader('Authorization', 'Bearer '.$token1)
+                ->postJson('/api/janji-temu', [
+                    'polyclinic_id' => $doctor->polyclinic_id,
+                    'doctor_id' => $doctor->id,
+                    'appointment_date' => $targetDate,
+                    'appointment_time' => '10:00',
+                    'complaint' => 'Pemeriksaan umum',
+                ]);
 
-        $firstBooking->assertStatus(201)
-            ->assertJsonPath('data.appointment_time', '10:00');
+            $firstBooking->assertStatus(201)
+                ->assertJsonPath('data.appointment_time', '10:00');
 
-        $appointmentId = $firstBooking->json('data.id');
-        $this->createdAppointmentIds[] = $appointmentId;
+            $appointmentId = $firstBooking->json('data.id');
+            $this->createdAppointmentIds[] = $appointmentId;
 
-        $slotRes = $this->withHeader('Authorization', 'Bearer '.$token1)
-            ->getJson("/api/slot-tersedia?doctor_id={$doctor->id}&date={$targetDate}");
+            $slotRes = $this->withHeader('Authorization', 'Bearer '.$token1)
+                ->getJson("/api/slot-tersedia?doctor_id={$doctor->id}&date={$targetDate}");
 
-        $slotRes->assertStatus(200);
-        $slots = collect($slotRes->json('data'));
-        $slot10 = $slots->firstWhere('time', '10:00');
-        $this->assertNotNull($slot10);
-        $this->assertFalse($slot10['available']);
+            $slotRes->assertStatus(200);
+            $slots = collect($slotRes->json('data'));
+            $slot10 = $slots->firstWhere('time', '10:00');
+            $this->assertNotNull($slot10);
+            $this->assertFalse($slot10['available']);
 
-        $this->app['auth']->forgetGuards();
+            $this->app['auth']->forgetGuards();
 
-        $doubleBooking = $this->withHeader('Authorization', 'Bearer '.$token2)
-            ->postJson('/api/janji-temu', [
-                'polyclinic_id' => $doctor->polyclinic_id,
-                'doctor_id' => $doctor->id,
-                'appointment_date' => $targetDate,
-                'appointment_time' => '10:00',
-                'complaint' => 'Keluhan pasien kedua pada jam yang sama',
-            ]);
+            $doubleBooking = $this->withHeader('Authorization', 'Bearer '.$token2)
+                ->postJson('/api/janji-temu', [
+                    'polyclinic_id' => $doctor->polyclinic_id,
+                    'doctor_id' => $doctor->id,
+                    'appointment_date' => $targetDate,
+                    'appointment_time' => '10:00',
+                    'complaint' => 'Keluhan pasien kedua pada jam yang sama',
+                ]);
 
-        $doubleBooking->assertStatus(422)
-            ->assertJsonValidationErrors(['appointment_time']);
+            $doubleBooking->assertStatus(422)
+                ->assertJsonValidationErrors(['appointment_time']);
 
-        $this->app['auth']->forgetGuards();
+            $this->app['auth']->forgetGuards();
 
-        // Pembatalan sepihak oleh admin tanpa pengajuan dokter ditolak (403)
-        $this->withHeader('Authorization', 'Bearer '.$adminToken)
-            ->patchJson("/api/admin/janji-temu/{$appointmentId}", [
-                'status' => 'dibatalkan',
-                'doctor_notes' => 'Dibatalkan untuk pengujian slot',
-            ])
-            ->assertStatus(403);
+            // Pembatalan sepihak oleh admin tanpa pengajuan dokter ditolak (403)
+            $this->withHeader('Authorization', 'Bearer '.$adminToken)
+                ->patchJson("/api/admin/janji-temu/{$appointmentId}", [
+                    'status' => 'dibatalkan',
+                    'doctor_notes' => 'Dibatalkan untuk pengujian slot',
+                ])
+                ->assertStatus(403);
 
-        $this->app['auth']->forgetGuards();
+            $this->app['auth']->forgetGuards();
 
-        // Pasien membatalkan mandiri untuk mengosongkan slot
-        $this->withHeader('Authorization', 'Bearer '.$token1)
-            ->postJson("/api/janji-temu/{$appointmentId}/batal", [
-                'reason' => 'Pasien berhalangan hadir pada jam tersebut.',
-            ])
-            ->assertStatus(200)
-            ->assertJsonPath('data.status', 'dibatalkan');
+            // Pasien membatalkan mandiri untuk mengosongkan slot
+            $this->withHeader('Authorization', 'Bearer '.$token1)
+                ->postJson("/api/janji-temu/{$appointmentId}/batal", [
+                    'reason' => 'Pasien berhalangan hadir pada jam tersebut.',
+                ])
+                ->assertStatus(200)
+                ->assertJsonPath('data.status', 'dibatalkan');
 
-        $this->app['auth']->forgetGuards();
+            $this->app['auth']->forgetGuards();
 
-        $rebookAfterCancel = $this->withHeader('Authorization', 'Bearer '.$token2)
-            ->postJson('/api/janji-temu', [
-                'polyclinic_id' => $doctor->polyclinic_id,
-                'doctor_id' => $doctor->id,
-                'appointment_date' => $targetDate,
-                'appointment_time' => '10:00',
-                'complaint' => 'Pemesanan ulang setelah slot dibatalkan',
-            ]);
+            $rebookAfterCancel = $this->withHeader('Authorization', 'Bearer '.$token2)
+                ->postJson('/api/janji-temu', [
+                    'polyclinic_id' => $doctor->polyclinic_id,
+                    'doctor_id' => $doctor->id,
+                    'appointment_date' => $targetDate,
+                    'appointment_time' => '10:00',
+                    'complaint' => 'Pemesanan ulang setelah slot dibatalkan',
+                ]);
 
-        $rebookAfterCancel->assertStatus(201);
-        $this->createdAppointmentIds[] = $rebookAfterCancel->json('data.id');
+            $rebookAfterCancel->assertStatus(201);
+            $this->createdAppointmentIds[] = $rebookAfterCancel->json('data.id');
+        } finally {
+            $doctor->update(['available_dates' => $originalDates]);
+        }
     }
 
     public function test_admin_reschedule_or_cancel_sends_whatsapp_notification(): void
@@ -545,19 +564,58 @@ class AppointmentAndAdminApiTest extends TestCase
         $allowedDate2 = now()->addDays(20)->format('Y-m-d');
         $blockedDate = now()->addDays(21)->format('Y-m-d');
 
-        $createdDocRes = $this->withHeader('Authorization', 'Bearer '.$adminToken)
-            ->postJson('/api/admin/dokter', [
-                'polyclinic_id' => $poli->id,
-                'name' => 'dr. Jadwal Terbatas '.uniqid(),
-                'is_active' => true,
-            ]);
+        $doctorUser = User::create([
+            'name' => 'dr. Jadwal Sendiri',
+            'email' => 'dokter.jadwal.'.uniqid().'@klinik.local',
+            'password' => bcrypt('DokterTest2026!'),
+            'role' => 'dokter',
+            'phone_number' => '08129999'.random_int(1000, 9999),
+        ]);
 
-        $createdDocRes->assertStatus(201);
-        $doctorId = (int) $createdDocRes->json('data.id');
+        $doctor = Doctor::create([
+            'user_id' => $doctorUser->id,
+            'polyclinic_id' => $poli->id,
+            'name' => 'dr. Jadwal Terbatas '.uniqid(),
+            'is_active' => true,
+        ]);
+        $doctorId = (int) $doctor->id;
+        $doctorToken = $doctorUser->createToken('doctor-token', ['surface:staf'])->plainTextToken;
 
         try {
-            $scheduleRes = $this->withHeader('Authorization', 'Bearer '.$adminToken)
-                ->patchJson("/api/admin/dokter/{$doctorId}/jadwal", [
+            // Admin tidak berwenang mengatur jadwal dokter
+            $this->withHeader('Authorization', 'Bearer '.$adminToken)
+                ->patchJson('/api/dokter/jadwal', ['available_dates' => [$allowedDate1]])
+                ->assertStatus(403);
+
+            $this->app['auth']->forgetGuards();
+
+            // Saat dokter belum membuka tanggal praktik, pasien tidak dapat memilih tanggal mana pun
+            $this->withHeader('Authorization', 'Bearer '.$patientToken)
+                ->getJson("/api/slot-tersedia?doctor_id={$doctorId}&date={$allowedDate1}")
+                ->assertStatus(200)
+                ->assertJsonPath('date_available', false)
+                ->assertJsonPath('data', []);
+
+            $this->withHeader('Authorization', 'Bearer '.$patientToken)
+                ->postJson('/api/janji-temu', [
+                    'polyclinic_id' => $poli->id,
+                    'doctor_id' => $doctorId,
+                    'appointment_date' => $allowedDate1,
+                    'appointment_time' => '09:00',
+                ])
+                ->assertStatus(422)
+                ->assertJsonValidationErrors(['appointment_date']);
+
+            $this->app['auth']->forgetGuards();
+
+            // Dokter membuka jadwal tanggal pilihannya sendiri
+            $this->withHeader('Authorization', 'Bearer '.$doctorToken)
+                ->getJson('/api/dokter/jadwal')
+                ->assertStatus(200)
+                ->assertJsonPath('data.available_dates', []);
+
+            $scheduleRes = $this->withHeader('Authorization', 'Bearer '.$doctorToken)
+                ->patchJson('/api/dokter/jadwal', [
                     'available_dates' => [$allowedDate2, $allowedDate1],
                 ]);
 
@@ -607,15 +665,39 @@ class AppointmentAndAdminApiTest extends TestCase
 
             $this->app['auth']->forgetGuards();
 
-            $resetRes = $this->withHeader('Authorization', 'Bearer '.$adminToken)
-                ->patchJson("/api/admin/dokter/{$doctorId}/jadwal", [
-                    'available_dates' => null,
+            // Dokter menutup semua tanggal praktik -> booking tanggal berikutnya ditolak
+            $resetRes = $this->withHeader('Authorization', 'Bearer '.$doctorToken)
+                ->patchJson('/api/dokter/jadwal', [
+                    'available_dates' => [],
                 ]);
             $resetRes->assertStatus(200)
-                ->assertJsonPath('data.available_dates', null);
+                ->assertJsonPath('data.available_dates', []);
+
+            $this->app['auth']->forgetGuards();
+
+            $this->withHeader('Authorization', 'Bearer '.$patientToken)
+                ->postJson('/api/janji-temu', [
+                    'polyclinic_id' => $poli->id,
+                    'doctor_id' => $doctorId,
+                    'appointment_date' => $allowedDate2,
+                    'appointment_time' => '09:00',
+                ])
+                ->assertStatus(422)
+                ->assertJsonValidationErrors(['appointment_date']);
         } finally {
-            Appointment::where('doctor_id', $doctorId)->delete();
-            Doctor::whereKey($doctorId)->delete();
+            DB::transaction(function () use ($doctorId, $doctorUser): void {
+                if (DB::getDriverName() === 'pgsql') {
+                    DB::statement('SET LOCAL search_path TO klinik, public');
+                }
+
+                $apptIds = Appointment::where('doctor_id', $doctorId)->pluck('id')->all();
+                if (! empty($apptIds)) {
+                    $this->deleteAppointmentsSafely($apptIds);
+                }
+
+                Doctor::whereKey($doctorId)->delete();
+                User::whereKey($doctorUser->id)->delete();
+            });
         }
     }
 }

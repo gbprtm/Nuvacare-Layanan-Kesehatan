@@ -63,8 +63,8 @@ class Doctor extends Model
     public function isAvailableOnDate(string $date): bool
     {
         $configured = $this->normalizedAvailableDates();
-        if ($configured === null) {
-            return true;
+        if ($configured === null || $configured === []) {
+            return false;
         }
 
         $targetDate = Carbon::parse($date)->toDateString();

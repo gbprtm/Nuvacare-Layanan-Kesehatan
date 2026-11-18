@@ -10,6 +10,21 @@ jobs:
   laravel-tests:
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: klinik
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: secret
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
     - uses: actions/checkout@v4
 
@@ -19,12 +34,6 @@ jobs:
         php-version: '8.4'
         extensions: mbstring, pdo_pgsql, pgsql, openssl, intl, dom, fileinfo
         coverage: none
-
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: 22
-        cache: 'npm'
 
     - name: Validate composer.json
       run: composer validate --strict
@@ -44,11 +53,27 @@ jobs:
     - name: Code style check (Pint)
       run: vendor/bin/pint --test
 
-    - name: Run PHPUnit Tests
-      run: php artisan test
-
-    - name: Install NPM dependencies & Build Assets
+    - name: Prepare Database Schema, Migrations & Seeders
+      env:
+        DB_CONNECTION: pgsql
+        DB_HOST: 127.0.0.1
+        DB_PORT: 5432
+        DB_DATABASE: klinik
+        DB_USERNAME: postgres
+        DB_PASSWORD: secret
+        DB_SSLMODE: disable
       run: |
-        npm ci
-        npm run build
+        php -r '$pdo = new PDO("pgsql:host=127.0.0.1;port=5432;dbname=klinik", "postgres", "secret"); $pdo->exec("CREATE SCHEMA IF NOT EXISTS klinik;");'
+        php artisan migrate --force
+        php artisan db:seed --force
 
+    - name: Run PHPUnit Tests
+      env:
+        DB_CONNECTION: pgsql
+        DB_HOST: 127.0.0.1
+        DB_PORT: 5432
+        DB_DATABASE: klinik
+        DB_USERNAME: postgres
+        DB_PASSWORD: secret
+        DB_SSLMODE: disable
+      run: php artisan test

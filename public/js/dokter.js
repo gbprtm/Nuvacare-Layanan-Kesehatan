@@ -1,6 +1,7 @@
 let doctorAppointmentsCache = [];
 let doctorRequestsCache = [];
 let doctorSlotRequestsCache = [];
+let doctorPracticeDates = [];
 let doctorMasterPoliCache = [];
 let selectedDoctorAppointmentId = null;
 let pendingWithdrawRequestId = null;
@@ -127,6 +128,7 @@ function initDoctorDrawer() {
       switchDoctorTab(tab);
       if (tab === 'requests') loadDoctorRequests();
       else if (tab === 'slotRequests') loadDoctorSlotRequests();
+      else if (tab === 'practiceSchedule') loadDoctorPracticeSchedule();
       closeDrawer();
     });
   });
@@ -224,6 +226,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   initDoctorSearch();
   initDoctorFilters();
   initDoctorModals();
+  initDoctorPracticeSchedule();
   setupDoctorEscapeHandler();
 
   await syncDoctorUserFromServer();
@@ -231,6 +234,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     loadDoctorAppointments(),
     loadDoctorRequests(),
     loadDoctorSlotRequests(),
+    loadDoctorPracticeSchedule(),
     loadDoctorMasterPoli()
   ]);
   renderDoctorSidebarSummary();
@@ -287,6 +291,7 @@ function initDoctorTabs() {
   const tabAppointmentsBtn = document.getElementById('tabBtnAppointments');
   const tabRequestsBtn = document.getElementById('tabBtnRequests');
   const tabSlotRequestsBtn = document.getElementById('tabBtnSlotRequests');
+  const tabPracticeScheduleBtn = document.getElementById('tabBtnPracticeSchedule');
 
   if (tabAppointmentsBtn) {
     tabAppointmentsBtn.addEventListener('click', () => switchDoctorTab('appointments'));
@@ -303,6 +308,12 @@ function initDoctorTabs() {
       loadDoctorSlotRequests();
     });
   }
+  if (tabPracticeScheduleBtn) {
+    tabPracticeScheduleBtn.addEventListener('click', () => {
+      switchDoctorTab('practiceSchedule');
+      loadDoctorPracticeSchedule();
+    });
+  }
 }
 
 function switchDoctorTab(tabName) {
@@ -310,13 +321,16 @@ function switchDoctorTab(tabName) {
   const tabAppointmentsBtn = document.getElementById('tabBtnAppointments');
   const tabRequestsBtn = document.getElementById('tabBtnRequests');
   const tabSlotRequestsBtn = document.getElementById('tabBtnSlotRequests');
+  const tabPracticeScheduleBtn = document.getElementById('tabBtnPracticeSchedule');
   const viewAppointments = document.getElementById('viewAppointments');
   const viewRequests = document.getElementById('viewRequests');
   const viewSlotRequests = document.getElementById('viewSlotRequests');
+  const viewPracticeSchedule = document.getElementById('viewPracticeSchedule');
 
   const isAppointments = tabName === 'appointments';
   const isRequests = tabName === 'requests';
   const isSlotRequests = tabName === 'slotRequests';
+  const isPracticeSchedule = tabName === 'practiceSchedule';
 
   if (tabAppointmentsBtn) {
     tabAppointmentsBtn.classList.toggle('is-active', isAppointments);
@@ -329,6 +343,10 @@ function switchDoctorTab(tabName) {
   if (tabSlotRequestsBtn) {
     tabSlotRequestsBtn.classList.toggle('is-active', isSlotRequests);
     tabSlotRequestsBtn.setAttribute('aria-selected', isSlotRequests ? 'true' : 'false');
+  }
+  if (tabPracticeScheduleBtn) {
+    tabPracticeScheduleBtn.classList.toggle('is-active', isPracticeSchedule);
+    tabPracticeScheduleBtn.setAttribute('aria-selected', isPracticeSchedule ? 'true' : 'false');
   }
 
   document.querySelectorAll('[data-drawer-doc-tab]').forEach((btn) => {
@@ -346,6 +364,10 @@ function switchDoctorTab(tabName) {
   if (viewSlotRequests) {
     viewSlotRequests.hidden = !isSlotRequests;
     viewSlotRequests.style.display = isSlotRequests ? '' : 'none';
+  }
+  if (viewPracticeSchedule) {
+    viewPracticeSchedule.hidden = !isPracticeSchedule;
+    viewPracticeSchedule.style.display = isPracticeSchedule ? '' : 'none';
   }
 
   if (getDoctorSearchQuery()) {
@@ -576,6 +598,8 @@ async function loadDoctorAppointments() {
 
     if (selectedDoctorAppointmentId && doctorAppointmentsCache.some((item) => item.id === selectedDoctorAppointmentId)) {
       await selectDoctorAppointment(selectedDoctorAppointmentId, { scrollToDetail: false });
+    } else if (doctorAppointmentsCache.length > 0 && window.innerWidth > 900) {
+      await selectDoctorAppointment(doctorAppointmentsCache[0].id, { scrollToDetail: false });
     } else if (selectedDoctorAppointmentId) {
       resetDoctorDetailPanel();
     }
@@ -729,6 +753,14 @@ function renderDoctorAppointments(items, tableBody, cardsEl) {
       `;
     }).join('');
 
+    cardsEl.querySelectorAll('article.mobile-data-card').forEach((card) => {
+      card.addEventListener('click', (e) => {
+        if (e.target.closest('button')) return;
+        const apptId = Number(card.getAttribute('data-appointment-id'));
+        if (apptId) selectDoctorAppointment(apptId, { scrollToDetail: true });
+      });
+    });
+
     cardsEl.querySelectorAll('[data-view-detail-id]').forEach((btn) => {
       btn.addEventListener('click', () => {
         const apptId = Number(btn.getAttribute('data-view-detail-id'));
@@ -751,6 +783,7 @@ function resetDoctorDetailPanel() {
 
   const emptyEl = getDoctorEl('detailPlaceholder', 'detailEmptyState');
   const contentEl = getDoctorEl('detailContent', 'detailContentBox');
+  const loadingEl = document.getElementById('detailLoading');
   if (emptyEl) {
     emptyEl.hidden = false;
     emptyEl.style.display = '';
@@ -758,6 +791,10 @@ function resetDoctorDetailPanel() {
   if (contentEl) {
     contentEl.hidden = true;
     contentEl.style.display = 'none';
+  }
+  if (loadingEl) {
+    loadingEl.hidden = true;
+    loadingEl.style.display = 'none';
   }
 
   const openReqBox = document.getElementById('detailOpenRequestBox');
@@ -784,18 +821,46 @@ async function selectDoctorAppointment(appointmentId, options = {}) {
 
   const emptyEl = getDoctorEl('detailPlaceholder', 'detailEmptyState');
   const contentEl = getDoctorEl('detailContent', 'detailContentBox');
+  const loadingEl = document.getElementById('detailLoading');
+
   if (emptyEl) {
     emptyEl.hidden = true;
     emptyEl.style.display = 'none';
   }
-  if (contentEl) {
-    contentEl.hidden = false;
-    contentEl.style.display = '';
+
+  const cached = doctorAppointmentsCache.find((item) => Number(item.id) === Number(appointmentId));
+  if (cached) {
+    renderDoctorDetailPanel(cached);
+    if (contentEl) {
+      contentEl.hidden = false;
+      contentEl.style.display = '';
+    }
+    if (loadingEl) {
+      loadingEl.hidden = true;
+      loadingEl.style.display = 'none';
+    }
+  } else {
+    if (loadingEl) {
+      loadingEl.hidden = false;
+      loadingEl.style.display = '';
+    }
+    if (contentEl) {
+      contentEl.hidden = true;
+      contentEl.style.display = 'none';
+    }
   }
 
   try {
     const res = await api.request(`/dokter/janji-temu/${appointmentId}`, { priority: 'high' });
     const d = res.data || res;
+    if (loadingEl) {
+      loadingEl.hidden = true;
+      loadingEl.style.display = 'none';
+    }
+    if (contentEl) {
+      contentEl.hidden = false;
+      contentEl.style.display = '';
+    }
     renderDoctorDetailPanel(d);
 
     if (options.scrollToDetail) {
@@ -805,6 +870,14 @@ async function selectDoctorAppointment(appointmentId, options = {}) {
       }
     }
   } catch (err) {
+    if (loadingEl) {
+      loadingEl.hidden = true;
+      loadingEl.style.display = 'none';
+    }
+    if (!cached && emptyEl) {
+      emptyEl.hidden = false;
+      emptyEl.style.display = '';
+    }
     api.showAlert('doctorPortalAlert', err.message || 'Gagal memuat rincian janji temu.', 'danger');
   }
 }
@@ -822,6 +895,21 @@ function renderDoctorDetailPanel(d) {
   setField('detailDateTime', `${api.formatDate(d.appointment_date)}, ${d.appointment_time || '09:00'} WIB`);
   setField('detailPoli', d.polyclinic?.name || '-');
   setField('detailType', getAppointmentTypeLabel(d.type));
+  setField('detailComplaint', d.complaint || '-');
+
+  const docNotesEl = document.getElementById('detailDoctorNotes');
+  const docNotesRow = document.getElementById('detailDoctorNotesRow');
+  if (docNotesEl && docNotesRow) {
+    if (d.doctor_notes) {
+      docNotesEl.textContent = d.doctor_notes;
+      docNotesRow.hidden = false;
+      docNotesRow.style.display = '';
+    } else {
+      docNotesEl.textContent = '-';
+      docNotesRow.hidden = true;
+      docNotesRow.style.display = 'none';
+    }
+  }
 
   const statusEl = document.getElementById('detailStatus');
   if (statusEl) {
@@ -2176,5 +2264,190 @@ async function loadDoctorSlotRequests() {
     if (loadingEl) loadingEl.hidden = true;
     if (errorEl) errorEl.hidden = false;
     if (errorMsgEl) errorMsgEl.textContent = err.message || 'Gagal memuat daftar pengajuan slot tambahan.';
+  }
+}
+
+function renderDoctorPracticeDates() {
+  const listEl = document.getElementById('docPracticeDatesList');
+  const countEl = document.getElementById('docPracticeCountText');
+  const clearBtn = document.getElementById('docClearPracticeDatesBtn');
+  if (!listEl) return;
+
+  const sorted = [...new Set(doctorPracticeDates)].sort();
+  doctorPracticeDates = sorted;
+
+  if (countEl) {
+    countEl.textContent = `Tanggal Praktik Aktif (${sorted.length})`;
+  }
+  if (clearBtn) {
+    clearBtn.hidden = sorted.length === 0;
+  }
+
+  if (sorted.length === 0) {
+    listEl.innerHTML = '<span class="text-sm text-muted">Belum ada tanggal praktik dibuka. Pasien belum dapat memilih tanggal janji temu.</span>';
+    return;
+  }
+
+  listEl.innerHTML = sorted.map((isoDate) => `
+    <button type="button" class="medical-filter-chip is-active" data-remove-practice-date="${escapeHtml(isoDate)}" title="Hapus tanggal ${escapeHtml(isoDate)}">
+      <span>${escapeHtml(formatCompactDateDoc(isoDate))}</span>
+      <span aria-hidden="true">&times;</span>
+    </button>
+  `).join('');
+
+  listEl.querySelectorAll('[data-remove-practice-date]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const target = btn.getAttribute('data-remove-practice-date');
+      doctorPracticeDates = doctorPracticeDates.filter((d) => d !== target);
+      renderDoctorPracticeDates();
+    });
+  });
+}
+
+async function loadDoctorPracticeSchedule() {
+  const listEl = document.getElementById('docPracticeDatesList');
+  if (!listEl) return;
+
+  try {
+    const res = await api.request('/dokter/jadwal', { priority: 'low' });
+    const dates = Array.isArray(res.data?.available_dates) ? res.data.available_dates : [];
+    doctorPracticeDates = dates.filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(String(d)));
+    renderDoctorPracticeDates();
+  } catch (err) {
+    api.showAlert('docScheduleAlert', err.message || 'Gagal memuat jadwal praktik Anda.', 'danger');
+  }
+}
+
+function initDoctorPracticeSchedule() {
+  const todayStr = getLocalIsoDate(0);
+  const rangeStartEl = document.getElementById('docPracticeRangeStart');
+  const rangeEndEl = document.getElementById('docPracticeRangeEnd');
+  const includeSundayEl = document.getElementById('docPracticeIncludeSunday');
+  const addRangeBtn = document.getElementById('docAddRangeBtn');
+  const singleDateEl = document.getElementById('docPracticeSingleDate');
+  const addSingleBtn = document.getElementById('docAddSingleDateBtn');
+  const clearBtn = document.getElementById('docClearPracticeDatesBtn');
+  const reloadBtn = document.getElementById('docReloadPracticeScheduleBtn');
+  const saveBtn = document.getElementById('docSavePracticeScheduleBtn');
+  const shortcutBtn = document.getElementById('openPracticeScheduleBtn');
+
+  [rangeStartEl, rangeEndEl, singleDateEl].forEach((input) => {
+    if (input) input.min = todayStr;
+  });
+
+  if (shortcutBtn) {
+    shortcutBtn.addEventListener('click', () => {
+      switchDoctorTab('practiceSchedule');
+      loadDoctorPracticeSchedule();
+    });
+  }
+
+  if (addRangeBtn && rangeStartEl && rangeEndEl) {
+    addRangeBtn.addEventListener('click', () => {
+      api.hideAlert('docScheduleAlert');
+      const startVal = (rangeStartEl.value || '').trim();
+      const endVal = (rangeEndEl.value || '').trim();
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(startVal) || !/^\d{4}-\d{2}-\d{2}$/.test(endVal)) {
+        api.showAlert('docScheduleAlert', 'Pilih tanggal mulai dan tanggal selesai terlebih dahulu.', 'danger');
+        return;
+      }
+      if (startVal > endVal) {
+        api.showAlert('docScheduleAlert', 'Tanggal selesai harus sama atau lebih lambat dari tanggal mulai.', 'danger');
+        return;
+      }
+
+      const [sy, sm, sd] = startVal.split('-').map(Number);
+      const [ey, em, ed] = endVal.split('-').map(Number);
+      const cursor = new Date(sy, sm - 1, sd);
+      const endObj = new Date(ey, em - 1, ed);
+      const diffDays = Math.round((endObj - cursor) / 86400000);
+      if (diffDays > 90) {
+        api.showAlert('docScheduleAlert', 'Rentang sekali tambah maksimal 90 hari.', 'danger');
+        return;
+      }
+
+      const includeSunday = Boolean(includeSundayEl?.checked);
+      const added = [];
+      while (cursor <= endObj) {
+        if (includeSunday || cursor.getDay() !== 0) {
+          const y = cursor.getFullYear();
+          const m = String(cursor.getMonth() + 1).padStart(2, '0');
+          const d = String(cursor.getDate()).padStart(2, '0');
+          const iso = `${y}-${m}-${d}`;
+          if (iso >= todayStr) {
+            added.push(iso);
+          }
+        }
+        cursor.setDate(cursor.getDate() + 1);
+      }
+
+      if (added.length === 0) {
+        api.showAlert('docScheduleAlert', 'Tidak ada tanggal valid dalam rentang yang dipilih.', 'danger');
+        return;
+      }
+
+      doctorPracticeDates = [...new Set([...doctorPracticeDates, ...added])].sort();
+      renderDoctorPracticeDates();
+      api.showAlert('docScheduleAlert', `${added.length} tanggal ditambahkan ke daftar. Klik Simpan Jadwal Praktik untuk menerapkan.`, 'info');
+    });
+  }
+
+  if (addSingleBtn && singleDateEl) {
+    addSingleBtn.addEventListener('click', () => {
+      api.hideAlert('docScheduleAlert');
+      const val = (singleDateEl.value || '').trim();
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(val)) {
+        api.showAlert('docScheduleAlert', 'Pilih tanggal praktik yang valid.', 'danger');
+        return;
+      }
+      if (val < todayStr) {
+        api.showAlert('docScheduleAlert', 'Tanggal praktik tidak boleh di masa lalu.', 'danger');
+        return;
+      }
+      if (!doctorPracticeDates.includes(val)) {
+        doctorPracticeDates = [...doctorPracticeDates, val].sort();
+        renderDoctorPracticeDates();
+      }
+      singleDateEl.value = '';
+    });
+  }
+
+  if (clearBtn) {
+    clearBtn.addEventListener('click', () => {
+      api.hideAlert('docScheduleAlert');
+      doctorPracticeDates = [];
+      renderDoctorPracticeDates();
+    });
+  }
+
+  if (reloadBtn) {
+    reloadBtn.addEventListener('click', () => {
+      api.hideAlert('docScheduleAlert');
+      loadDoctorPracticeSchedule();
+    });
+  }
+
+  if (saveBtn) {
+    saveBtn.addEventListener('click', async () => {
+      api.hideAlert('docScheduleAlert');
+      const origText = saveBtn.textContent;
+      try {
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Menyimpan…';
+        const res = await api.request('/dokter/jadwal', {
+          method: 'PATCH',
+          body: JSON.stringify({ available_dates: doctorPracticeDates })
+        });
+        doctorPracticeDates = Array.isArray(res.data?.available_dates) ? res.data.available_dates : doctorPracticeDates;
+        renderDoctorPracticeDates();
+        api.showAlert('docScheduleAlert', res.message || 'Jadwal praktik berhasil disimpan.', 'success');
+        updateDoctorSyncTime();
+      } catch (err) {
+        api.showAlert('docScheduleAlert', err.message || 'Gagal menyimpan jadwal praktik.', 'danger');
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = origText;
+      }
+    });
   }
 }

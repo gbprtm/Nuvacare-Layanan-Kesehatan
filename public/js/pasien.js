@@ -634,9 +634,14 @@ async function initBookingPage() {
         : 'Filter poliklinik dan pilih dokter spesialis aktif';
     }
     if (step2Subtitle) {
-      step2Subtitle.textContent = docObj
-        ? `Pilih tanggal kunjungan untuk ${docObj.name}`
-        : 'Pilih tanggal kunjungan yang tersedia';
+      if (!docObj) {
+        step2Subtitle.textContent = 'Pilih dokter terlebih dahulu pada Langkah 1';
+      } else {
+        const upcomingForDoc = getDoctorUpcomingAvailableDates(docObj);
+        step2Subtitle.textContent = upcomingForDoc.length > 0
+          ? `Jadwal ${docObj.name} tersedia pada ${upcomingForDoc.length} tanggal aktif. Tanggal di luar jadwal tidak dapat dipilih.`
+          : `Dokter ${docObj.name} belum membuka jadwal praktik. Tanggal lain tidak dapat dipilih.`;
+      }
     }
 
     syncStepProgression();
@@ -653,7 +658,7 @@ async function initBookingPage() {
   };
 
   const getDoctorUpcomingAvailableDates = (doctor) => {
-    if (!doctor || !Array.isArray(doctor.available_dates)) return null;
+    if (!doctor || !Array.isArray(doctor.available_dates)) return [];
     return doctor.available_dates
       .map((d) => String(d || '').trim().slice(0, 10))
       .filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d) && d >= todayStr)
@@ -662,14 +667,9 @@ async function initBookingPage() {
   };
 
   const isDateAvailableForDoctor = (dateStr, doctor) => {
-    if (!dateStr || dateStr < todayStr) return false;
-    const dateObj = parseIsoDateLocal(dateStr);
-    const isSunday = dateObj.getDay() === 0;
-    if (doctor && Array.isArray(doctor.available_dates)) {
-      const upcoming = getDoctorUpcomingAvailableDates(doctor) || [];
-      return upcoming.includes(dateStr);
-    }
-    return !isSunday;
+    if (!dateStr || dateStr < todayStr || !doctor) return false;
+    const upcoming = getDoctorUpcomingAvailableDates(doctor);
+    return upcoming.includes(dateStr);
   };
 
   // Month Calendar Grid Renderer (Bebas Navigasi Bulan, Sinkron Jadwal Dokter)
@@ -709,7 +709,6 @@ async function initBookingPage() {
     }
 
     const selectedDoc = getSelectedDoctorObject();
-    const hasRestrictedSchedule = Boolean(selectedDoc && Array.isArray(selectedDoc.available_dates));
 
     // Days in current month
     for (let d = 1; d <= daysInMonth; d++) {
@@ -738,7 +737,7 @@ async function initBookingPage() {
       } else {
         const disabledTitle = isPast
           ? 'Tanggal sudah lewat'
-          : (hasRestrictedSchedule ? 'Dokter tidak praktik pada tanggal ini' : (isSunday ? 'Klinik Tutup (Hari Minggu)' : 'Tanggal tidak tersedia'));
+          : (selectedDoc ? 'Dokter tidak praktik pada tanggal ini' : 'Pilih dokter terlebih dahulu');
         const closedBadge = isSunday ? '<span class="calendar-day-status is-closed">Tutup</span>' : '';
         cells.push(`
           <div class="calendar-day-cell is-disabled ${isSunday ? 'is-sunday' : ''} ${isToday ? 'is-today' : ''}" aria-disabled="true" title="${disabledTitle}">
@@ -1039,19 +1038,15 @@ async function initBookingPage() {
       const shortPoliName = polyclinic.short_name || polyclinic.name.replace(/^Poli\s+/i, '');
       const roomLabel = polyclinic.room_label || `Gedung Utama • Ruang ${100 + polyclinic.id}`;
       const upcomingDates = getDoctorUpcomingAvailableDates(doctor);
-      let scheduleText = `Praktik: ${doctor.schedule_label || polyclinic.schedule_label || '09:00 - 17:00 WIB'}`;
-      if (upcomingDates !== null) {
-        if (upcomingDates.length === 0) {
-          scheduleText = 'Belum ada jadwal tanggal praktik';
-        } else if (upcomingDates.length <= 3) {
-          const formattedDates = upcomingDates.map((d) => {
-            const dt = parseIsoDateLocal(d);
-            return `${dt.getDate()} ${MONTH_NAMES_ID[dt.getMonth()].slice(0, 3)}`;
-          }).join(', ');
-          scheduleText = `Jadwal tersedia: ${formattedDates}`;
-        } else {
-          scheduleText = `Tersedia pada ${upcomingDates.length} tanggal`;
-        }
+      let scheduleText = 'Belum ada jadwal tanggal praktik';
+      if (upcomingDates.length > 0 && upcomingDates.length <= 3) {
+        const formattedDates = upcomingDates.map((d) => {
+          const dt = parseIsoDateLocal(d);
+          return `${dt.getDate()} ${MONTH_NAMES_ID[dt.getMonth()].slice(0, 3)}`;
+        }).join(', ');
+        scheduleText = `Jadwal tersedia: ${formattedDates}`;
+      } else if (upcomingDates.length > 3) {
+        scheduleText = `Tersedia pada ${upcomingDates.length} tanggal`;
       }
       return `
         <button
@@ -1208,12 +1203,12 @@ async function initBookingPage() {
       const upcoming = getDoctorUpcomingAvailableDates(selectedDoc);
 
       if (step2Sub) {
-        if (selectedDoc && upcoming !== null) {
+        if (selectedDoc) {
           step2Sub.textContent = upcoming.length > 0
-            ? `Jadwal ${selectedDoc.name} tersedia pada ${upcoming.length} tanggal aktif. Tanggal lain tidak dapat dipilih.`
-            : `Belum ada tanggal praktik tersedia untuk ${selectedDoc.name}.`;
+            ? `Jadwal ${selectedDoc.name} tersedia pada ${upcoming.length} tanggal aktif. Tanggal di luar jadwal tidak dapat dipilih.`
+            : `Dokter ${selectedDoc.name} belum membuka jadwal praktik. Tanggal lain tidak dapat dipilih.`;
         } else {
-          step2Sub.textContent = 'Pilih tanggal kunjungan yang tersedia';
+          step2Sub.textContent = 'Pilih dokter terlebih dahulu pada Langkah 1';
         }
       }
 
@@ -1796,6 +1791,15 @@ function renderPatientAppointmentsTable() {
               </div>
 
               <div class="clinical-ledger-actions-col">
+                <button type="button" class="clinical-ledger-btn-qr" onclick="openPatientTicketModal(${a.id})" title="Lihat E-Tiket & Kode QR">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <rect x="3" y="3" width="7" height="7"></rect>
+                    <rect x="14" y="3" width="7" height="7"></rect>
+                    <rect x="14" y="14" width="7" height="7"></rect>
+                    <rect x="3" y="14" width="7" height="7"></rect>
+                  </svg>
+                  <span>Kode QR</span>
+                </button>
                 <button type="button" class="clinical-ledger-btn-cancel" onclick="openPatientCancelModal(${a.id})" title="Batalkan janji temu ini">Batalkan</button>
                 <button type="button" class="clinical-ledger-toggle-btn" onclick="toggleClinicalLedgerDrawer('${a.id}')" aria-expanded="false" aria-controls="ledger-drawer-${a.id}" aria-label="Buka rincian janji temu">
                   <span class="clinical-ledger-toggle-label">Rincian</span>
@@ -2049,9 +2053,27 @@ function getDoctorInitials(name) {
   return 'DR';
 }
 
+function renderSafeQrSvg(container, payload, options = { cellSize: 4, margin: 1 }) {
+  if (!container) return;
+  const safeText = escapeHtml(String(payload || ''));
+  if (typeof QRCode !== 'undefined' && typeof QRCode.generateSvg === 'function') {
+    try {
+      container.innerHTML = QRCode.generateSvg(String(payload || ''), options);
+      return;
+    } catch {
+      // Fallback below if payload exceeds QR version capacity
+    }
+  }
+  container.innerHTML = `<span style="font-size: 12px; font-weight: 700; color: #0037B0; word-break: break-all; overflow-wrap: anywhere; text-align: center;">${safeText}</span>`;
+}
+
 function openMedicalQrModal(id) {
-  if (!Array.isArray(examinationHistoryData)) return;
-  const item = examinationHistoryData.find(x => String(x.id) === String(id));
+  const pool = [
+    ...(Array.isArray(historicalRecordsData) ? historicalRecordsData : []),
+    ...(Array.isArray(examinationHistoryData) ? examinationHistoryData : []),
+    ...(Array.isArray(upcomingAppointmentsData) ? upcomingAppointmentsData : []),
+  ];
+  const item = pool.find(x => String(x.id) === String(id));
   if (!item) return;
 
   const modal = document.getElementById('modalQrMedis');
@@ -2064,18 +2086,15 @@ function openMedicalQrModal(id) {
   if (doctorEl) doctorEl.textContent = item.doctor?.name || '-';
   if (dateEl) dateEl.textContent = api.formatDate(item.appointment_date);
 
-  const verificationPayload = `NUVACARE-MEDREC-${item.id}-${item.appointment_date}-${item.user_id || 'PATIENT'}`;
+  const dateClean = String(item.appointment_date || '').split('T')[0].replace(/[^0-9]/g, '');
+  const verificationPayload = `NUVACARE-MEDREC-${item.id}-${dateClean}-${item.user_id || 'P'}`;
 
-  if (qrBox) {
-    if (typeof QRCode !== 'undefined' && typeof QRCode.generateSvg === 'function') {
-      qrBox.innerHTML = QRCode.generateSvg(verificationPayload, { cellSize: 5, margin: 1 });
-    } else {
-      qrBox.innerHTML = `<span style="font-size: 13px; font-weight: 700; color: #0037B0;">${verificationPayload}</span>`;
-    }
-  }
+  renderSafeQrSvg(qrBox, verificationPayload, { cellSize: 5, margin: 1 });
 
   if (modal) {
     modal.classList.remove('hidden');
+    document.body.classList.add('modal-open');
+    document.documentElement.classList.add('modal-open');
     document.body.style.overflow = 'hidden';
   }
 }
@@ -2084,6 +2103,8 @@ function closeMedicalQrModal() {
   const modal = document.getElementById('modalQrMedis');
   if (modal) {
     modal.classList.add('hidden');
+    document.body.classList.remove('modal-open');
+    document.documentElement.classList.remove('modal-open');
     document.body.style.overflow = '';
   }
 }
@@ -2141,68 +2162,6 @@ function formatMonthYear(dateStr) {
   } catch {
     return dateStr;
   }
-}
-
-function renderUpcomingFocusCard(upcomingItems) {
-  const section = document.getElementById('upcomingScheduleSection');
-  if (!section) return;
-
-  if (!upcomingItems || upcomingItems.length === 0) {
-    section.innerHTML = '';
-    section.style.display = 'none';
-    return;
-  }
-
-  // Sort upcoming chronologically ascending (terdekat lebih dahulu)
-  const sorted = [...upcomingItems].sort((a, b) => {
-    const dateA = `${a.appointment_date || ''} ${a.appointment_time || ''}`;
-    const dateB = `${b.appointment_date || ''} ${b.appointment_time || ''}`;
-    return dateA.localeCompare(dateB);
-  });
-
-  const nextAppt = sorted[0];
-  const moreCount = sorted.length - 1;
-
-  section.innerHTML = `
-    <div class="upcoming-focus-card">
-      <div class="upcoming-focus-header">
-        <div class="upcoming-header-left">
-          <span class="upcoming-kicker">Kunjungan Mendatang</span>
-          <span class="upcoming-datetime">${escapeHtml(api.formatDate(nextAppt.appointment_date))} • ${escapeHtml(nextAppt.appointment_time || '08:00')} WIB</span>
-        </div>
-        <a href="/pasien/janji-temu.html" class="upcoming-manage-btn" title="Kelola janji di halaman Janji Temu">
-          <span>Kelola Janji</span>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <polyline points="9 18 15 12 9 6"></polyline>
-          </svg>
-        </a>
-      </div>
-
-      <div class="upcoming-focus-content">
-        <div class="upcoming-doctor-block">
-          <h3 class="upcoming-poli-title">${escapeHtml(nextAppt.polyclinic?.name || 'Poliklinik')}</h3>
-          <p class="upcoming-doctor-name">${escapeHtml(nextAppt.doctor?.name || 'dr. Spesialis')} <span class="upcoming-doc-spec">• ${escapeHtml(nextAppt.doctor?.specialization || 'Spesialis Medis')}</span></p>
-        </div>
-        <div class="upcoming-meta-grid">
-          <div class="upcoming-meta-cell">
-            <span class="upcoming-meta-label">Ruang Klinik</span>
-            <span class="upcoming-meta-value">${escapeHtml(nextAppt.polyclinic?.room_label || nextAppt.polyclinic?.room || 'Gedung Utama Rawat Jalan')}</span>
-          </div>
-          <div class="upcoming-meta-cell">
-            <span class="upcoming-meta-label">Dibuat di Sistem</span>
-            <span class="upcoming-meta-value upcoming-meta-mono" title="Waktu janji diajukan">${formatDateShort(nextAppt.created_at)}</span>
-          </div>
-          <div class="upcoming-meta-cell">
-            <span class="upcoming-meta-label">Keluhan / Catatan</span>
-            <span class="upcoming-meta-value">${escapeHtml(nextAppt.complaint || 'Pemeriksaan / konsultasi rutin.')}</span>
-          </div>
-        </div>
-      </div>
-
-      ${moreCount > 0 ? `<div class="upcoming-focus-footer"><span>+ Terdapat ${moreCount} janji temu mendatang lainnya terjadwal.</span></div>` : ''}
-    </div>
-  `;
-  section.style.display = 'block';
 }
 
 function updateStatusFilterCounts(items) {
@@ -2508,23 +2467,14 @@ async function loadExaminationHistory() {
   if (!cardsContainer && !tableBody) return;
 
   try {
-    const [scheduledRes, historyRes] = await Promise.all([
-      api.request('/janji-temu', { priority: 'high' }).catch(() => ({ data: [] })),
-      api.request('/riwayat-pemeriksaan', { priority: 'high' }).catch(() => ({ data: [] })),
-    ]);
-
-    const scheduled = (Array.isArray(scheduledRes) ? scheduledRes : (Array.isArray(scheduledRes?.data) ? scheduledRes.data : [])).map(item => ({
-      ...item,
-      status: item.status || 'terjadwal'
-    }));
+    const historyRes = await api.request('/riwayat-pemeriksaan', { priority: 'high' }).catch(() => ({ data: [] }));
 
     const history = (Array.isArray(historyRes) ? historyRes : (Array.isArray(historyRes?.data) ? historyRes.data : [])).filter(item => item.status !== 'terjadwal');
 
-    upcomingAppointmentsData = scheduled;
+    upcomingAppointmentsData = [];
     historicalRecordsData = history.sort((a, b) => compareAppointmentsByDate(a, b, 'desc'));
     examinationHistoryData = historicalRecordsData;
 
-    renderUpcomingFocusCard(upcomingAppointmentsData);
     updateStatusFilterCounts(historicalRecordsData);
     populateYearDropdown(historicalRecordsData);
 
@@ -2825,6 +2775,8 @@ function openControlModal(modalEl, triggerEl) {
   controlScheduleState.lastModalTrigger = triggerEl || document.activeElement;
   controlScheduleState.activeModal = modalEl;
   modalEl.classList.remove('hidden');
+  document.body.classList.add('modal-open');
+  document.documentElement.classList.add('modal-open');
   document.body.style.overflow = 'hidden';
 
   requestAnimationFrame(() => {
@@ -2836,6 +2788,8 @@ function openControlModal(modalEl, triggerEl) {
 function closeControlModal(modalEl, restoreFocus = true) {
   if (!modalEl || modalEl.classList.contains('hidden')) return;
   modalEl.classList.add('hidden');
+  document.body.classList.remove('modal-open');
+  document.documentElement.classList.remove('modal-open');
   document.body.style.overflow = '';
   if (controlScheduleState.activeModal === modalEl) {
     controlScheduleState.activeModal = null;
@@ -2872,19 +2826,7 @@ function openControlTicketModal(item, triggerEl) {
   if (dateTimeEl) dateTimeEl.textContent = `${view.dateFormatted}, ${view.timeLabel}`;
 
   if (qrBox) {
-    const qrPayload = JSON.stringify({
-      code: ticketCode,
-      appointment_id: item.id,
-      date: item.appointment_date,
-      time: item.appointment_time || '08:00',
-      type: 'kontrol_rutin',
-    });
-
-    if (typeof QRCode !== 'undefined' && typeof QRCode.generateSvg === 'function') {
-      qrBox.innerHTML = QRCode.generateSvg(qrPayload, { cellSize: 4, margin: 1 });
-    } else {
-      qrBox.innerHTML = `<p class="control-state-desc">Kode Tiket: ${escapeHtml(ticketCode)}</p>`;
-    }
+    renderSafeQrSvg(qrBox, ticketCode, { cellSize: 4, margin: 1 });
   }
 
   openControlModal(modal, triggerEl);
@@ -3165,11 +3107,7 @@ function openBookingSuccessModal(appointment, fallbackForm) {
   // Generate QR Code for Ticket
   const qrContainer = document.getElementById('ticketQrcodeContainer');
   if (qrContainer) {
-    if (typeof QRCode !== 'undefined' && typeof QRCode.generateSvg === 'function') {
-      qrContainer.innerHTML = QRCode.generateSvg(bookingCode, { cellSize: 3.5, margin: 1 });
-    } else {
-      qrContainer.innerHTML = `<span style="font-size: 11px; color: #0037B0; font-weight: 700;">${bookingCode}</span>`;
-    }
+    renderSafeQrSvg(qrContainer, bookingCode, { cellSize: 3.5, margin: 1 });
   }
 
   modal.classList.add('is-open');

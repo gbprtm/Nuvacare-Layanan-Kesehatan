@@ -138,8 +138,6 @@ class CancellationRequestService
             'appointment_time' => $appointment->appointment_time,
             'type' => $appointment->type,
             'status' => $appointment->status,
-            'complaint' => $appointment->complaint,
-            'doctor_notes' => $appointment->doctor_notes,
             'patient' => [
                 'name' => $appointment->user?->name ?? 'Pasien',
                 'masked_phone' => $this->maskPhone($appointment->user?->phone_number),

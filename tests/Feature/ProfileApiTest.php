@@ -53,6 +53,10 @@ class ProfileApiTest extends TestCase
         $originalAddress = $patient->address;
         $token = $patient->createToken('patient-token')->plainTextToken;
 
+        User::where('id', '!=', $patient->id)
+            ->whereIn('phone_number', ['089988776655', '6289988776655'])
+            ->update(['phone_number' => null]);
+
         try {
             $response = $this->withHeader('Authorization', 'Bearer '.$token)
                 ->patchJson('/api/profil', [

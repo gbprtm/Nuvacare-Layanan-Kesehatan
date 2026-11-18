@@ -45,6 +45,7 @@ class AppServiceProvider extends ServiceProvider
             'pengajuan.ajukan',
             'pengajuan.lihat_milik',
             'pengajuan.tarik_milik',
+            'jadwal.kelola',
         ];
 
         foreach ($doctorAbilities as $ability) {

@@ -123,7 +123,11 @@ class DoctorAppointmentController extends Controller
         return response()->json([
             'data' => array_merge(
                 $this->formatDoctorAppointmentWithQuickCancel($appointment, $service),
-                ['cancellation_requests' => $cancellationRequests],
+                [
+                    'complaint' => $appointment->complaint,
+                    'doctor_notes' => $appointment->doctor_notes,
+                    'cancellation_requests' => $cancellationRequests,
+                ],
             ),
         ]);
     }

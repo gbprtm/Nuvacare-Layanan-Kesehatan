@@ -41,6 +41,7 @@ class AuthController extends Controller
         'pengajuan.ajukan',
         'pengajuan.lihat_milik',
         'pengajuan.tarik_milik',
+        'jadwal.kelola',
     ];
 
     public function publicInfo(): JsonResponse
@@ -558,15 +559,13 @@ class AuthController extends Controller
 
         $polyclinics->each(function (Polyclinic $polyclinic): void {
             $polyclinic->doctors->each(function (Doctor $doctor): void {
-                $configured = $doctor->normalizedAvailableDates();
-                if ($configured !== null) {
-                    $approvedDates = $doctor->slotRequests
-                        ->map(fn ($req): string => Carbon::parse($req->schedule_date)->toDateString())
-                        ->all();
-                    $merged = array_values(array_unique(array_merge($configured, $approvedDates)));
-                    sort($merged);
-                    $doctor->setAttribute('available_dates', $merged);
-                }
+                $configured = $doctor->normalizedAvailableDates() ?? [];
+                $approvedDates = $doctor->slotRequests
+                    ->map(fn ($req): string => Carbon::parse($req->schedule_date)->toDateString())
+                    ->all();
+                $merged = array_values(array_unique(array_merge($configured, $approvedDates)));
+                sort($merged);
+                $doctor->setAttribute('available_dates', $merged);
                 $doctor->unsetRelation('slotRequests');
             });
         });
