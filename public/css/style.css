@@ -5938,7 +5938,7 @@ html.modal-open {
   margin: 0 auto;
   padding: var(--space-2) var(--space-4);
   display: grid;
-  grid-template-columns: 208px minmax(0, 1fr) auto;
+  grid-template-columns: 220px minmax(0, 1fr) auto;
   align-items: center;
   gap: var(--space-3);
 }
@@ -5984,166 +5984,7 @@ html.modal-open {
   background-color: var(--color-paper);
   color: var(--color-ink);
   font-family: var(--font-body);
-  font-size: 0.875rem;
-  transition: border-color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
-}
-
-.staff-search-input:focus {
-  background-color: var(--color-surface);
-  outline: 2px solid var(--color-focus);
-  outline-offset: -2px;
-}
-
-.staff-search-clear {
-  position: absolute;
-  right: var(--space-1);
-  min-width: 28px;
-  min-height: 28px;
-  border: none;
-  border-radius: var(--radius-xs);
-  background-color: transparent;
-  color: var(--color-muted);
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.staff-search-clear:hover {
-  background-color: var(--color-paper-2);
-  color: var(--color-ink);
-}
-
-.staff-topbar__actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  flex-shrink: 0;
-}
-
-.staff-notif-btn {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-height: var(--control-app-h);
-  padding: var(--space-1) var(--space-3);
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--color-rule);
-  background-color: var(--color-paper);
-  color: var(--color-ink);
-  font-family: var(--font-body);
-  font-size: 0.8125rem;
-  font-weight: 600;
-  white-space: nowrap;
-  cursor: pointer;
-  text-decoration: none;
-}
-
-.staff-notif-btn::after {
-  content: "";
-  position: absolute;
-  inset: -4px 0;
-}
-
-.staff-notif-btn:hover {
-  background-color: var(--color-paper-2);
-  border-color: var(--color-control-border);
-}
-
-.staff-notif-btn__count {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 20px;
-  height: 20px;
-  padding: 0 var(--space-1);
-  border-radius: var(--radius-pill);
-  background-color: var(--color-primary);
-  color: var(--color-on-primary);
   font-size: 0.75rem;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-
-.staff-topbar__user {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding-left: var(--space-2);
-  border-left: 1px solid var(--color-rule);
-}
-
-.staff-portal-page {
-  min-height: 100dvh;
-  background-color: var(--color-paper);
-  display: flex;
-  flex-direction: column;
-}
-
-.staff-topbar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 30;
-  background-color: var(--color-surface);
-  border-bottom: 1px solid var(--color-rule);
-  width: 100%;
-}
-
-.staff-topbar__inner {
-  max-width: 1480px;
-  margin: 0 auto;
-  padding: var(--space-2) var(--space-4);
-  display: grid;
-  grid-template-columns: 208px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: var(--space-3);
-}
-
-.staff-topbar__brand {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-width: 0;
-}
-
-.staff-topbar__search {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  max-width: 520px;
-  width: 100%;
-  min-width: 0;
-}
-
-.staff-search-wrap {
-  position: relative;
-  flex: 1 1 auto;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-}
-
-.staff-search-icon {
-  position: absolute;
-  left: var(--space-3);
-  color: var(--color-muted);
-  pointer-events: none;
-  flex-shrink: 0;
-}
-
-.staff-search-input {
-  width: 100%;
-  min-height: var(--control-app-h);
-  padding: var(--space-1) var(--space-8) var(--space-1) var(--space-8);
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--color-control-border);
-  background-color: var(--color-paper);
-  color: var(--color-ink);
-  font-family: var(--font-body);
-  font-size: 0.875rem;
   transition: border-color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
 }
 
@@ -6192,7 +6033,7 @@ html.modal-open {
   background-color: var(--color-paper);
   color: var(--color-ink);
   font-family: var(--font-body);
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   font-weight: 600;
   white-space: nowrap;
   cursor: pointer;
@@ -6223,19 +6064,11 @@ html.modal-open {
   font-size: 0.75rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-}
-
-.staff-topbar__user {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding-left: var(--space-2);
-  border-left: 1px solid var(--color-rule);
 }
 
 .staff-app-shell {
   display: grid;
-  grid-template-columns: 224px minmax(0, 1fr);
+  grid-template-columns: 220px minmax(0, 1fr);
   max-width: 1480px;
   width: 100%;
   margin: 0 auto;
@@ -6274,16 +6107,16 @@ html.modal-open {
 .staff-sidebar__section {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: var(--space-3xs);
 }
 
 .staff-sidebar__section + .staff-sidebar__section {
-  padding-top: var(--space-3);
+  padding-top: var(--space-2);
   border-top: 1px solid var(--color-rule);
 }
 
 .staff-sidebar__label {
-  margin: 0;
+  margin: 0 0 var(--space-3xs);
   padding: 0 var(--space-2);
   font-size: 0.75rem;
   font-weight: 600;
@@ -6293,24 +6126,26 @@ html.modal-open {
 .staff-sidebar__nav {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: var(--space-3xs);
   margin: 0;
 }
 
 .staff-sidebar__nav .portal-tab-btn,
 .staff-nav-link,
-.staff-quick-filter-btn {
+.staff-quick-filter-btn,
+.staff-shortcut-btn {
   width: 100%;
   justify-content: flex-start;
-  min-height: var(--control-app-h);
-  padding: var(--space-2) var(--space-3);
+  min-height: 34px;
+  padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-sm);
   border: 1px solid transparent;
   background-color: transparent;
   color: var(--color-ink-2);
   font-family: var(--font-body);
-  font-size: 0.8125rem;
-  font-weight: 600;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.35;
   text-decoration: none;
   white-space: nowrap;
   cursor: pointer;
@@ -6318,6 +6153,7 @@ html.modal-open {
   align-items: center;
   gap: var(--space-2);
   position: relative;
+  transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
 }
 
 .staff-sidebar__nav .nav-count-badge {
@@ -6331,16 +6167,27 @@ html.modal-open {
   min-width: 0;
 }
 
-.staff-nav-icon {
+.staff-nav-icon,
+.staff-shortcut-icon {
   flex-shrink: 0;
   color: var(--color-muted);
+  transition: color var(--dur-fast) var(--ease-out);
+}
+
+.staff-shortcut-icon {
+  color: var(--color-primary);
 }
 
 .staff-sidebar__nav .portal-tab-btn:hover,
 .staff-nav-link:hover,
-.staff-quick-filter-btn:hover {
+.staff-quick-filter-btn:hover,
+.staff-shortcut-btn:hover {
   background-color: var(--color-paper-2);
   color: var(--color-ink);
+}
+
+.staff-shortcut-btn:hover .staff-shortcut-icon {
+  color: var(--color-primary-hover);
 }
 
 .staff-sidebar__nav .portal-tab-btn.is-active,
@@ -6349,7 +6196,8 @@ html.modal-open {
 .staff-quick-filter-btn.is-active {
   background-color: var(--color-primary-soft);
   color: var(--color-primary);
-  border-color: var(--color-primary-border);
+  font-weight: 600;
+  border-color: transparent;
 }
 
 .staff-sidebar__nav .portal-tab-btn.is-active .staff-nav-icon,
@@ -6364,39 +6212,13 @@ html.modal-open {
   color: var(--color-on-primary);
 }
 
-.staff-shortcut-btn {
-  width: 100%;
-  justify-content: flex-start;
-  min-height: var(--control-app-h);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--color-rule);
-  background-color: var(--color-paper);
-  color: var(--color-ink);
-  font-family: var(--font-body);
-  font-size: 0.8125rem;
-  font-weight: 600;
-  text-decoration: none;
-  white-space: nowrap;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  position: relative;
-}
-
-.staff-shortcut-btn:hover {
-  background-color: var(--color-paper-2);
-  border-color: var(--color-control-border);
-}
-
 .staff-sidebar__footer {
   margin-top: auto;
-  padding-top: var(--space-3);
+  padding-top: var(--space-2);
   border-top: 1px solid var(--color-rule);
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-1);
 }
 
 .staff-sync-meta {
@@ -6416,6 +6238,107 @@ html.modal-open {
   font-weight: 600;
   color: var(--color-ink);
   font-variant-numeric: tabular-nums;
+}
+
+.staff-sidebar__account {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3xs);
+  min-width: 0;
+}
+
+.staff-account-meta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3xs);
+  padding: 0 var(--space-2);
+  min-width: 0;
+}
+
+.staff-account-name {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.staff-account-sub {
+  font-size: 0.75rem;
+  color: var(--color-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.staff-logout-action {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: 34px;
+  padding: var(--space-1) var(--space-2);
+  border: none;
+  border-radius: var(--radius-sm);
+  background-color: transparent;
+  color: var(--color-danger-ink);
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+
+.staff-logout-action::after {
+  content: "";
+  position: absolute;
+  inset: -5px 0;
+}
+
+.staff-logout-action:hover {
+  background-color: var(--color-danger-bg);
+  color: var(--color-danger-ink);
+}
+
+.staff-logout-action:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: -2px;
+}
+
+.patient-drawer__link--danger {
+  color: var(--color-danger-ink);
+}
+
+.patient-drawer__link--danger:hover {
+  background-color: var(--color-danger-bg);
+  color: var(--color-danger-ink);
+}
+
+.doctor-summary-strip {
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-surface);
+  margin: 0;
+  overflow: hidden;
+}
+
+.staff-main .clinical-pagination-nav {
+  padding: var(--space-3) 0 0;
+}
+
+.staff-main .segmented-page-btn,
+.staff-main .segmented-page-ellipsis {
+  min-width: 36px;
+  min-height: var(--control-app-h);
+  padding: 0 var(--space-2);
+  font-size: 0.75rem;
+}
+
+.staff-main .segmented-page-btn--nav {
+  padding: 0 var(--space-3);
 }
 
 .staff-user-meta {
@@ -6441,6 +6364,12 @@ html.modal-open {
 
 .staff-workspace--single {
   grid-template-columns: minmax(0, 1fr);
+}
+
+.staff-main,
+.staff-right-rail {
+  font-size: 0.75rem;
+  line-height: 1.45;
 }
 
 .staff-main {
@@ -6469,7 +6398,7 @@ html.modal-open {
 
 .staff-main .card-title,
 .staff-right-rail .card-title {
-  font-size: 1rem;
+  font-size: 0.875rem;
   margin-bottom: 0;
 }
 
@@ -6479,13 +6408,13 @@ html.modal-open {
 }
 
 .staff-main .page-title {
-  font-size: 1.25rem;
+  font-size: 1.0625rem;
   margin: 0;
 }
 
 .staff-main .booking-page-subtitle {
   margin: var(--space-3xs) 0 0;
-  font-size: 0.875rem;
+  font-size: 0.75rem;
 }
 
 .staff-main .portal-toolbar {
@@ -6493,10 +6422,47 @@ html.modal-open {
   gap: var(--space-2);
 }
 
+.staff-main .text-sm,
+.staff-right-rail .text-sm,
+.staff-main .detail-kv-label,
+.staff-main .detail-kv-value,
+.staff-main .checkbox-inline {
+  font-size: 0.75rem;
+}
+
+.staff-main .form-label,
+.staff-portal-page .modal-content .form-label {
+  font-size: 0.75rem;
+  margin-bottom: var(--space-1);
+}
+
+.staff-main .form-input,
+.staff-main .form-select,
+.staff-main .form-textarea,
+.staff-portal-page .modal-content .form-input,
+.staff-portal-page .modal-content .form-select,
+.staff-portal-page .modal-content .form-textarea {
+  font-size: 0.75rem;
+}
+
+.staff-main .form-input,
+.staff-main .form-select,
+.staff-portal-page .modal-content .form-input,
+.staff-portal-page .modal-content .form-select {
+  min-height: var(--control-app-h);
+  padding: var(--space-1) var(--space-2);
+}
+
+.staff-main .badge,
+.staff-right-rail .badge {
+  font-size: 0.75rem;
+  padding: var(--space-3xs) var(--space-2);
+}
+
 .staff-main th,
 .staff-main td {
   padding: var(--space-2);
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
 }
 
 #adminTabAppointments table th,
@@ -6509,10 +6475,13 @@ html.modal-open {
   overflow-wrap: break-word;
 }
 
-.staff-main .btn-touch {
+.staff-main .btn,
+.staff-main .btn-touch,
+.staff-right-rail .btn-touch,
+.staff-portal-page .modal-content .btn-touch {
   min-height: var(--control-app-h);
   padding: var(--space-1) var(--space-3);
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   position: relative;
 }
 
@@ -6586,7 +6555,7 @@ html.modal-open {
 }
 
 .staff-focus-value {
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   font-weight: 600;
   color: var(--color-ink);
   overflow-wrap: break-word;
@@ -6625,7 +6594,7 @@ html.modal-open {
 }
 
 .staff-queue-item__title {
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   font-weight: 600;
   color: var(--color-ink);
 }
@@ -6665,7 +6634,7 @@ html.modal-open {
   width: 100%;
   min-height: var(--control-app-h);
   padding: var(--space-1) var(--space-2);
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
 }
 
 .staff-organizer-actions {
@@ -6684,7 +6653,7 @@ html.modal-open {
   gap: var(--space-2);
   flex-wrap: wrap;
   margin-bottom: var(--space-2);
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   color: var(--color-muted);
   font-variant-numeric: tabular-nums;
 }
@@ -6714,14 +6683,16 @@ html.modal-open {
 }
 
 .staff-summary-row__label {
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   font-weight: 600;
   color: var(--color-ink-2);
 }
 
-.staff-summary-row__val {
+.staff-summary-row__val,
+.staff-right-rail .portal-summary-value,
+.doctor-summary-strip .portal-summary-value {
   font-family: var(--font-display);
-  font-size: 1.125rem;
+  font-size: 0.9375rem;
   font-weight: 700;
   color: var(--color-ink);
 }
@@ -6740,13 +6711,13 @@ html.modal-open {
 .staff-sidebar__top {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-2);
   flex: 1 1 auto;
 }
 
 .staff-sidebar__shortcuts {
   border-top: 1px solid var(--color-rule);
-  padding-top: var(--space-3);
+  padding-top: var(--space-2);
 }
 
 .staff-sidebar__sync,
@@ -6786,7 +6757,7 @@ html.modal-open {
   display: flex;
   flex-direction: column;
   gap: var(--space-3xs);
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   color: var(--color-ink);
 }
 
@@ -6807,9 +6778,9 @@ html.modal-open {
 
 .staff-focus-note p {
   margin: 0;
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   color: var(--color-ink);
-  line-height: 1.5;
+  line-height: 1.45;
 }
 
 .staff-queue-item__actions {
@@ -7023,13 +6994,18 @@ button.patient-drawer__link.is-active {
 
   .staff-organizer-field .form-input,
   .staff-organizer-field .form-select,
+  .staff-main .form-input,
+  .staff-main .form-select,
+  .staff-main .form-textarea,
   .staff-search-input {
     min-height: var(--tap-min);
     font-size: 1rem;
   }
 
   .staff-main .btn-touch,
-  .staff-notif-btn {
+  .staff-notif-btn,
+  .staff-main .segmented-page-btn,
+  .staff-main .segmented-page-ellipsis {
     min-height: var(--tap-min);
   }
 

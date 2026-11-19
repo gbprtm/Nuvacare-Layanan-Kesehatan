@@ -9,6 +9,22 @@ let selectedAdminAppointmentId = null;
 let activeAdminTabName = 'appointments';
 let masterDataCache = [];
 
+const ADMIN_TABLE_PAGE_SIZE = 10;
+const adminPaginationState = {
+  appointments: 1,
+  requests: 1,
+  slotRequests: 1,
+  masterData: 1
+};
+
+function scrollStaffTableTop(el) {
+  const target = el?.closest('.card') || el?.closest('.card-flat') || el;
+  if (!target || typeof target.scrollIntoView !== 'function') return;
+  const prefersReduced = typeof window.matchMedia === 'function'
+    && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  target.scrollIntoView({ behavior: prefersReduced ? 'auto' : 'smooth', block: 'nearest' });
+}
+
 function getAdminEl(...ids) {
   for (const id of ids) {
     const el = document.getElementById(id);
@@ -147,15 +163,19 @@ function getStaffSearchQuery() {
 function applyAdminSearchForCurrentPage() {
   if (document.getElementById('adminAppointmentTableBody')) {
     if (activeAdminTabName === 'requests') {
+      adminPaginationState.requests = 1;
       renderFilteredAdminRequests();
     } else if (activeAdminTabName === 'slotRequests') {
+      adminPaginationState.slotRequests = 1;
       renderFilteredAdminSlotRequests();
     } else {
+      adminPaginationState.appointments = 1;
       renderFilteredAppointments();
     }
     return;
   }
   if (document.getElementById('poliTableBody')) {
+    adminPaginationState.masterData = 1;
     renderFilteredMasterData();
   }
 }
@@ -398,6 +418,7 @@ async function initAppointmentManagement() {
   if (filterType && urlParams.get('type')) filterType.value = urlParams.get('type');
 
   const syncUrlAndReload = () => {
+    adminPaginationState.appointments = 1;
     const nextParams = new URLSearchParams();
     if (filterDate?.value) nextParams.set('date', filterDate.value);
     if (filterType?.value) nextParams.set('type', filterType.value);
@@ -413,14 +434,26 @@ async function initAppointmentManagement() {
 
   if (filterPoli) {
     filterPoli.addEventListener('change', () => {
+      adminPaginationState.appointments = 1;
       populateAppointmentOrganizerOptions();
       renderFilteredAppointments();
     });
   }
-  if (filterDoctor) filterDoctor.addEventListener('change', renderFilteredAppointments);
-  if (filterSort) filterSort.addEventListener('change', renderFilteredAppointments);
+  if (filterDoctor) {
+    filterDoctor.addEventListener('change', () => {
+      adminPaginationState.appointments = 1;
+      renderFilteredAppointments();
+    });
+  }
+  if (filterSort) {
+    filterSort.addEventListener('change', () => {
+      adminPaginationState.appointments = 1;
+      renderFilteredAppointments();
+    });
+  }
 
   const resetAllFilters = () => {
+    adminPaginationState.appointments = 1;
     if (filterDate) filterDate.value = '';
     if (filterPoli) filterPoli.value = '';
     if (filterDoctor) filterDoctor.value = '';
@@ -471,6 +504,7 @@ async function initAppointmentManagement() {
         switchAdminTab('appointments');
         resetAllFilters();
       } else if (preset === 'overdue') {
+        adminPaginationState.requests = 1;
         switchAdminTab('requests');
         const reqStatus = document.getElementById('reqFilterStatus');
         const reqOverdue = document.getElementById('reqFilterOverdue');
@@ -647,8 +681,21 @@ function renderFilteredAppointments() {
     return db.localeCompare(da);
   });
 
+  const {
+    pageItems,
+    currentPage,
+    totalPages,
+    startIndex,
+    endIndex
+  } = api.paginateItems(filtered, adminPaginationState.appointments, ADMIN_TABLE_PAGE_SIZE);
+  adminPaginationState.appointments = currentPage;
+
+  const paginationNav = document.getElementById('adminAppointmentsPagination');
+
   if (resultInfo) {
-    resultInfo.textContent = `Menampilkan ${filtered.length} dari ${adminAppointmentsCache.length} janji`;
+    resultInfo.textContent = filtered.length > 0
+      ? `Menampilkan ${startIndex}-${endIndex} dari ${filtered.length} janji`
+      : `Menampilkan 0 dari ${adminAppointmentsCache.length} janji`;
   }
 
   updateRightSummaryRail(filtered, adminAppointmentsCache.length);
@@ -659,10 +706,11 @@ function renderFilteredAppointments() {
     if (cardsEl) {
       cardsEl.innerHTML = '<div class="portal-state-box"><p class="text-muted">Belum ada janji yang cocok dengan filter atau pencarian ini.</p></div>';
     }
+    api.renderPagination(paginationNav, { currentPage: 1, totalPages: 1 });
     return;
   }
 
-  tableBody.innerHTML = filtered.map((a) => {
+  tableBody.innerHTML = pageItems.map((a) => {
     const openReq = a.open_cancellation_request || a.open_request || null;
     const openReqBadge = openReq
       ? `<div class="mt-1"><span class="badge badge-diajukan">Pengajuan batal</span>${openReq.is_overdue ? ' <span class="badge badge-overdue-sla">Lewat SLA</span>' : ''}</div>`
@@ -725,7 +773,7 @@ function renderFilteredAppointments() {
   });
 
   if (cardsEl) {
-    cardsEl.innerHTML = filtered.map((a) => {
+    cardsEl.innerHTML = pageItems.map((a) => {
       const openReq = a.open_cancellation_request || a.open_request || null;
       const openReqBadge = openReq
         ? `<span class="badge badge-diajukan">Pengajuan batal</span>${openReq.is_overdue ? '<span class="badge badge-overdue-sla">Lewat SLA</span>' : ''}`
@@ -760,6 +808,16 @@ function renderFilteredAppointments() {
       `;
     }).join('');
   }
+
+  api.renderPagination(paginationNav, {
+    currentPage,
+    totalPages,
+    onPageChange: (nextPage) => {
+      adminPaginationState.appointments = nextPage;
+      renderFilteredAppointments();
+      scrollStaffTableTop(tableBody || cardsEl);
+    }
+  });
 }
 
 async function loadAppointments() {
@@ -1002,9 +1060,24 @@ async function initAdminCancellationInbox() {
     reqFilterStatus.value = 'diajukan';
   }
 
-  if (reqFilterStatus) reqFilterStatus.addEventListener('change', loadCancellationRequests);
-  if (reqFilterDoctor) reqFilterDoctor.addEventListener('change', loadCancellationRequests);
-  if (reqFilterOverdue) reqFilterOverdue.addEventListener('change', loadCancellationRequests);
+  if (reqFilterStatus) {
+    reqFilterStatus.addEventListener('change', () => {
+      adminPaginationState.requests = 1;
+      loadCancellationRequests();
+    });
+  }
+  if (reqFilterDoctor) {
+    reqFilterDoctor.addEventListener('change', () => {
+      adminPaginationState.requests = 1;
+      loadCancellationRequests();
+    });
+  }
+  if (reqFilterOverdue) {
+    reqFilterOverdue.addEventListener('change', () => {
+      adminPaginationState.requests = 1;
+      loadCancellationRequests();
+    });
+  }
   if (refreshReqsBtn) refreshReqsBtn.addEventListener('click', loadCancellationRequests);
 
   initAdminDecisionModals();
@@ -1173,6 +1246,7 @@ function renderFilteredAdminRequests() {
   const stateEl = getAdminEl('adminRequestState', 'adminRequestsState');
   const tableBody = getAdminEl('adminRequestTableBody', 'adminRequestsTableBody');
   const cardsEl = getAdminEl('adminRequestCards', 'adminRequestsCards');
+  const paginationNav = document.getElementById('adminRequestsPagination');
   const tableWrap = tableBody ? tableBody.closest('.table-responsive') : null;
   if (!tableBody && !cardsEl) return;
 
@@ -1202,11 +1276,28 @@ function renderFilteredAdminRequests() {
           ? 'Tidak ada pengajuan yang menunggu.'
           : 'Belum ada pengajuan pembatalan pada filter ini.');
     setAdminRequestsState(stateEl, tableWrap, cardsEl, tableBody, 'empty', emptyMsg);
+    api.renderPagination(paginationNav, { currentPage: 1, totalPages: 1 });
     return;
   }
 
+  const { pageItems, currentPage, totalPages } = api.paginateItems(
+    filtered,
+    adminPaginationState.requests,
+    ADMIN_TABLE_PAGE_SIZE
+  );
+  adminPaginationState.requests = currentPage;
+
   hideAdminRequestsState(stateEl, tableWrap, cardsEl);
-  renderAdminRequests(filtered, tableBody, cardsEl);
+  renderAdminRequests(pageItems, tableBody, cardsEl);
+  api.renderPagination(paginationNav, {
+    currentPage,
+    totalPages,
+    onPageChange: (nextPage) => {
+      adminPaginationState.requests = nextPage;
+      renderFilteredAdminRequests();
+      scrollStaffTableTop(tableBody || cardsEl);
+    }
+  });
 }
 
 function populateRequestDoctorFilter(polis) {
@@ -1322,6 +1413,10 @@ function updateAdminPendingBadge(count) {
 }
 
 function setAdminRequestsState(stateEl, tableWrap, cardsEl, tableBody, mode, message, retryFn = null) {
+  const paginationNav = document.getElementById('adminRequestsPagination');
+  if (paginationNav) {
+    api.renderPagination(paginationNav, { currentPage: 1, totalPages: 1 });
+  }
   if (cardsEl) {
     cardsEl.innerHTML = '';
     cardsEl.style.display = 'none';
@@ -2076,11 +2171,27 @@ async function initMasterData() {
   const sortSelect = document.getElementById('masterSort');
   const resetBtn = document.getElementById('resetMasterFiltersBtn');
 
-  if (practiceSelect) practiceSelect.addEventListener('change', renderFilteredMasterData);
-  if (accountSelect) accountSelect.addEventListener('change', renderFilteredMasterData);
-  if (sortSelect) sortSelect.addEventListener('change', renderFilteredMasterData);
+  if (practiceSelect) {
+    practiceSelect.addEventListener('change', () => {
+      adminPaginationState.masterData = 1;
+      renderFilteredMasterData();
+    });
+  }
+  if (accountSelect) {
+    accountSelect.addEventListener('change', () => {
+      adminPaginationState.masterData = 1;
+      renderFilteredMasterData();
+    });
+  }
+  if (sortSelect) {
+    sortSelect.addEventListener('change', () => {
+      adminPaginationState.masterData = 1;
+      renderFilteredMasterData();
+    });
+  }
 
   const resetMasterFilters = () => {
+    adminPaginationState.masterData = 1;
     if (practiceSelect) practiceSelect.value = '';
     if (accountSelect) accountSelect.value = '';
     if (sortSelect) sortSelect.value = 'name_asc';
@@ -2102,6 +2213,7 @@ async function initMasterData() {
       document.querySelectorAll('[data-master-quick]').forEach((el) => {
         el.classList.toggle('is-active', el.getAttribute('data-master-quick') === preset);
       });
+      adminPaginationState.masterData = 1;
 
       if (preset === 'active_practice') {
         if (practiceSelect) practiceSelect.value = 'active';
@@ -2268,8 +2380,20 @@ function renderFilteredMasterData() {
   });
 
   const totalVisibleDoctors = prepared.reduce((acc, p) => acc + p.visibleDoctors.length, 0);
+  const {
+    pageItems,
+    currentPage,
+    totalPages,
+    startIndex,
+    endIndex
+  } = api.paginateItems(prepared, adminPaginationState.masterData, ADMIN_TABLE_PAGE_SIZE);
+  adminPaginationState.masterData = currentPage;
+  const paginationNav = document.getElementById('adminMasterDataPagination');
+
   if (resultInfoEl) {
-    resultInfoEl.textContent = `Menampilkan ${prepared.length} poliklinik, ${totalVisibleDoctors} dokter`;
+    resultInfoEl.textContent = prepared.length > 0
+      ? `Menampilkan ${startIndex}-${endIndex} dari ${prepared.length} poliklinik (${totalVisibleDoctors} dokter)`
+      : 'Menampilkan 0 poliklinik, 0 dokter';
   }
 
   const renderDoctorListHtml = (doctors) => {
@@ -2322,10 +2446,11 @@ function renderFilteredMasterData() {
     if (masterCardsEl) {
       masterCardsEl.innerHTML = '<div class="portal-state-box"><p class="text-muted">Belum ada poliklinik atau dokter yang cocok dengan filter.</p></div>';
     }
+    api.renderPagination(paginationNav, { currentPage: 1, totalPages: 1 });
     return;
   }
 
-  poliListEl.innerHTML = prepared.map(p => `
+  poliListEl.innerHTML = pageItems.map(p => `
     <tr>
       <td><strong>${escapeHtml(p.name)}</strong></td>
       <td>${escapeHtml(p.description || '-')}</td>
@@ -2334,7 +2459,7 @@ function renderFilteredMasterData() {
   `).join('');
 
   if (masterCardsEl) {
-    masterCardsEl.innerHTML = prepared.map(p => `
+    masterCardsEl.innerHTML = pageItems.map(p => `
       <article class="mobile-data-card">
         <div class="mobile-data-card__head">
           <div>
@@ -2348,6 +2473,16 @@ function renderFilteredMasterData() {
       </article>
     `).join('');
   }
+
+  api.renderPagination(paginationNav, {
+    currentPage,
+    totalPages,
+    onPageChange: (nextPage) => {
+      adminPaginationState.masterData = nextPage;
+      renderFilteredMasterData();
+      scrollStaffTableTop(poliListEl || masterCardsEl);
+    }
+  });
 }
 
 async function loadMasterDataList() {
@@ -2626,7 +2761,10 @@ async function initAdminSlotRequests() {
     });
   }
   if (statusFilter) {
-    statusFilter.addEventListener('change', loadAdminSlotRequests);
+    statusFilter.addEventListener('change', () => {
+      adminPaginationState.slotRequests = 1;
+      loadAdminSlotRequests();
+    });
   }
   if (reloadBtn) {
     reloadBtn.addEventListener('click', loadAdminSlotRequests);
@@ -2657,6 +2795,7 @@ function renderFilteredAdminSlotRequests() {
   const tableWrap = document.getElementById('adminSlotRequestsTableWrap');
   const tableBody = document.getElementById('adminSlotRequestsTableBody');
   const cardsEl = document.getElementById('adminSlotRequestsCards');
+  const paginationNav = document.getElementById('adminSlotRequestsPagination');
   if (!tableBody && !cardsEl) return;
 
   const query = getStaffSearchQuery();
@@ -2677,10 +2816,20 @@ function renderFilteredAdminSlotRequests() {
   if (emptyEl) emptyEl.hidden = items.length > 0;
   if (cardsEl) cardsEl.innerHTML = '';
 
-  if (!items.length) return;
+  if (!items.length) {
+    api.renderPagination(paginationNav, { currentPage: 1, totalPages: 1 });
+    return;
+  }
+
+  const { pageItems, currentPage, totalPages } = api.paginateItems(
+    items,
+    adminPaginationState.slotRequests,
+    ADMIN_TABLE_PAGE_SIZE
+  );
+  adminPaginationState.slotRequests = currentPage;
 
   if (tableBody) {
-    tableBody.innerHTML = items.map((item) => {
+    tableBody.innerHTML = pageItems.map((item) => {
       const docName = item.doctor?.name || `Dokter #${item.doctor_id}`;
       const poliName = item.doctor?.polyclinic?.name || '-';
       const startLabel = String(item.start_time || '').slice(0, 5);
@@ -2716,7 +2865,7 @@ function renderFilteredAdminSlotRequests() {
   }
 
   if (cardsEl) {
-    cardsEl.innerHTML = items.map((item) => {
+    cardsEl.innerHTML = pageItems.map((item) => {
       const docName = item.doctor?.name || `Dokter #${item.doctor_id}`;
       const poliName = item.doctor?.polyclinic?.name || '-';
       const startLabel = String(item.start_time || '').slice(0, 5);
@@ -2750,6 +2899,16 @@ function renderFilteredAdminSlotRequests() {
       `;
     }).join('');
   }
+
+  api.renderPagination(paginationNav, {
+    currentPage,
+    totalPages,
+    onPageChange: (nextPage) => {
+      adminPaginationState.slotRequests = nextPage;
+      renderFilteredAdminSlotRequests();
+      scrollStaffTableTop(tableBody || cardsEl);
+    }
+  });
 }
 
 async function loadAdminSlotRequests() {
@@ -2760,6 +2919,7 @@ async function loadAdminSlotRequests() {
   const tableWrap = document.getElementById('adminSlotRequestsTableWrap');
   const tableBody = document.getElementById('adminSlotRequestsTableBody');
   const cardsEl = document.getElementById('adminSlotRequestsCards');
+  const paginationNav = document.getElementById('adminSlotRequestsPagination');
   const statusFilter = document.getElementById('adminSlotStatusFilter')?.value || 'diajukan';
 
   if (!tableBody && !cardsEl) return;
@@ -2772,6 +2932,7 @@ async function loadAdminSlotRequests() {
   if (errorEl) errorEl.hidden = true;
   if (tableWrap) tableWrap.hidden = true;
   if (cardsEl) cardsEl.innerHTML = '';
+  api.renderPagination(paginationNav, { currentPage: 1, totalPages: 1 });
 
   try {
     const query = statusFilter && statusFilter !== 'semua'
@@ -2953,3 +3114,24 @@ window.openAdminSlotApproveModal = openAdminSlotApproveModal;
 window.closeAdminSlotApproveModal = closeAdminSlotApproveModal;
 window.openAdminSlotRejectModal = openAdminSlotRejectModal;
 window.closeAdminSlotRejectModal = closeAdminSlotRejectModal;
+
+if (typeof window.matchMedia === 'function') {
+  const adminPaginationMq = window.matchMedia('(max-width: 540px)');
+  const onAdminPaginationMqChange = () => {
+    if (document.getElementById('adminAppointmentTableBody')) {
+      if (activeAdminTabName === 'requests' && adminRequestsCache.length > 0) {
+        renderFilteredAdminRequests();
+      } else if (activeAdminTabName === 'slotRequests' && adminSlotRequestsCache.length > 0) {
+        renderFilteredAdminSlotRequests();
+      } else if (adminAppointmentsCache.length > 0) {
+        renderFilteredAppointments();
+      }
+    }
+    if (document.getElementById('poliTableBody') && masterDataCache.length > 0) {
+      renderFilteredMasterData();
+    }
+  };
+  if (typeof adminPaginationMq.addEventListener === 'function') {
+    adminPaginationMq.addEventListener('change', onAdminPaginationMqChange);
+  }
+}

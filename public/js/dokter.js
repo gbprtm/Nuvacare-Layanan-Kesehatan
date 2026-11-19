@@ -8,6 +8,21 @@ let pendingWithdrawRequestId = null;
 let batchPreviewSeq = 0;
 let activeDoctorTabName = 'appointments';
 
+const DOCTOR_TABLE_PAGE_SIZE = 10;
+const doctorPaginationState = {
+  appointments: 1,
+  requests: 1,
+  slotRequests: 1
+};
+
+function scrollDoctorTableTop(el) {
+  const target = el?.closest('.card') || el?.closest('.card-flat') || el;
+  if (!target || typeof target.scrollIntoView !== 'function') return;
+  const prefersReduced = typeof window.matchMedia === 'function'
+    && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  target.scrollIntoView({ behavior: prefersReduced ? 'auto' : 'smooth', block: 'nearest' });
+}
+
 function getDoctorEl(...ids) {
   for (const id of ids) {
     const el = document.getElementById(id);
@@ -58,10 +73,10 @@ function renderDoctorSidebarSummary() {
   const openReqs = doctorRequestsCache.filter((r) => r.status === 'diajukan').length;
 
   container.innerHTML = `
-    <div class="staff-rail-metric-row"><span class="portal-summary-label">Total rentang</span><strong class="portal-summary-value">${total}</strong></div>
-    <div class="staff-rail-metric-row"><span class="portal-summary-label">Terjadwal</span><strong class="portal-summary-value">${scheduled}</strong></div>
-    <div class="staff-rail-metric-row"><span class="portal-summary-label">Selesai</span><strong class="portal-summary-value">${completed}</strong></div>
-    <div class="staff-rail-metric-row"><span class="portal-summary-label">Pengajuan aktif</span><strong class="portal-summary-value">${openReqs}</strong></div>
+    <div class="portal-summary-item"><span class="portal-summary-label">Total rentang</span><strong class="portal-summary-value">${total}</strong></div>
+    <div class="portal-summary-item"><span class="portal-summary-label">Terjadwal</span><strong class="portal-summary-value">${scheduled}</strong></div>
+    <div class="portal-summary-item"><span class="portal-summary-label">Selesai</span><strong class="portal-summary-value">${completed}</strong></div>
+    <div class="portal-summary-item"><span class="portal-summary-label">Pengajuan aktif</span><strong class="portal-summary-value">${openReqs}</strong></div>
   `;
 }
 
@@ -136,26 +151,27 @@ function initDoctorDrawer() {
   if (slotBtn) {
     slotBtn.addEventListener('click', () => {
       closeDrawer();
-      const origSlotBtn = document.getElementById('openSlotRequestBtn');
-      if (origSlotBtn) origSlotBtn.click();
+      openSlotRequestModal();
     });
   }
 
   if (primaryCta) {
     primaryCta.addEventListener('click', () => {
       closeDrawer();
-      const origBatchBtn = document.getElementById('openBatchCancelBtn');
-      if (origBatchBtn) origBatchBtn.click();
+      openBatchCancelModal();
     });
   }
 }
 
 function applyDoctorSearchForCurrentTab() {
   if (activeDoctorTabName === 'requests') {
+    doctorPaginationState.requests = 1;
     renderFilteredDoctorRequests();
   } else if (activeDoctorTabName === 'slotRequests') {
+    doctorPaginationState.slotRequests = 1;
     renderFilteredDoctorSlotRequests();
   } else {
+    doctorPaginationState.appointments = 1;
     renderFilteredDoctorAppointments();
   }
 }
@@ -215,10 +231,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const headerBatchCancelBtn = document.getElementById('headerBatchCancelBtn');
   if (headerBatchCancelBtn) {
-    headerBatchCancelBtn.addEventListener('click', () => {
-      const origBatchBtn = document.getElementById('openBatchCancelBtn');
-      if (origBatchBtn) origBatchBtn.click();
-    });
+    headerBatchCancelBtn.addEventListener('click', openBatchCancelModal);
   }
 
   initDoctorTabs();
@@ -396,6 +409,7 @@ function initDoctorFilters() {
   if (dateFrom && dateTo) {
     dateTo.min = dateFrom.value;
     dateFrom.addEventListener('change', () => {
+      doctorPaginationState.appointments = 1;
       if (dateFrom.value) {
         dateTo.min = dateFrom.value;
         if (dateTo.value && dateTo.value < dateFrom.value) {
@@ -404,18 +418,47 @@ function initDoctorFilters() {
       }
       loadDoctorAppointments();
     });
-    dateTo.addEventListener('change', loadDoctorAppointments);
+    dateTo.addEventListener('change', () => {
+      doctorPaginationState.appointments = 1;
+      loadDoctorAppointments();
+    });
   } else {
-    if (dateFrom) dateFrom.addEventListener('change', loadDoctorAppointments);
-    if (dateTo) dateTo.addEventListener('change', loadDoctorAppointments);
+    if (dateFrom) {
+      dateFrom.addEventListener('change', () => {
+        doctorPaginationState.appointments = 1;
+        loadDoctorAppointments();
+      });
+    }
+    if (dateTo) {
+      dateTo.addEventListener('change', () => {
+        doctorPaginationState.appointments = 1;
+        loadDoctorAppointments();
+      });
+    }
   }
 
-  if (statusSelect) statusSelect.addEventListener('change', loadDoctorAppointments);
-  if (typeSelect) typeSelect.addEventListener('change', renderFilteredDoctorAppointments);
-  if (sortSelect) sortSelect.addEventListener('change', renderFilteredDoctorAppointments);
+  if (statusSelect) {
+    statusSelect.addEventListener('change', () => {
+      doctorPaginationState.appointments = 1;
+      loadDoctorAppointments();
+    });
+  }
+  if (typeSelect) {
+    typeSelect.addEventListener('change', () => {
+      doctorPaginationState.appointments = 1;
+      renderFilteredDoctorAppointments();
+    });
+  }
+  if (sortSelect) {
+    sortSelect.addEventListener('change', () => {
+      doctorPaginationState.appointments = 1;
+      renderFilteredDoctorAppointments();
+    });
+  }
   if (refreshApptsBtn) refreshApptsBtn.addEventListener('click', loadDoctorAppointments);
 
   const resetDoctorFilters = () => {
+    doctorPaginationState.appointments = 1;
     if (dateFrom) dateFrom.value = today;
     if (dateTo) {
       dateTo.min = today;
@@ -442,6 +485,7 @@ function initDoctorFilters() {
       document.querySelectorAll('[data-doc-quick]').forEach((el) => {
         el.classList.toggle('is-active', el.getAttribute('data-doc-quick') === preset);
       });
+      doctorPaginationState.appointments = 1;
       switchDoctorTab('appointments');
 
       if (preset === 'today') {
@@ -481,7 +525,10 @@ function initDoctorFilters() {
 
   const reqStatusFilter = getDoctorEl('filterReqStatus', 'filterDocReqStatus', 'filterRequestStatus');
   if (reqStatusFilter) {
-    reqStatusFilter.addEventListener('change', loadDoctorRequests);
+    reqStatusFilter.addEventListener('change', () => {
+      doctorPaginationState.requests = 1;
+      loadDoctorRequests();
+    });
   }
 
   const refreshRequestsBtn = document.getElementById('refreshDocRequestsBtn');
@@ -532,8 +579,20 @@ function renderFilteredDoctorAppointments() {
     return da.localeCompare(db);
   });
 
+  const paginationNav = document.getElementById('doctorAppointmentsPagination');
+  const {
+    pageItems,
+    currentPage,
+    totalPages,
+    startIndex,
+    endIndex
+  } = api.paginateItems(filtered, doctorPaginationState.appointments, DOCTOR_TABLE_PAGE_SIZE);
+  doctorPaginationState.appointments = currentPage;
+
   if (resultInfo) {
-    resultInfo.textContent = `Menampilkan ${filtered.length} dari ${doctorAppointmentsCache.length} jadwal`;
+    resultInfo.textContent = filtered.length > 0
+      ? `Menampilkan ${startIndex}-${endIndex} dari ${filtered.length} jadwal`
+      : `Menampilkan 0 dari ${doctorAppointmentsCache.length} jadwal`;
   }
 
   renderDoctorSidebarSummary();
@@ -550,7 +609,16 @@ function renderFilteredDoctorAppointments() {
   }
 
   hideDoctorListState(stateEl, tableWrap, cardsEl);
-  renderDoctorAppointments(filtered, tableBody, cardsEl);
+  renderDoctorAppointments(pageItems, tableBody, cardsEl);
+  api.renderPagination(paginationNav, {
+    currentPage,
+    totalPages,
+    onPageChange: (nextPage) => {
+      doctorPaginationState.appointments = nextPage;
+      renderFilteredDoctorAppointments();
+      scrollDoctorTableTop(tableBody || cardsEl);
+    }
+  });
 }
 
 async function loadDoctorAppointments() {
@@ -610,6 +678,11 @@ async function loadDoctorAppointments() {
 }
 
 function setDoctorListState(stateEl, tableWrap, cardsEl, mode, message, retryFn = null) {
+  const cardEl = stateEl?.closest('.card') || tableWrap?.closest('.card') || cardsEl?.closest('.card');
+  const paginationNav = cardEl?.querySelector('.clinical-pagination-nav');
+  if (paginationNav) {
+    api.renderPagination(paginationNav, { currentPage: 1, totalPages: 1 });
+  }
   if (tableWrap) {
     tableWrap.style.display = 'none';
   }
@@ -1549,6 +1622,7 @@ function renderFilteredDoctorRequests() {
   const stateEl = document.getElementById('doctorRequestsState');
   const tableBody = document.getElementById('doctorRequestsBody');
   const cardsEl = document.getElementById('doctorRequestsCards');
+  const paginationNav = document.getElementById('doctorRequestsPagination');
   const tableWrap = tableBody ? tableBody.closest('.table-responsive') : null;
   if (!tableBody && !cardsEl) return;
 
@@ -1576,8 +1650,24 @@ function renderFilteredDoctorRequests() {
     return;
   }
 
+  const { pageItems, currentPage, totalPages } = api.paginateItems(
+    filtered,
+    doctorPaginationState.requests,
+    DOCTOR_TABLE_PAGE_SIZE
+  );
+  doctorPaginationState.requests = currentPage;
+
   hideDoctorListState(stateEl, tableWrap, cardsEl);
-  renderDoctorRequests(filtered, tableBody, cardsEl);
+  renderDoctorRequests(pageItems, tableBody, cardsEl);
+  api.renderPagination(paginationNav, {
+    currentPage,
+    totalPages,
+    onPageChange: (nextPage) => {
+      doctorPaginationState.requests = nextPage;
+      renderFilteredDoctorRequests();
+      scrollDoctorTableTop(tableBody || cardsEl);
+    }
+  });
 }
 
 async function loadDoctorRequests() {
@@ -2170,6 +2260,7 @@ function renderFilteredDoctorSlotRequests() {
   const tableWrap = document.getElementById('slotRequestsTableWrap');
   const tableBody = document.getElementById('slotRequestsTableBody');
   const cardsEl = document.getElementById('slotRequestsCards');
+  const paginationNav = document.getElementById('doctorSlotRequestsPagination');
   if (!tableBody && !cardsEl) return;
 
   const query = getDoctorSearchQuery();
@@ -2188,10 +2279,20 @@ function renderFilteredDoctorSlotRequests() {
   if (emptyEl) emptyEl.hidden = items.length > 0;
   if (cardsEl) cardsEl.innerHTML = '';
 
-  if (!items.length) return;
+  if (!items.length) {
+    api.renderPagination(paginationNav, { currentPage: 1, totalPages: 1 });
+    return;
+  }
+
+  const { pageItems, currentPage, totalPages } = api.paginateItems(
+    items,
+    doctorPaginationState.slotRequests,
+    DOCTOR_TABLE_PAGE_SIZE
+  );
+  doctorPaginationState.slotRequests = currentPage;
 
   if (tableBody) {
-    tableBody.innerHTML = items.map((item) => {
+    tableBody.innerHTML = pageItems.map((item) => {
       const startLabel = String(item.start_time || '').slice(0, 5);
       const endLabel = String(item.end_time || '').slice(0, 5);
       return `
@@ -2208,7 +2309,7 @@ function renderFilteredDoctorSlotRequests() {
   }
 
   if (cardsEl) {
-    cardsEl.innerHTML = items.map((item) => {
+    cardsEl.innerHTML = pageItems.map((item) => {
       const startLabel = String(item.start_time || '').slice(0, 5);
       const endLabel = String(item.end_time || '').slice(0, 5);
       return `
@@ -2229,6 +2330,16 @@ function renderFilteredDoctorSlotRequests() {
       `;
     }).join('');
   }
+
+  api.renderPagination(paginationNav, {
+    currentPage,
+    totalPages,
+    onPageChange: (nextPage) => {
+      doctorPaginationState.slotRequests = nextPage;
+      renderFilteredDoctorSlotRequests();
+      scrollDoctorTableTop(tableBody || cardsEl);
+    }
+  });
 }
 
 async function loadDoctorSlotRequests() {
@@ -2239,6 +2350,7 @@ async function loadDoctorSlotRequests() {
   const tableWrap = document.getElementById('slotRequestsTableWrap');
   const tableBody = document.getElementById('slotRequestsTableBody');
   const cardsEl = document.getElementById('slotRequestsCards');
+  const paginationNav = document.getElementById('doctorSlotRequestsPagination');
 
   if (!tableBody && !cardsEl) return;
 
@@ -2250,6 +2362,7 @@ async function loadDoctorSlotRequests() {
   if (errorEl) errorEl.hidden = true;
   if (tableWrap) tableWrap.hidden = true;
   if (cardsEl) cardsEl.innerHTML = '';
+  api.renderPagination(paginationNav, { currentPage: 1, totalPages: 1 });
 
   try {
     const res = await api.request('/dokter/slot-tambahan', { priority: 'low' });
@@ -2449,5 +2562,21 @@ function initDoctorPracticeSchedule() {
         saveBtn.textContent = origText;
       }
     });
+  }
+}
+
+if (typeof window.matchMedia === 'function') {
+  const doctorPaginationMq = window.matchMedia('(max-width: 540px)');
+  const onDoctorPaginationMqChange = () => {
+    if (activeDoctorTabName === 'requests' && doctorRequestsCache.length > 0) {
+      renderFilteredDoctorRequests();
+    } else if (activeDoctorTabName === 'slotRequests' && doctorSlotRequestsCache.length > 0) {
+      renderFilteredDoctorSlotRequests();
+    } else if (doctorAppointmentsCache.length > 0) {
+      renderFilteredDoctorAppointments();
+    }
+  };
+  if (typeof doctorPaginationMq.addEventListener === 'function') {
+    doctorPaginationMq.addEventListener('change', onDoctorPaginationMqChange);
   }
 }

@@ -58,11 +58,6 @@
           <span id="topbarNotifCount" class="nav-count-badge" hidden>0</span>
         </button>
 
-        <div class="staff-topbar__user">
-          <span id="navDoctorNameTop" class="nav-user-name">Dokter</span>
-          <button type="button" id="logoutBtnTop" class="btn btn-secondary btn-sm btn-touch">Keluar</button>
-        </div>
-
         <button type="button" id="mobileMenuBtn" class="patient-drawer-btn" aria-label="Buka menu navigasi" aria-expanded="false" aria-controls="staffDrawerPanel">
           <span class="staff-drawer-trigger-label">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -148,26 +143,46 @@
         <div class="staff-sidebar__section staff-sidebar__shortcuts">
           <p class="staff-sidebar__label">Pintasan praktik</p>
           <div class="staff-sidebar__nav">
-            <button type="button" id="openPracticeScheduleBtn" class="staff-shortcut-btn">+ Atur jadwal praktik</button>
-            <button type="button" id="openBatchCancelBtn" class="staff-shortcut-btn">+ Ajukan cuti terjadwal</button>
-            <button type="button" id="openSlotRequestBtn" class="staff-shortcut-btn">+ Ajukan slot tambahan</button>
+            <button type="button" id="openPracticeScheduleBtn" class="staff-shortcut-btn">
+              <svg class="staff-shortcut-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              <span>Atur jadwal praktik</span>
+            </button>
+            <button type="button" id="openBatchCancelBtn" class="staff-shortcut-btn">
+              <svg class="staff-shortcut-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              <span>Ajukan cuti terjadwal</span>
+            </button>
+            <button type="button" id="openSlotRequestBtn" class="staff-shortcut-btn">
+              <svg class="staff-shortcut-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              <span>Ajukan slot tambahan</span>
+            </button>
           </div>
-        </div>
-
-        <div id="docSidebarSummary" class="staff-sidebar__section" aria-live="polite">
-          <p class="staff-sidebar__label">Ringkasan praktik</p>
-          <div id="docSidebarSummaryMetrics" class="staff-rail-metrics"></div>
         </div>
       </div>
 
       <div class="staff-sidebar__footer">
         <p class="staff-sidebar__sync">Pembaruan: <span id="staffSidebarSyncTime">-</span></p>
-        <div class="staff-user-row">
-          <div class="staff-user-meta">
-            <span id="navDoctorName" class="nav-user-name">Dokter</span>
-            <span id="navDoctorPoli" class="staff-user-role">Poliklinik</span>
+        <div class="staff-sidebar__account">
+          <div class="staff-account-meta">
+            <span id="navDoctorName" class="staff-account-name">Dokter</span>
+            <span id="navDoctorPoli" class="staff-account-sub"></span>
           </div>
-          <button type="button" id="logoutBtn" class="btn btn-secondary btn-sm btn-touch">Keluar</button>
+          <button type="button" id="logoutBtn" class="staff-logout-action">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+              <polyline points="16 17 21 12 16 7"></polyline>
+              <line x1="21" y1="12" x2="9" y2="12"></line>
+            </svg>
+            <span>Keluar</span>
+          </button>
         </div>
       </div>
     </aside>
@@ -227,6 +242,8 @@
             </div>
           </div>
 
+          <div id="docSidebarSummaryMetrics" class="portal-summary-strip doctor-summary-strip" aria-label="Ringkasan praktik" aria-live="polite"></div>
+
           <div class="doctor-workspace-grid">
             <div class="card">
               <div class="portal-toolbar">
@@ -253,6 +270,7 @@
               </div>
 
               <div id="doctorAppointmentsCards" class="mobile-card-list" aria-live="polite"></div>
+              <nav id="doctorAppointmentsPagination" class="clinical-pagination-nav" aria-label="Navigasi halaman jadwal pasien" hidden></nav>
             </div>
 
             <aside id="appointmentDetailPanel" class="card" aria-labelledby="detailPanelTitle">
@@ -369,6 +387,7 @@
           </div>
 
           <div id="slotRequestsCards" class="mobile-card-list mt-4" aria-live="polite"></div>
+          <nav id="doctorSlotRequestsPagination" class="clinical-pagination-nav" aria-label="Navigasi halaman pengajuan slot tambahan" hidden></nav>
         </div>
       </section>
 
@@ -414,6 +433,7 @@
           </div>
 
           <div id="doctorRequestsCards" class="mobile-card-list mt-4" aria-live="polite"></div>
+          <nav id="doctorRequestsPagination" class="clinical-pagination-nav" aria-label="Navigasi halaman pengajuan pembatalan" hidden></nav>
         </div>
       </section>
 
@@ -519,18 +539,6 @@
           </button>
         </li>
         <li class="patient-drawer__item">
-          <button type="button" id="drawerQuickFilterExpandBtn" class="patient-drawer__toggle-expand" aria-expanded="false" aria-controls="drawerQuickFilterSub">
-            <span>Rentang Cepat</span>
-            <span class="patient-drawer__plus" aria-hidden="true">+</span>
-          </button>
-          <div id="drawerQuickFilterSub" class="patient-drawer__sub" hidden>
-            <button type="button" class="patient-drawer__sub-link" data-doc-quick="today">Hari ini</button>
-            <button type="button" class="patient-drawer__sub-link" data-doc-quick="week">7 hari ke depan</button>
-            <button type="button" class="patient-drawer__sub-link" data-doc-quick="scheduled">Status terjadwal</button>
-            <button type="button" class="patient-drawer__sub-link" data-doc-quick="all">Semua jadwal</button>
-          </div>
-        </li>
-        <li class="patient-drawer__item">
           <button type="button" id="drawerSlotRequestBtn" class="patient-drawer__link">
             <span>Ajukan Slot Tambahan</span>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -541,7 +549,7 @@
           </button>
         </li>
         <li class="patient-drawer__item">
-          <button type="button" id="drawerLogoutBtn" class="patient-drawer__link">
+          <button type="button" id="drawerLogoutBtn" class="patient-drawer__link patient-drawer__link--danger">
             <span>Keluar</span>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>

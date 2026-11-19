@@ -1531,87 +1531,6 @@ function setPatientAppointmentsFilter(filterValue) {
   renderPatientAppointmentsTable();
 }
 
-function buildPaginationSequence(currentPage, totalPages, isCompact) {
-  if (totalPages <= (isCompact ? 5 : 7)) {
-    return Array.from({ length: totalPages }, (_, idx) => idx + 1);
-  }
-  if (isCompact) {
-    if (currentPage <= 2) return [1, 2, '...', totalPages];
-    if (currentPage >= totalPages - 1) return [1, '...', totalPages - 1, totalPages];
-    return [1, '...', currentPage, '...', totalPages];
-  }
-  if (currentPage <= 3) return [1, 2, 3, 4, '...', totalPages];
-  if (currentPage >= totalPages - 2) {
-    return [1, '...', totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
-  }
-  return [1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages];
-}
-
-function renderSegmentedPagination(navEl, { currentPage, totalPages, onPageChange }) {
-  if (!navEl) return;
-  if (totalPages <= 1) {
-    navEl.hidden = true;
-    navEl.style.display = 'none';
-    navEl.innerHTML = '';
-    return;
-  }
-
-  const isCompact = typeof window.matchMedia === 'function'
-    && window.matchMedia('(max-width: 540px)').matches;
-  const items = buildPaginationSequence(currentPage, totalPages, isCompact);
-
-  const prevChevron = '<svg class="segmented-page-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>';
-  const nextChevron = '<svg class="segmented-page-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>';
-
-  const itemButtonsHtml = items.map((entry) => {
-    if (entry === '...') {
-      return '<span class="segmented-page-ellipsis" aria-hidden="true">…</span>';
-    }
-    const isActive = entry === currentPage;
-    return `<button type="button" class="segmented-page-btn${isActive ? ' is-active' : ''}" data-page="${entry}" aria-label="Halaman ${entry}"${isActive ? ' aria-current="page"' : ''}>${entry}</button>`;
-  }).join('');
-
-  navEl.innerHTML = `
-    <div class="segmented-pagination" role="group" aria-label="Daftar halaman">
-      <button type="button" class="segmented-page-btn segmented-page-btn--nav" data-page-nav="prev" aria-label="Halaman sebelumnya"${currentPage <= 1 ? ' disabled' : ''}>
-        ${prevChevron}
-        <span class="segmented-page-label">Sebelumnya</span>
-      </button>
-      ${itemButtonsHtml}
-      <button type="button" class="segmented-page-btn segmented-page-btn--nav" data-page-nav="next" aria-label="Halaman berikutnya"${currentPage >= totalPages ? ' disabled' : ''}>
-        <span class="segmented-page-label">Berikutnya</span>
-        ${nextChevron}
-      </button>
-    </div>
-  `;
-
-  navEl.hidden = false;
-  navEl.style.display = 'flex';
-
-  navEl.querySelectorAll('[data-page]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const target = Number(btn.getAttribute('data-page'));
-      if (target >= 1 && target <= totalPages && target !== currentPage) {
-        onPageChange(target);
-      }
-    });
-  });
-
-  const prevBtn = navEl.querySelector('[data-page-nav="prev"]');
-  if (prevBtn) {
-    prevBtn.addEventListener('click', () => {
-      if (currentPage > 1) onPageChange(currentPage - 1);
-    });
-  }
-
-  const nextBtn = navEl.querySelector('[data-page-nav="next"]');
-  if (nextBtn) {
-    nextBtn.addEventListener('click', () => {
-      if (currentPage < totalPages) onPageChange(currentPage + 1);
-    });
-  }
-}
-
 if (typeof window.matchMedia === 'function') {
   const paginationMq = window.matchMedia('(max-width: 540px)');
   const onPaginationMqChange = () => {
@@ -1703,7 +1622,7 @@ function renderPatientAppointmentsTable() {
 
   if (visiblePool.length === 0) {
     const paginationNav = document.getElementById('patientAppointmentsPagination');
-    renderSegmentedPagination(paginationNav, { currentPage: 1, totalPages: 1, onPageChange: () => { } });
+    api.renderPagination(paginationNav, { currentPage: 1, totalPages: 1, onPageChange: () => { } });
     const isFilteredEmpty = activeCount > 0 && currentApptFilter === 'recent';
     const emptyTitle = isFilteredEmpty ? 'Belum ada janji temu yang baru dibuat' : 'Belum ada janji temu aktif';
     const emptySub = isFilteredEmpty
@@ -1847,7 +1766,7 @@ function renderPatientAppointmentsTable() {
     container.innerHTML = html;
 
     const paginationNav = document.getElementById('patientAppointmentsPagination');
-    renderSegmentedPagination(paginationNav, {
+    api.renderPagination(paginationNav, {
       currentPage: currentApptPage,
       totalPages: totalApptPages,
       onPageChange: (nextPage) => {
@@ -2308,7 +2227,7 @@ function renderHistoryCurrentPage() {
         <p class="medical-empty-sub">Tidak ditemukan catatan kunjungan yang sesuai dengan filter Anda.</p>
       </div>
     `;
-    renderSegmentedPagination(paginationNav, { currentPage: 1, totalPages: 1, onPageChange: () => { } });
+    api.renderPagination(paginationNav, { currentPage: 1, totalPages: 1, onPageChange: () => { } });
     return;
   }
 
@@ -2446,7 +2365,7 @@ function renderHistoryCurrentPage() {
 
   cardsContainer.innerHTML = html;
 
-  renderSegmentedPagination(paginationNav, {
+  api.renderPagination(paginationNav, {
     currentPage: currentHistoryPage,
     totalPages,
     onPageChange: (nextPage) => {
